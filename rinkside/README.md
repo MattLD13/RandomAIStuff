@@ -19,10 +19,11 @@ of the way down an iPhone lock screen. Each element's font was identified by ren
 
 - **Headings, names, times, scores:** Barlow Condensed Bold (0.98 correlation).
 - **Small text:** Barlow Semi Condensed.
-- **Numbers:** a sporty athletic numeral with 45° chamfered corners, spur terminals, a
-  dotted zero and no curves. No public font matched, so `fonts/build-font.py` draws one,
-  **Rinkside Mono**, from straight-line geometry measured off the screenshot (0.86–0.91
-  correlation per digit).
+- **Numbers:** a sporty chamfered numeral. No public font matched, so
+  `fonts/build-font.py` draws one, **Rinkside Mono**. Every glyph is a centre line widened
+  by a single stroke width (4px at the reference's 30px digit height), with 45° chamfered
+  corners, flat-cut terminals, no serifs and no curves. Run it with `--stroke` or
+  `--chamfer` to tune.
 
 The home/away icons are Material-style house and plane shapes.
 
@@ -50,7 +51,8 @@ rinkside/
   config.json                  default team; per-team colours, logo variant, URL name + aliases
   scripts/build-data.mjs       NHL API -> site/data/*.json + one site/<name>/ page per team name (Node 18+, no deps)
   scripts/render-wallpaper.mjs site -> site/<name>/wallpaper.png (1179x2556) via Playwright
-  site/                        the board (index.html, style.css, app.js), team picker, motifs.js
+  site/                        the board (index.html, style.css, app.js) and the team picker
+  site/alt/                    optional alternate-logo images of your own (see config "altLogo")
   site/fonts/RinksideMono.woff2  the numeral font (built by fonts/build-font.py, committed)
   fonts/build-font.py          draws Rinkside Mono (pip install fonttools brotli shapely)
   SETUP-WITH-CLAUDE.md         a prompt that has Claude (desktop) do the setup below for you
@@ -106,16 +108,20 @@ three-letter abbreviation (`/nyr`). Names are set in `config.json`.
 - On the board, tap the team logo (top-left) or the RINKSIDE mark, or press `t`, to switch
   teams.
 
-## Hometown remix
+## Remix background
 
-Like the NHL's hometown remix jerseys, each team's board carries a motif of its city: a
-skyline for New York and Chicago, waves for Seattle, San Jose and Long Island, music notes for
-St. Louis and Nashville, card suits for Vegas, bridge arches for Pittsburgh, Motor City gears
-for Detroit, and so on. The motif sits in the header band and as a faint texture behind the
-board. Motifs are generic hometown imagery, not team marks, and are drawn in `site/motifs.js`.
-Set a team's motif with `"motif"` in `config.json`. The options are skyline, waves, peaks,
-notes, stars, bolts, pines, snow, suits, gears, drops, palms, leaves, brick, arches, spiral,
-flames and stripes.
+Behind each board, the team's alternate logo is tiled faintly, like the NHL's remix and
+reverse-retro jerseys. The logo is set by `"altLogo"` in `config.json`, and it can be:
+
+- an NHL logo file name, such as `TBL_alt.svg` or `NYI_19951996-19961997_dark.svg`. The
+  NHL's records API lists every logo: https://records.nhl.com/site/api/logo
+- a file you add to `site/alt/`, such as `"alt/NYR.png"` (see `site/alt/README.md`)
+- any image URL.
+
+The defaults are the official current alternates where the NHL publishes one (Tampa Bay,
+Toronto, Calgary, Nashville, Utah, Dallas) and a fan-favourite throwback for the rest, such as
+the Islanders fisherman, the Canucks flying skate and the Penguins 1967 roundel. Seattle,
+Vegas and Winnipeg have only ever had one logo, so they use it.
 
 ## Run locally
 

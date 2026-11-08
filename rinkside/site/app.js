@@ -136,13 +136,6 @@
     return s + `</div>`;
   }
 
-  // Mix two #rrggbb colours: t = share of b.
-  const mix = (a, b, t) => {
-    const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-    const [x, y] = [p(a), p(b)];
-    return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join('');
-  };
-
   const suffix = (n) => {
     const s = ['th', 'st', 'nd', 'rd'], v = n % 100;
     return s[(v - 20) % 10] || s[v] || s[0];
@@ -155,21 +148,20 @@
     if (d.team.accentColor) root.setProperty('--accent', d.team.accentColor);
     document.title = `${d.team.name} · Rinkside`;
 
-    // Hometown remix: the team's motif as a faint texture behind the whole board.
-    const M = window.RinksideMotifs;
+    // Remix background: the team's alternate / throwback logo, tiled faintly behind the board.
     const remix = document.getElementById('remix');
-    if (M && remix) {
-      remix.innerHTML = `<svg width="100%" height="100%"><defs>${M.pattern('remix-bg', d.team.motif, {
-        scale: 1.5, rotate: -12, color: mix(d.team.primaryColor, '#ffffff', 0.35),
-      })}</defs><rect width="100%" height="100%" fill="url(#remix-bg)"/></svg>`;
+    if (remix) {
+      const alt = esc(d.team.altLogo || d.team.logo);
+      remix.innerHTML = `<svg width="100%" height="100%"><defs><pattern id="remix-bg" width="168" height="168" patternUnits="userSpaceOnUse" patternTransform="rotate(-12)">
+        <image href="${alt}" x="8" y="8" width="68" height="68" preserveAspectRatio="xMidYMid meet"/>
+        <image href="${alt}" x="92" y="92" width="68" height="68" preserveAspectRatio="xMidYMid meet"/>
+      </pattern></defs><rect width="100%" height="100%" fill="url(#remix-bg)"/></svg>`;
     }
 
     const h = d.header;
     let s = `<header class="abs hdr">
       <svg class="band" viewBox="0 0 210 95" width="210" height="95" preserveAspectRatio="none">
-        <defs>${M ? M.pattern('remix-band', d.team.motif, { scale: 0.85, rotate: -8 }) : ''}</defs>
         <polygon points="0,0 196,0 171,95 0,95" fill="var(--primary)"/>
-        <polygon points="0,0 196,0 171,95 0,95" fill="url(#remix-band)" opacity="0.16"/>
         <polygon points="196,0 204,0 179,95 171,95" fill="var(--accent)"/>
       </svg>
       <div class="band" style="background:none" title="Change team"${wallpaper ? '' : ' role="button" tabindex="0"'}><img src="${esc(d.team.logo)}" alt="${esc(d.team.name)}"></div>

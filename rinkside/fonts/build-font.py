@@ -1,135 +1,136 @@
 #!/usr/bin/env python3
 """Builds Rinkside Mono, the board's numeral font, from straight-line geometry.
 
-Sporty athletic numerals: 45-degree chamfered corners, spur terminals, no curves.
+Sporty monoline numerals: every glyph is a centreline widened by one constant stroke,
+with 45-degree chamfered corners, flat cut terminals, no serifs and no curves.
 Proportions were measured from the reference screenshot (digit height = 700 units).
 
     pip install fonttools brotli shapely
-    python3 fonts/build-font.py            # writes site/fonts/RinksideMono.woff2
-    python3 fonts/build-font.py --stroke 84 --chamfer 104   # tune
+    python3 fonts/build-font.py                       # writes site/fonts/RinksideMono.woff2
+    python3 fonts/build-font.py --stroke 80 --chamfer 110   # tune
 
 The output covers 0-9 . , - + − – : / and space. Other characters fall back to the
 next font in the CSS stack.
 """
 import argparse
-import math
 from pathlib import Path
 
 from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from shapely import affinity
-from shapely.geometry import Polygon, box
+from shapely.geometry import LineString, Polygon, box
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
 
 ap = argparse.ArgumentParser()
-ap.add_argument('--stroke', type=float, default=82)
-ap.add_argument('--chamfer', type=float, default=112)
+ap.add_argument('--stroke', type=float, default=93, help='stroke width (the reference: 4px at a 30px digit height)')
+ap.add_argument('--chamfer', type=float, default=96, help='corner cut, measured on the centreline')
 ap.add_argument('--advance', type=int, default=590)
 ap.add_argument('--width', type=float, default=446)
 ap.add_argument('--out', default=str(Path(__file__).resolve().parent.parent / 'site' / 'fonts' / 'RinksideMono.woff2'))
 o = ap.parse_args()
 
-S, C, ADV, H = o.stroke, o.chamfer, o.advance, 700
+S, CC, ADV, H = o.stroke, o.chamfer, o.advance, 700
 L = (ADV - o.width) / 2
 R = L + o.width
 CX = ADV / 2
-CI = max(C - S * (math.sqrt(2) - 1), 8)  # inner chamfer keeps the stroke even round the corner
+h = S / 2
+XL, XR, YB, YT = L + h, R - h, h, H - h  # centreline box
+ADV_P = 300
 
 
-def octagon(x0, y0, x1, y1, c):
+def stroke(*paths, closed=False):
+    """Widen centreline paths by the one stroke width: mitred joins, flat ends."""
+    shapes = []
+    for pts in paths:
+        if closed:
+            pts = list(pts) + [pts[0], pts[1]]
+        shapes.append(LineString(pts).buffer(h, cap_style='flat', join_style='mitre', mitre_limit=3))
+    return unary_union(shapes)
+
+
+def octagon(x0, y0, x1, y1, c=CC):
     c = min(c, (x1 - x0) / 2, (y1 - y0) / 2)
-    return Polygon([(x0 + c, y0), (x1 - c, y0), (x1, y0 + c), (x1, y1 - c),
-                    (x1 - c, y1), (x0 + c, y1), (x0, y1 - c), (x0, y0 + c)])
+    return [(x0 + c, y0), (x1 - c, y0), (x1, y0 + c), (x1, y1 - c), (x1 - c, y1), (x0 + c, y1), (x0, y1 - c), (x0, y0 + c)]
 
 
-def ring(x0, y0, x1, y1, c=C, s=S):
-    return octagon(x0, y0, x1, y1, c).difference(octagon(x0 + s, y0 + s, x1 - s, y1 - s, CI))
-
-
-def band(top_l, top_r, bot_l, bot_r, y_top, y_bot):
-    """A slanted stroke between two horizontal spans."""
-    return Polygon([(top_l, y_top), (top_r, y_top), (bot_r, y_bot), (bot_l, y_bot)])
+def clip(g, x0=L, x1=R, y0=0, y1=H):
+    """Cut every terminal flat at the glyph box."""
+    return g.intersection(box(x0, y0, x1, y1))
 
 
 U = lambda *g: unary_union(g)
-MID = 365  # waist of 3 and 8
-SPUR_HI, SPUR_LO = 490, 236  # where the top / bottom spurs end
+
 
 def g_zero():
-    return U(ring(L, 0, R, H), box(CX - 50, H / 2 - 58, CX + 50, H / 2 + 58))
+    return U(stroke(octagon(XL, YB, XR, YT), closed=True), box(CX - h * 1.05, H / 2 - h * 1.25, CX + h * 1.05, H / 2 + h * 1.25))
 
 def g_one():
-    sl, sr = CX - S * 0.53, CX + S * 0.53
-    flag = Polygon([(sl, H), (sl - 172, H - 98), (sl - 172, H - 98 - 86), (sl, H - 86)])
-    return U(box(sl, 0, sr, H), box(CX - 175, 0, CX + 175, S + 4), flag)
+    x = CX + 55
+    return clip(stroke([(x - 175, YT - 125), (x, YT), (x, -50)], ), x0=0, x1=ADV)
 
 def g_two():
-    top = ring(L, 300, R, H).difference(box(L - 1, 0, L + S + 1, SPUR_HI)).difference(box(L - 1, 0, R + 1, 430))
-    diag = band(R - S * 1.3, R, L, L + S * 1.3, 470, S - 2)
-    return U(top, diag, box(L, 0, R, S), box(R - S, 0, R, 190))
+    return clip(stroke([(XL, YT - CC - 40), (XL, YT - CC), (XL + CC, YT), (XR - CC, YT), (XR, YT - CC), (XR, 430), (XL, YB + 10), (XL, YB), (R + 50, YB)]))
 
 def g_three():
-    up = ring(L + 12, MID - S / 2, R, H)
-    lo = ring(L, 0, R, MID + S / 2)
-    return U(up, lo).difference(box(L - 1, SPUR_LO, L + 120, SPUR_HI + 10))
+    ym = 372
+    return clip(stroke([(L - 50, YT), (XR - CC, YT), (XR, YT - CC), (XR, ym + CC * 0.8), (XR - CC * 0.8, ym), (L + 110, ym)],
+                       [(XR - CC * 0.8, ym), (XR, ym - CC * 0.8), (XR, YB + CC), (XR - CC, YB), (L - 50, YB)]))
 
 def g_four():
-    stem_l, stem_r = L + 285, L + 285 + S
-    diag = band(stem_l - 95, stem_r - 10, L, L + S * 1.3, H, 285)
-    return U(box(stem_l, 0, stem_r, H), diag, box(L, 200, R, 285), box(stem_l - 45, 0, stem_r + 45, S - 4))
+    xs = L + 318
+    return clip(stroke([(xs, -50), (xs, YT), (XL, 262), (R + 50, 262)]))
 
 def g_five():
-    ymid = 440
-    lo = ring(L, 0, R, ymid).difference(box(L - 1, SPUR_LO, L + S + 1, ymid - S))
-    return U(box(L, H - S, R, H), box(R - S, 505, R, H), box(L, ymid - S, L + S, H), lo)
+    ym = 418
+    return clip(stroke([(R + 50, YT), (XL, YT), (XL, ym), (XR - CC, ym), (XR, ym - CC), (XR, YB + CC), (XR - CC, YB), (L - 50, YB)]))
 
 def g_six():
-    return affinity.rotate(g_nine(), 180, origin=(CX, H / 2))
+    yb = 400
+    return clip(stroke([(R + 50, YT), (XL + CC, YT), (XL, YT - CC), (XL, YB + CC), (XL + CC, YB), (XR - CC, YB), (XR, YB + CC),
+                        (XR, yb - CC), (XR - CC, yb), (XL, yb)]))
 
 def g_seven():
-    bar = box(L, H - S + 4, R, H)
-    spur = box(L, 520, L + S - 6, H)
-    diag = band(R - S * 1.1, R, L + 150, L + 150 + S * 1.1, H - S + 4, S)
-    foot = box(L + 80, 0, L + 295, S + 4)
-    return U(bar, spur, diag, foot)
+    return clip(stroke([(L - 50, YT), (XR, YT), (L + 140, -60)]))
 
 def g_eight():
-    return U(ring(L + 14, MID - S / 2, R - 14, H), ring(L, 0, R, MID + S / 2))
+    ym = 378
+    return U(stroke(octagon(XL + 16, ym, XR - 16, YT, CC * 0.9), closed=True), stroke(octagon(XL, YB, XR, ym), closed=True))
 
 def g_nine():
-    yb = 290
-    full = ring(L, 0, R, H).difference(box(L - 1, SPUR_LO, L + S + 1, H))
-    return U(full, ring(L, yb, R, H))
+    return affinity.rotate(g_six(), 180, origin=(CX, H / 2))
+
+def dot(cx, y0):
+    return box(cx - h * 1.1, y0, cx + h * 1.1, y0 + S * 1.1)
 
 def g_period():
-    return box(ADV_P / 2 - 52, 0, ADV_P / 2 + 52, 104)
+    return dot(ADV_P / 2, 0)
 
 def g_comma():
-    return U(box(ADV_P / 2 - 52, 0, ADV_P / 2 + 52, 104), Polygon([(ADV_P / 2 - 52, 0), (ADV_P / 2 + 52, 0), (ADV_P / 2 - 10, -110), (ADV_P / 2 - 70, -110)]))
+    return U(dot(ADV_P / 2, 0), Polygon([(ADV_P / 2 - h * 1.1, 0), (ADV_P / 2 + h * 1.1, 0), (ADV_P / 2 - 20, -120), (ADV_P / 2 - 20 - S * 0.9, -120)]))
 
 def g_hyphen():
-    return box(CX - 146, 357 - S / 2 + 4, CX + 146, 357 + S / 2 - 4)
+    return box(CX - 150, 357 - h, CX + 150, 357 + h)
 
 def g_minus():
-    return box(CX - 175, 357 - S / 2 + 4, CX + 175, 357 + S / 2 - 4)
+    return box(CX - 180, 357 - h, CX + 180, 357 + h)
 
 def g_plus():
-    return U(g_minus(), box(CX - S / 2 + 4, 357 - 175, CX + S / 2 - 4, 357 + 175))
+    return U(g_minus(), box(CX - h, 357 - 180, CX + h, 357 + 180))
 
 def g_colon():
-    return U(box(ADV_P / 2 - 52, 80, ADV_P / 2 + 52, 184), box(ADV_P / 2 - 52, 430, ADV_P / 2 + 52, 534))
+    return U(dot(ADV_P / 2, 70), dot(ADV_P / 2, 430))
 
 def g_slash():
-    return band(R - S * 1.2 - 40, R - 40, L + 40, L + 40 + S * 1.2, H, 0)
+    return clip(stroke([(L + 60, -60), (R - 60, H + 60)]))
 
-ADV_P = 300
+
 glyphs = {
     'zero': ('0', g_zero, ADV), 'one': ('1', g_one, ADV), 'two': ('2', g_two, ADV), 'three': ('3', g_three, ADV),
     'four': ('4', g_four, ADV), 'five': ('5', g_five, ADV), 'six': ('6', g_six, ADV), 'seven': ('7', g_seven, ADV),
     'eight': ('8', g_eight, ADV), 'nine': ('9', g_nine, ADV), 'period': ('.', g_period, ADV_P),
-    'comma': (',', g_comma, ADV_P), 'hyphen': ('-', g_hyphen, ADV), 'minus': ('−', g_minus, ADV),
-    'endash': ('–', g_minus, ADV), 'plus': ('+', g_plus, ADV), 'colon': (':', g_colon, ADV_P),
+    'comma': (',', g_comma, ADV_P), 'hyphen': ('-', g_hyphen, ADV), 'minus': ('\u2212', g_minus, ADV),
+    'endash': ('\u2013', g_minus, ADV), 'plus': ('+', g_plus, ADV), 'colon': (':', g_colon, ADV_P),
     'slash': ('/', g_slash, ADV),
 }
 
@@ -176,4 +177,4 @@ fb.font['head'].fontRevision = 1.0
 fb.font.flavor = 'woff2'
 Path(o.out).parent.mkdir(parents=True, exist_ok=True)
 fb.save(o.out)
-print(f'wrote {o.out} (stroke {S}, chamfer {C}, advance {ADV})')
+print(f'wrote {o.out} (stroke {S}, chamfer {CC}, advance {ADV})')

@@ -329,7 +329,11 @@ async function buildTeam(TEAM) {
       logo: palette.bandLogo === 'dark' ? meRow.teamLogoDark : meRow.teamLogo,
       primaryColor: palette.primary || '#333333',
       accentColor: palette.accent || '#888888',
-    motif: palette.motif || 'stripes',
+    // alternate / throwback logo tiled behind the board (config.json "altLogo")
+    // a bare file name is an NHL logo file; a path (alt/NYR.png) or URL is used as given
+    altLogo: !palette.altLogo
+      ? meRow.teamLogoDark
+      : /[/:]/.test(palette.altLogo) ? palette.altLogo : `https://assets.nhle.com/logos/nhl/svg/${palette.altLogo}`,
     },
     header,
     season: { games, played, total: games.length },

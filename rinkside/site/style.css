@@ -30,8 +30,8 @@ html, body { margin: 0; background: var(--bg); color: var(--fg); }
 body { font-family: var(--cond); -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; overflow-x: hidden; }
 
 #stage { position: relative; width: 100%; }
-/* hometown remix texture (motifs.js), kept faint so the board reads exactly as before */
-#remix { position: absolute; inset: 0; pointer-events: none; opacity: 0.075;
+/* remix background: the team's alternate logo tiled faintly (app.js), so the board still reads as before */
+#remix { position: absolute; inset: 0; pointer-events: none; opacity: 0.085;
   -webkit-mask-image: linear-gradient(#000, rgba(0,0,0,.55) 30%, rgba(0,0,0,.55) 70%, #000);
           mask-image: linear-gradient(#000, rgba(0,0,0,.55) 30%, rgba(0,0,0,.55) 70%, #000); }
 #remix svg { display: block; }
