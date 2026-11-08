@@ -214,41 +214,29 @@
   let index = null;   // data/teams.json
   let team = null;
 
-  // A team can come from the subdomain: rangers.mattdicks.org, blues.mattdicks.org, nyr.mattdicks.org ...
+  // The team comes from the path: hockey.mattdicks.org/rangers/, /blues/, /nyr/, /leafs/ ...
   const resolve = (word) => {
     const w = (word || '').toLowerCase();
     if (!w) return null;
     const t = index.teams.find((t) => t.abbrev.toLowerCase() === w || t.slug === w || t.aliases?.includes(w));
     return t ? t.abbrev : null;
   };
-  const hostParts = location.hostname.split('.');
-  const hostTeam = () => (hostParts.length >= 3 ? resolve(hostParts[0]) : null);
+  const pathTeam = () => {
+    const parts = location.pathname.split('/').filter((p) => p && p !== 'index.html');
+    return resolve(parts[parts.length - 1]);
+  };
 
   function pickTeam() {
-    const fromUrl = resolve(params.get('team'));
-    if (fromUrl) { store.set(fromUrl); return fromUrl; }
-    const fromHost = hostTeam();
-    if (fromHost) return fromHost;
-    return resolve(store.get()) || index.default;
+    const found = pathTeam() || resolve(params.get('team'));
+    if (found) { store.set(found); return found; }
+    return resolve(store.get()) || index.default;   // the bare domain shows your last team
   }
 
   function setTeam(abbrev) {
-    const fromHost = hostTeam();
-    if (fromHost) {
-      // On a team subdomain, switching team means going to that team's subdomain.
-      if (abbrev === fromHost) return closePicker();
-      const slug = index.teams.find((t) => t.abbrev === abbrev).slug;
-      location.href = `${location.protocol}//${[slug, ...hostParts.slice(1)].join('.')}${location.port ? `:${location.port}` : ''}/`;
-      return;
-    }
-    team = abbrev;
+    if (abbrev === team) return closePicker();
     store.set(abbrev);
-    const url = new URL(location.href);
-    url.searchParams.set('team', abbrev);
-    history.replaceState(null, '', url);
-    lastStamp = null;
-    closePicker();
-    load();
+    const slug = index.teams.find((t) => t.abbrev === abbrev).slug;
+    location.href = new URL(`${slug}/`, document.baseURI).href;
   }
 
   // Team picker: tap the team band (or the RINKSIDE mark, or press "t").

@@ -371,4 +371,14 @@ const teamsIndex = {
     .sort((a, b) => a.name.localeCompare(b.name)),
 };
 await writeFile(join(outDir, 'teams.json'), JSON.stringify(teamsIndex, null, 1));
+
+// One folder per team name so hockey.mattdicks.org/rangers/ (and /nyr/, /leafs/ ...) work on plain
+// static hosting. Each is the main page with <base href="../"> so it shares app.js, style.css and data/.
+const page = (await readFile(join(ROOT, 'site', 'index.html'), 'utf8')).replace('<head>', '<head>\n  <base href="../">');
+for (const t of teamsIndex.teams) {
+  for (const name of new Set([t.slug, t.abbrev.toLowerCase(), ...t.aliases])) {
+    await mkdir(join(ROOT, 'site', name), { recursive: true });
+    await writeFile(join(ROOT, 'site', name, 'index.html'), page);
+  }
+}
 console.log(`Wrote ${built.length} boards to site/data/`);

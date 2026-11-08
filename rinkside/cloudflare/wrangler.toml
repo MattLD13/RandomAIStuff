@@ -1,5 +1,0 @@
-name = "rinkside"
-main = "worker.js"
-compatibility_date = "2026-10-01"
-workers_dev = false
-routes = [{ pattern = "*.mattdicks.org/*", zone_name = "mattdicks.org" }]

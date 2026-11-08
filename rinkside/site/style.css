@@ -102,7 +102,7 @@ svg text { font-family: var(--cond); }
 /* leaders */
 .leaders { margin-top: 0; }
 .lrow { display: flex; align-items: center; height: 55px; }
-.lrow .face { width: 46px; height: 46px; border-radius: 50%; background: color-mix(in srgb, var(--primary) 60%, #2a2a2a); overflow: hidden; flex: none; border: 1.5px solid color-mix(in srgb, var(--primary) 60%, #666); }
+.lrow .face { width: 46px; height: 46px; border-radius: 50%; background: #000; overflow: hidden; flex: none; border: 1.5px solid #3a3a3a; }
 .lrow .face img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
 .lrow .who { margin-left: 10px; line-height: 1; }
 .lrow .k { font: 600 10px var(--cond); letter-spacing: 0.12em; color: var(--otl); text-transform: uppercase; }

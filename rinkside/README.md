@@ -1,14 +1,14 @@
 # Rinkside
 
 An auto-updating, one-screen dashboard for every NHL team, recreated from a phone-wallpaper
-screenshot. Each team has its own subdomain:
+screenshot. Each team has its own page:
 
-- https://rangers.mattdicks.org
-- https://blues.mattdicks.org
+- https://hockey.mattdicks.org/rangers
+- https://hockey.mattdicks.org/blues
 - …and the other 30 teams (list below)
 
-Data refreshes every 30 minutes from the NHL's public APIs. GitHub Actions builds the data and
-GitHub Pages hosts the site. A small Cloudflare Worker routes each subdomain to the team's board.
+Data refreshes every 30 minutes from the NHL's public APIs. GitHub Actions builds it and
+GitHub Pages hosts it.
 
 ## How the original graphic was made
 
@@ -30,57 +30,47 @@ Mono for numbers. The home/away icons are Material-style house and plane shapes.
 | Next 5 / Last 5 | team schedule | times in Eastern time; scores shown winner-first |
 
 The NHL APIs don't send CORS headers, so a browser can't call them directly. The GitHub
-Action fetches the data for all 32 teams, writes `site/data/<TEAM>.json`, renders a
+Action fetches the data for all 32 teams, writes `site/data/<TEAM>.json`, generates a
+folder per team name (`site/rangers/index.html`, `site/nyr/`, `site/leafs/`…), renders a
 lock-screen PNG per team, and deploys the static site.
 
 ## Layout
 
 ```
 rinkside/
-  config.json                  default team; per-team colours, logo variant, subdomain + aliases
-  scripts/build-data.mjs       NHL API -> site/data/<TEAM>.json + site/data/teams.json (Node 18+, no deps)
-  scripts/render-wallpaper.mjs site -> site/wallpaper/<TEAM>.png (1179x2556) via Playwright
+  config.json                  default team; per-team colours, logo variant, URL name + aliases
+  scripts/build-data.mjs       NHL API -> site/data/*.json + one site/<name>/ page per team name (Node 18+, no deps)
+  scripts/render-wallpaper.mjs site -> site/<name>/wallpaper.png (1179x2556) via Playwright
   site/                        the board (index.html, style.css, app.js) and the team picker
-  cloudflare/worker.js         routes <team>.mattdicks.org to the Pages site
-  cloudflare/wrangler.toml     Worker config (route *.mattdicks.org/*)
+  SETUP-WITH-CLAUDE.md         a prompt that has Claude (desktop) do the setup below for you
 .github/workflows/rinkside.yml runs every 30 min and on every push to main, deploys to GitHub Pages
 ```
 
 ## Setup
 
-### 1. GitHub Pages
+`SETUP-WITH-CLAUDE.md` has a prompt you can paste into the Claude desktop app (with Claude in
+Chrome or computer use) to do all of this in your browser. Doing it by hand:
 
-1. **Settings → General → Default branch:** set it to `main`. GitHub runs scheduled workflows
-   only from the default branch, and the Pages environment deploys only from it.
-2. **Settings → Pages → Build and deployment → Source:** choose **GitHub Actions**. Leave
-   **Custom domain** empty. The Worker fetches the site from
-   `mattld13.github.io/RandomAIStuff`, and that address redirects away once a custom domain
-   is set.
-3. **Actions → Rinkside → Run workflow** (or push to `main`). After that it runs every
-   30 minutes. Check that https://mattld13.github.io/RandomAIStuff/ loads.
+1. **GitHub → repo Settings → General → Default branch:** `main`. GitHub runs scheduled
+   workflows only from the default branch, and Pages deploys only from it.
+2. **GitHub → repo Settings → Pages → Source:** **GitHub Actions**.
+3. **Actions → Rinkside → Run workflow.** When it finishes,
+   https://mattld13.github.io/RandomAIStuff/rangers/ should load.
+4. **DNS** (wherever mattdicks.org's DNS is managed): add a `CNAME` record, name `hockey`,
+   target `mattld13.github.io`. If you use Cloudflare, set it to **DNS only** (grey cloud).
+5. **GitHub → repo Settings → Pages → Custom domain:** `hockey.mattdicks.org` → Save. Once
+   the DNS check passes and the certificate is issued (minutes to an hour), tick
+   **Enforce HTTPS**.
+6. Optional: **GitHub → your profile Settings → Pages → Add a domain** to verify
+   `mattdicks.org` with a TXT record, so nobody else can claim it on GitHub.
+
+The deploy is done by GitHub Actions, so GitHub ignores a `CNAME` file. The custom domain
+lives only in the Pages settings.
 
 GitHub turns off scheduled workflows in repositories with no activity for 60 days. If the
 board stops updating, re-enable the workflow on the Actions tab.
 
-### 2. Subdomains (Cloudflare, free plan)
-
-GitHub Pages allows only one custom domain per site, so 32 team subdomains need a router in
-front of it. `mattdicks.org` has to use Cloudflare DNS: in the Cloudflare dashboard,
-**Add a site** and switch your registrar's nameservers to Cloudflare's.
-
-1. **DNS → Add record:** type `AAAA`, name `*`, IPv6 `100::`, **Proxied** (orange cloud).
-   This placeholder record lets the wildcard reach the Worker. Your existing records (the
-   root domain, `www`, and so on) take priority and aren't affected.
-2. **Deploy the Worker**, either way:
-   - Dashboard: **Workers & Pages → Create → Worker**, name it `rinkside`, paste
-     `cloudflare/worker.js`, and deploy. Then open **Settings → Domains & Routes → Add →
-     Route** and enter `*.mattdicks.org/*` for zone `mattdicks.org`.
-   - CLI: `cd rinkside/cloudflare && npx wrangler deploy` (the route is in `wrangler.toml`).
-
-The Worker only answers for team subdomains. Any other subdomain passes through to whatever
-it normally serves.
-
-## Team subdomains
+## Team pages
 
 | | | | |
 | --- | --- | --- | --- |
@@ -93,24 +83,22 @@ it normally serves.
 | blues | lightning (bolts) | mapleleafs (leafs) | mammoth (utah) |
 | canucks | goldenknights (knights, vegas) | jets | capitals (caps) |
 
-The three-letter abbreviation works too (`nyr.mattdicks.org`). Names in brackets are aliases.
-Change them in `config.json`.
+`hockey.mattdicks.org/<name>` works for every name above, aliases in brackets, and the
+three-letter abbreviation (`/nyr`). Names are set in `config.json`.
 
-Each team subdomain also serves:
-
-- `/wallpaper.png`: that team's 1179x2556 lock-screen image. An iOS Shortcuts automation
-  ("Get Contents of URL" → "Set Wallpaper") can keep your lock screen current.
-- `/?wallpaper`: a preview of the board in its lock-screen position.
-
-On the board, tap the team logo (top-left) or the RINKSIDE mark, or press `t`, to switch
-teams. On a team subdomain this goes to the other team's subdomain. Without a subdomain
-(e.g. on github.io), the choice is stored in the browser and in `?team=BOS`.
+- `hockey.mattdicks.org/` shows the last team you opened (the Rangers the first time).
+- `hockey.mattdicks.org/rangers/wallpaper.png` is that team's 1179x2556 lock-screen image
+  (main names only, not aliases). An iOS Shortcuts automation ("Get Contents of URL" → "Set
+  Wallpaper") can keep your lock screen current.
+- `hockey.mattdicks.org/rangers/?wallpaper` previews the board in its lock-screen position.
+- On the board, tap the team logo (top-left) or the RINKSIDE mark, or press `t`, to switch
+  teams.
 
 ## Run locally
 
 ```sh
 cd rinkside
 node scripts/build-data.mjs        # writes site/data/ (TEAMS=NYR,BOS to build a subset)
-python3 -m http.server 8080 --directory site   # open http://localhost:8080/?team=STL
+python3 -m http.server 8080 --directory site   # open http://localhost:8080/blues/
 npm install && npx playwright install chromium && node scripts/render-wallpaper.mjs  # optional PNGs
 ```
