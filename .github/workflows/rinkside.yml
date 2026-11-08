@@ -1,11 +1,11 @@
-name: Glanceboard
+name: Rinkside
 
 on:
   schedule:
     - cron: "*/30 * * * *"   # every 30 minutes (UTC)
   push:
     branches: [main]
-    paths: ["glanceboard/**", ".github/workflows/glanceboard.yml"]
+    paths: ["rinkside/**", ".github/workflows/rinkside.yml"]
   workflow_dispatch:
 
 permissions:
@@ -14,7 +14,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: glanceboard-pages
+  group: rinkside-pages
   cancel-in-progress: true
 
 jobs:
@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: glanceboard
+        working-directory: rinkside
     steps:
       - uses: actions/checkout@v4
 
@@ -44,7 +44,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: glanceboard/site
+          path: rinkside/site
 
   deploy:
     needs: build

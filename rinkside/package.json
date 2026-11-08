@@ -1,8 +1,8 @@
 {
-  "name": "glanceboard",
+  "name": "rinkside",
   "private": true,
   "type": "module",
-  "description": "Auto-updating NHL team glanceboard (static site built from the public NHL API).",
+  "description": "Auto-updating NHL team dashboard (static site built from the public NHL API).",
   "scripts": {
     "build": "node scripts/build-data.mjs",
     "wallpaper": "node scripts/render-wallpaper.mjs",

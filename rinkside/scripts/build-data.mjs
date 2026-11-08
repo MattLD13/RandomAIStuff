@@ -15,7 +15,7 @@ const STATS = 'https://api.nhle.com/stats/rest/en';
 async function get(url, tries = 4) {
   for (let i = 1; ; i++) {
     try {
-      const res = await fetch(url, { headers: { 'user-agent': 'glanceboard' } });
+      const res = await fetch(url, { headers: { 'user-agent': 'rinkside' } });
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
       return await res.json();
     } catch (err) {
@@ -360,6 +360,8 @@ const teamsIndex = {
   teams: standings
     .map((t) => ({
       abbrev: t.teamAbbrev.default,
+      slug: config.teams?.[t.teamAbbrev.default]?.slug || t.teamAbbrev.default.toLowerCase(),
+      aliases: config.teams?.[t.teamAbbrev.default]?.aliases || [],
       name: t.teamName.default,
       logo: t.teamLogoDark || t.teamLogo,
       conference: t.conferenceName,

@@ -1,4 +1,4 @@
-// Glanceboard renderer: reads data.json (built by scripts/build-data.mjs) and draws the board.
+// Rinkside renderer: reads data.json (built by scripts/build-data.mjs) and draws the board.
 (() => {
   const W = 921, H = 1145;
   const params = new URLSearchParams(location.search);
@@ -131,7 +131,7 @@
       : `<div class="note" style="margin-top:12px">No games scheduled</div>`;
     s += `</div><div class="colhead big l5head"><span class="t">Last 5</span></div><div class="llist">`;
     s += d.lastGames
-      .map((g) => `<div class="lgrow">${logo(g.logo, g.opp)}<span class="res ${g.result}">${esc(g.result)}</span><span class="sc">${esc(g.score)}</span></div>`)
+      .map((g) => `<div class="lgrow">${logo(g.logo, g.opp)}<span class="res ${g.result}">${esc(g.result)}</span><span class="sc">${esc(g.score.replace('-', '\u2013'))}</span></div>`)
       .join('');
     return s + `</div>`;
   }
@@ -146,7 +146,7 @@
     const root = document.documentElement.style;
     if (d.team.primaryColor) root.setProperty('--primary', d.team.primaryColor);
     if (d.team.accentColor) root.setProperty('--accent', d.team.accentColor);
-    document.title = `${d.team.name} · Glanceboard`;
+    document.title = `${d.team.name} · Rinkside`;
 
     const h = d.header;
     let s = `<header class="abs hdr">
@@ -180,7 +180,7 @@
       <span class="k"><i class="sw" style="background:var(--otl)"></i>OT/SO loss</span>
       <span class="k"><i class="sw" style="background:var(--future)"></i>Still to play</span>
       <span class="k">Filled dot or house = home, ring or plane = away</span>
-      <span class="brand" title="Change team">GLANCEBOARD</span>
+      <span class="brand" title="Change team">RINKSIDE</span>
     </footer>`;
     board.innerHTML = s;
     fit();
@@ -206,7 +206,7 @@
   addEventListener('resize', fit);
 
   // ---------- team choice ----------
-  const STORE = 'glanceboard-team';
+  const STORE = 'rinkside-team';
   const store = {
     get() { try { return localStorage.getItem(STORE); } catch { return null; } },
     set(v) { try { localStorage.setItem(STORE, v); } catch {} },
@@ -214,15 +214,33 @@
   let index = null;   // data/teams.json
   let team = null;
 
+  // A team can come from the subdomain: rangers.mattdicks.org, blues.mattdicks.org, nyr.mattdicks.org ...
+  const resolve = (word) => {
+    const w = (word || '').toLowerCase();
+    if (!w) return null;
+    const t = index.teams.find((t) => t.abbrev.toLowerCase() === w || t.slug === w || t.aliases?.includes(w));
+    return t ? t.abbrev : null;
+  };
+  const hostParts = location.hostname.split('.');
+  const hostTeam = () => (hostParts.length >= 3 ? resolve(hostParts[0]) : null);
+
   function pickTeam() {
-    const ok = (a) => a && index.teams.some((t) => t.abbrev === a);
-    const fromUrl = (params.get('team') || '').toUpperCase();
-    if (ok(fromUrl)) { store.set(fromUrl); return fromUrl; }
-    const saved = (store.get() || '').toUpperCase();
-    return ok(saved) ? saved : index.default;
+    const fromUrl = resolve(params.get('team'));
+    if (fromUrl) { store.set(fromUrl); return fromUrl; }
+    const fromHost = hostTeam();
+    if (fromHost) return fromHost;
+    return resolve(store.get()) || index.default;
   }
 
   function setTeam(abbrev) {
+    const fromHost = hostTeam();
+    if (fromHost) {
+      // On a team subdomain, switching team means going to that team's subdomain.
+      if (abbrev === fromHost) return closePicker();
+      const slug = index.teams.find((t) => t.abbrev === abbrev).slug;
+      location.href = `${location.protocol}//${[slug, ...hostParts.slice(1)].join('.')}${location.port ? `:${location.port}` : ''}/`;
+      return;
+    }
     team = abbrev;
     store.set(abbrev);
     const url = new URL(location.href);
@@ -233,7 +251,7 @@
     load();
   }
 
-  // Team picker: tap the team band (or the GLANCEBOARD mark, or press "t").
+  // Team picker: tap the team band (or the RINKSIDE mark, or press "t").
   let picker = null;
   function openPicker() {
     if (!index || wallpaper) return;

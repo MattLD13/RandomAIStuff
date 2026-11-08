@@ -1,4 +1,4 @@
-/* Glanceboard — laid out on a fixed 921 x 1145 design canvas, then scaled to fit. */
+/* Rinkside — laid out on a fixed 921 x 1145 design canvas, then scaled to fit. */
 :root {
   --bg: #000;
   --fg: #f4f4f4;
@@ -16,7 +16,7 @@
   --primary: #0038a8;
   --accent: #ce1126;
   --cond: 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
-  --mono: 'Geist Mono', ui-monospace, Menlo, monospace;
+  --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
   color-scheme: dark;
 }
 
@@ -41,7 +41,7 @@ img.logo { object-fit: contain; display: block; }
 .hdr .band img { position: absolute; left: 30px; top: -10px; width: 120px; height: 115px; }
 .hdr .record {
   position: absolute; left: 216px; top: 13px;
-  font: 400 50px/1 var(--mono); letter-spacing: -0.05em; transform: scaleY(1.12); transform-origin: 0 0; white-space: nowrap;
+  font: 400 48px/1 var(--mono); letter-spacing: 0; transform: scaleY(1.19); transform-origin: 0 0; white-space: nowrap;
 }
 .hdr .summary { position: absolute; left: 218px; top: 69px; font-size: 16.5px; font-weight: 500; white-space: nowrap; }
 .hdr .summary b { font-weight: 700; }
@@ -69,8 +69,8 @@ svg text { font-family: var(--cond); }
 .div { margin-bottom: 18px; }
 .drow { height: 27.2px; display: flex; align-items: center; }
 .drow img.logo { width: 19px; height: 19px; margin: 0 0 0 6px; transform: scale(1.55); }
-.drow .icons { display: flex; gap: 8px; margin-left: 15px; }
-.icon { width: 16px; height: 16px; fill: var(--future); }
+.drow .icons { display: flex; gap: 6px; margin-left: 14px; }
+.icon { width: 18px; height: 18px; fill: var(--future); }
 .icon.W { fill: var(--win); }
 .icon.L { fill: var(--loss); }
 .icon.O { fill: var(--otl); }
@@ -130,7 +130,7 @@ svg text { font-family: var(--cond); }
 .lgrow img.logo { width: 26px; height: 26px; margin-left: 12px; transform: scale(1.7); }
 .lgrow .res {
   width: 29px; height: 25px; margin-left: 21px; display: grid; place-items: center;
-  font: 500 17px var(--cond); border-radius: 1px;
+  font: 400 17px var(--mono); border-radius: 1px;
 }
 .lgrow .res.W { background: var(--win); color: var(--win-ink); }
 .lgrow .res.L { background: var(--loss); color: #fff; }
