@@ -237,3 +237,7 @@ svg text { font-family: var(--cond); }
 .pop .pgrid span { font: 600 9.5px var(--cond); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .pop .plink { display: inline-block; margin-top: 9px; color: var(--otl); font: 700 11px var(--cond); letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none; }
 .pop .plink:hover { text-decoration: underline; }
+
+.drow .dl { display: inline-flex; }
+.colhead[data-pop]:hover .t, .title [data-pop]:hover, .meta [data-pop]:hover { color: #fff; text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 3px; }
+.pop .pnote { margin-top: 8px; color: var(--dim); font-size: 12px; line-height: 1.35; }

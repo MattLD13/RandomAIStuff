@@ -162,6 +162,17 @@ async function buildTeam(TEAM) {
       pace: Math.round(meRow.pointPctg * 2 * myRegular.length),
       rw: meRow.regulationWins, row: meRow.regulationPlusOtWins,
       leagueRank: meRow.leagueSequence, confRank: meRow.conferenceSequence,
+      splits: [
+        ['Home', rec(meRow.homeWins, meRow.homeLosses, meRow.homeOtLosses), meRow.homeGoalsFor, meRow.homeGoalsAgainst],
+        ['Road', rec(meRow.roadWins, meRow.roadLosses, meRow.roadOtLosses), meRow.roadGoalsFor, meRow.roadGoalsAgainst],
+        ['Last 10', rec(meRow.l10Wins, meRow.l10Losses, meRow.l10OtLosses), meRow.l10GoalsFor, meRow.l10GoalsAgainst],
+      ],
+      sos: {
+        rank: mySos, of: abbrevs.length, left: myLeft,
+        oppPct: (sos.find((x) => x.a === TEAM).v || 0).toFixed(3).replace(/^0/, ''),
+        homeLeft: myRegular.filter((g) => !isFinal(g) && g.homeTeam.abbrev === TEAM).length,
+        roadLeft: myRegular.filter((g) => !isFinal(g) && g.awayTeam.abbrev === TEAM).length,
+      },
     },
     summary: [`${ordinal(meRow.divisionSequence)} in the ${meRow.divisionName}`, streak].filter(Boolean).join(', '),
     date: fmt(now, { weekday: 'long', month: 'long', day: 'numeric' }),
@@ -413,6 +424,10 @@ async function buildTeam(TEAM) {
     altLogo: altLogoFor(TEAM, palette, meRow),
     },
     header,
+    // every team's name and points %, for popups (toughest opponents left, etc.)
+    league: Object.fromEntries(abbrevs.map((a) => [a, {
+      name: teamInfo[a].row.teamName.default, pct: teamInfo[a].row.pointPctg, logo: teamInfo[a].logo,
+    }])),
     season: { games, played, total: games.length },
     playoffLine,
     divisions,

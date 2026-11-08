@@ -98,9 +98,9 @@
   // ---------- columns ----------
   function division(d) {
     const rows = d.teams
-      .map((t) => `<div class="drow">${logo(t.logo, t.abbrev)}<div class="icons">${t.games.map((g) => icon(g.home, g.result, pop(`game:${g.gi}`))).join('')}</div></div>`)
+      .map((t) => `<div class="drow"><span class="dl"${pop(`series:${t.abbrev}`)}>${logo(t.logo, t.abbrev)}</span><div class="icons">${t.games.map((g) => icon(g.home, g.result, pop(`game:${g.gi}`))).join('')}</div></div>`)
       .join('');
-    return `<section class="div"><div class="colhead"><span class="t">${esc(d.name)}</span><span class="r">${esc(d.record)}</span></div><div class="drows">${rows}</div></section>`;
+    return `<section class="div"><div class="colhead"${pop(`div:${d.name}`)}><span class="t">${esc(d.name)}</span><span class="r">${esc(d.record)}</span></div><div class="drows">${rows}</div></section>`;
   }
 
   function pictureRows(rows) {
@@ -119,7 +119,7 @@
     s += `<div class="cutline"></div>`;
     s += pictureRows(p.outRows);
     if (d.specialTeams) {
-      const box = (k, v) => `<div class="box"${pop(`st:${k === 'Power play' ? 'pp' : 'pk'}`)}><div class="k">${k}</div><div class="rk">· ${v.rank}${suffix(v.rank)} of ${v.of}</div><div class="v">${v.pct}<small> %</small></div></div>`;
+      const box = (k, v) => `<div class="box"${pop(`st:${k === 'Power play' ? 'pp' : 'pk'}`)}><div class="k">${k}</div><div class="rk">${v.rank}${suffix(v.rank)} of ${v.of}</div><div class="v">${v.pct}<small> %</small></div></div>`;
       s += `<div class="st">${box('Power play', d.specialTeams.pp)}${box('Penalty kill', d.specialTeams.pk)}</div>`;
     }
     s += `<div class="colhead big lhead"><span class="t">Team leaders</span></div><div class="leaders">`;
@@ -174,14 +174,14 @@
       <div class="band" style="background:none" title="Change team"${wallpaper ? '' : ' role="button" tabindex="0"'}><img src="${esc(d.team.logo)}" alt="${esc(d.team.name)}"></div>
       <div class="record"${pop('record')}>${esc(h.record)}</div>
       <div class="summary"${pop('record')}><b>${h.points} points</b>, ${esc(h.summary)}</div>
-      <div class="meta"><div>${esc(h.date)}</div><div>${esc(h.splits)}</div><div>${esc(h.schedule)}</div></div>
+      <div class="meta"><div>${esc(h.date)}</div><div${pop('splits')}>${esc(h.splits)}</div><div${pop('sos')}>${esc(h.schedule)}</div></div>
     </header>`;
 
-    s += at(40, 112, 0, 'The season, game by game', 'title');
+    s += at(40, 112, 0, `<span${pop('season')}>The season, game by game</span>`, 'title');
     s += `<div class="abs note" style="right:73px;top:118px">${d.season.played} of ${d.season.total} played, bar height = goal margin</div>`;
     s += seasonChart(d.season);
 
-    s += at(40, 352, 0, `Playoff line<span class="big">${esc(d.playoffLine.label)}</span>`, 'title');
+    s += at(40, 352, 0, `<span${pop('cut')}>Playoff line<span class="big">${esc(d.playoffLine.label)}</span></span>`, 'title');
     s += `<div class="abs note" style="right:73px;top:358px">${esc(d.playoffLine.text)}</div>`;
     s += playoffChart(d.playoffLine, d.season);
 
@@ -279,6 +279,72 @@
     }
     if (kind === 'next') return gamePop(d.nextGames[+arg].info, `Next up \u00b7 game ${+arg + 1} of 5`);
     if (kind === 'last') return gamePop(d.lastGames[+arg].info, +arg === 0 ? 'Most recent game' : `${+arg + 1} games ago`);
+    if (kind === 'series') {
+      const team = d.league[arg] || { name: arg };
+      const gs = d.season.games.filter((g) => g.opp === arg);
+      const c = (r) => gs.filter((g) => g.result === r).length;
+      let h = `<div class="pk">Season series</div><div class="pt">${logo(team.logo, arg)}<span>vs ${esc(team.name)}</span></div>`;
+      h += `<div class="ps"><span class="psc">${c('W')}-${c('L')}-${c('O')}</span><span class="pst">${gs.length - c('W') - c('L') - c('O')} to play</span></div>`;
+      h += rowsHtml(gs.map((g) => [`${g.info.date} \u00b7 ${g.home ? 'home' : 'away'}`,
+        g.result ? `${g.result === 'O' ? 'OTL' : g.result} ${g.info.us}\u2013${g.info.them}` : g.info.time, true]));
+      return h;
+    }
+    if (kind === 'div') {
+      const dv = d.divisions.find((x) => x.name === arg);
+      let h = `<div class="pk">Record vs division</div><div class="pt"><span>${esc(arg)}</span></div>`;
+      h += `<div class="ps"><span class="psc">${esc(dv.record)}</span><span class="pst">W-L-OTL</span></div>`;
+      h += rowsHtml(dv.teams.map((t) => {
+        const gs = t.games, c = (r) => gs.filter((g) => g.result === r).length, left = gs.filter((g) => !g.result).length;
+        return [d.league[t.abbrev]?.name || t.abbrev, `${c('W')}-${c('L')}-${c('O')}${left ? ` (${left} left)` : ''}`, true];
+      }));
+      return h;
+    }
+    if (kind === 'splits') {
+      let h = `<div class="pk">Splits</div><div class="pt"><span>Home, road and recent form</span></div>`;
+      h += rowsHtml(d.header.info.splits.map(([k, r, gf, ga]) => [k, `${r} \u00b7 ${gf}\u2013${ga}`, true]));
+      return h;
+    }
+    if (kind === 'sos') {
+      const o = d.header.info.sos;
+      const left = d.season.games.filter((g) => !g.result);
+      const tough = [...new Set(left.map((g) => g.opp))].map((a) => [a, d.league[a]]).filter(([, t]) => t)
+        .sort((x, y) => y[1].pct - x[1].pct).slice(0, 3);
+      let h = `<div class="pk">Schedule strength</div><div class="pt"><span>${o.rank}${suffix(o.rank)}-toughest of ${o.of}</span></div>`;
+      h += rowsHtml([['Games left', `${o.left} (${o.homeLeft} home, ${o.roadLeft} road)`, true], ['Opponents\u2019 points %', o.oppPct, true],
+        ...tough.map(([a, t], i) => [i ? '' : 'Toughest left', `${t.name} ${t.pct.toFixed(3).replace(/^0/, '')}`])]);
+      h += `<div class="pnote">Average current points % of every opponent still to play, ranked across the league.</div>`;
+      return h;
+    }
+    if (kind === 'season') {
+      const ps = d.season.games.filter((g) => g.result);
+      let best = 0, worst = 0, w = 0, l = 0, longW = 0, longL = 0;
+      for (const g of ps) {
+        const m = g.info.us - g.info.them;
+        best = Math.max(best, m); worst = Math.min(worst, m);
+        if (g.result === 'W') { w++; l = 0; } else { l++; w = 0; }   // an OT loss still ends a win streak
+        longW = Math.max(longW, w); longL = Math.max(longL, l);
+      }
+      const one = ps.filter((g) => Math.abs(g.info.us - g.info.them) === 1);
+      const c = (arr, r) => arr.filter((g) => g.result === r).length;
+      const bw = ps.find((g) => g.info.us - g.info.them === best && best > 0);
+      const wl = ps.find((g) => g.info.us - g.info.them === worst && worst < 0);
+      let h = `<div class="pk">${ps.length} of ${d.season.total} played</div><div class="pt"><span>Season so far</span></div>`;
+      h += rowsHtml([['Longest win streak', longW, true], ['Longest winless run', longL, true],
+        ['One-goal games', `${c(one, 'W')}-${c(one, 'L')}-${c(one, 'O')}`, true],
+        bw ? ['Biggest win', `${bw.info.us}\u2013${bw.info.them} ${bw.home ? 'vs' : '@'} ${bw.opp}`, true] : null,
+        wl ? ['Heaviest loss', `${wl.info.us}\u2013${wl.info.them} ${wl.home ? 'vs' : '@'} ${wl.opp}`, true] : null,
+        ['Shutouts', `${ps.filter((g) => g.info.them === 0).length} for, ${ps.filter((g) => g.info.us === 0).length} against`, true]]);
+      return h;
+    }
+    if (kind === 'cut') {
+      const wc = d.picture.wcRows, out = d.picture.outRows;
+      const lastIn = wc[wc.length - 1], firstOut = out[0];
+      let h = `<div class="pk">The playoff cut</div><div class="pt"><span class="big m">${esc(d.playoffLine.label)}</span><span>${esc(d.playoffLine.text)}</span></div>`;
+      h += rowsHtml([lastIn ? ['Last team in', `${lastIn.abbrev} \u00b7 ${lastIn.pts} pts, ${lastIn.gp} GP`, true] : null,
+        firstOut ? ['First team out', `${firstOut.abbrev} \u00b7 ${firstOut.pts} pts, ${firstOut.gp} GP`, true] : null]);
+      h += `<div class="pnote">Top three in each division plus two wild cards per conference make it. The line plots your points minus the first team out (or minus the last team in, when you're out).</div>`;
+      return h;
+    }
     if (kind === 'record') {
       const h0 = d.header, t = h0.info;
       let h = `<div class="pk">${esc(h0.date)}</div><div class="pt"><span>${esc(d.team.name)}</span></div>`;
