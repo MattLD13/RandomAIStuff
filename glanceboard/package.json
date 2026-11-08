@@ -1,0 +1,14 @@
+{
+  "name": "glanceboard",
+  "private": true,
+  "type": "module",
+  "description": "Auto-updating NHL team glanceboard (static site built from the public NHL API).",
+  "scripts": {
+    "build": "node scripts/build-data.mjs",
+    "wallpaper": "node scripts/render-wallpaper.mjs",
+    "serve": "python3 -m http.server 8080 --directory site"
+  },
+  "devDependencies": {
+    "playwright": "1.49.1"
+  }
+}
