@@ -131,10 +131,24 @@ function altLogoFor(team, palette, row) {
   return /[/:]/.test(v) ? v : `https://assets.nhle.com/logos/nhl/svg/${v}`;
 }
 
+// NHL team ids (EDGE endpoints are keyed by id, not abbreviation)
+function myIdFor(abbrev) {
+  for (const g of schedules[abbrev] || []) {
+    if (g.homeTeam.abbrev === abbrev) return g.homeTeam.id;
+    if (g.awayTeam.abbrev === abbrev) return g.awayTeam.id;
+  }
+  return 0;
+}
+
 // ---------- per-team board ----------
 async function buildTeam(TEAM) {
   const meRow = teamInfo[TEAM].row;
   const clubStats = await get(`${WEB}/club-stats/${TEAM}/${season}/2`);
+  // NHL EDGE tracking data (skating, shot speed, zone time). Optional: the board works without it.
+  const edgeGet = (path) => get(`${WEB}/edge/${path}/${myIdFor(TEAM)}/now`, 2).catch(() => null);
+  const [edgeTeam, edgeZone, edgeSpeed, edgeShot] = await Promise.all([
+    edgeGet('team-detail'), edgeGet('team-zone-time-details'), edgeGet('team-skating-speed-detail'), edgeGet('team-shot-speed-detail'),
+  ]);
   const mySchedule = schedules[TEAM];
   const myRegular = mySchedule.filter((g) => g.gameType === 2);
   const myId = (myRegular[0]?.homeTeam.abbrev === TEAM ? myRegular[0].homeTeam : myRegular[0]?.awayTeam)?.id;
@@ -285,8 +299,7 @@ async function buildTeam(TEAM) {
       return { name: d, record: rec(c('W'), c('L'), c('O')), teams };
     });
 
-  // ---------- playoff picture ----------
-  const divLetter = meRow.divisionAbbrev;
+  // ---------- playoff pictures ----------
   const pictureRow = (t, label) => ({
     label,
     abbrev: t.teamAbbrev.default,
@@ -294,28 +307,44 @@ async function buildTeam(TEAM) {
     gp: t.gamesPlayed,
     pts: t.points,
     me: t.teamAbbrev.default === TEAM,
-    info: {
-      name: t.teamName.default,
-      record: rec(t.wins, t.losses, t.otLosses),
-      ptsPct: t.pointPctg.toFixed(3).replace(/^0/, ''),
-      rw: t.regulationWins,
-      gf: t.goalFor, ga: t.goalAgainst, diff: t.goalDifferential,
-      l10: rec(t.l10Wins, t.l10Losses, t.l10OtLosses),
-      streak: t.streakCode ? `${t.streakCode}${t.streakCount}` : '–',
-      home: rec(t.homeWins, t.homeLosses, t.homeOtLosses),
-      road: rec(t.roadWins, t.roadLosses, t.roadOtLosses),
-    },
   });
-  const divRows = standings
-    .filter((t) => t.divisionName === meRow.divisionName)
-    .sort((x, y) => x.divisionSequence - y.divisionSequence)
-    .slice(0, 3)
-    .map((t, i) => pictureRow(t, `${divLetter}${i + 1}`));
-  const wcRows = [1, 2].map((n) => confRows.find((t) => t.wildcardSequence === n)).filter(Boolean)
-    .map((t, i) => pictureRow(t, `WC${i + 1}`));
-  let outRows = [3, 4, 5].map((n) => confRows.find((t) => t.wildcardSequence === n)).filter(Boolean)
-    .map((t) => pictureRow(t, ''));
-  if (![...divRows, ...wcRows, ...outRows].some((r) => r.me)) outRows = [...outRows.slice(0, 2), pictureRow(meRow, '')];
+  function pictureFor(confAbbrev, divisionName) {
+    const conf = standings.filter((t) => t.conferenceAbbrev === confAbbrev);
+    const div = conf.filter((t) => t.divisionName === divisionName).sort((x, y) => x.divisionSequence - y.divisionSequence);
+    const letter = div[0]?.divisionAbbrev || '';
+    const divRows = div.slice(0, 3).map((t, i) => pictureRow(t, `${letter}${i + 1}`));
+    const wcRows = [1, 2].map((n) => conf.find((t) => t.wildcardSequence === n)).filter(Boolean).map((t, i) => pictureRow(t, `WC${i + 1}`));
+    let outRows = [3, 4, 5].map((n) => conf.find((t) => t.wildcardSequence === n)).filter(Boolean).map((t) => pictureRow(t, ''));
+    const mine = conf.find((t) => t.teamAbbrev.default === TEAM);
+    if (mine && ![...divRows, ...wcRows, ...outRows].some((r) => r.me)) outRows = [...outRows.slice(0, 2), pictureRow(mine, '')];
+    return { conference: conf[0]?.conferenceName || confAbbrev, divisionName, divRows, wcRows, outRows };
+  }
+  const otherConf = standings.find((t) => t.conferenceAbbrev !== meRow.conferenceAbbrev);
+  const otherLeader = standings.filter((t) => t.conferenceAbbrev !== meRow.conferenceAbbrev).sort((x, y) => x.conferenceSequence - y.conferenceSequence)[0];
+  const pictures = {
+    own: pictureFor(meRow.conferenceAbbrev, meRow.divisionName),
+    other: otherConf ? pictureFor(otherConf.conferenceAbbrev, otherLeader.divisionName) : null,
+  };
+
+  // ---------- every team's standings line (tables and team popups) ----------
+  const teamsOut = Object.fromEntries(standings.map((t) => [t.teamAbbrev.default, {
+    name: t.teamName.default, logo: teamInfo[t.teamAbbrev.default].logo,
+    conf: t.conferenceName, div: t.divisionName, divSeq: t.divisionSequence, confSeq: t.conferenceSequence,
+    leagueSeq: t.leagueSequence, wcSeq: t.wildcardSequence,
+    gp: t.gamesPlayed, pts: t.points, pct: t.pointPctg,
+    record: rec(t.wins, t.losses, t.otLosses), rw: t.regulationWins,
+    gf: t.goalFor, ga: t.goalAgainst, diff: t.goalDifferential,
+    home: rec(t.homeWins, t.homeLosses, t.homeOtLosses), road: rec(t.roadWins, t.roadLosses, t.roadOtLosses),
+    l10: rec(t.l10Wins, t.l10Losses, t.l10OtLosses), streak: t.streakCode ? `${t.streakCode}${t.streakCount}` : '–',
+  }]));
+
+  // ---------- division points race: points after each of our games ----------
+  const raceTeams = standings.filter((t) => t.divisionName === meRow.divisionName).map((t) => t.teamAbbrev.default);
+  const race = { teams: raceTeams, pts: Object.fromEntries(raceTeams.map((a) => [a, [0]])) };
+  for (const g of games) if (g.result) {
+    const tb = tableAtCached(g.date);
+    for (const a of raceTeams) race.pts[a].push(tb[a].pts);
+  }
 
   // ---------- special teams ----------
   const rankOf = (key) => {
@@ -331,6 +360,59 @@ async function buildTeam(TEAM) {
   const specialTeams = summary.length && myId
     ? { pp: rankOf('powerPlayPct'), pk: rankOf('penaltyKillPct') }
     : null;
+
+  const statDefs = [
+    ['pp', 'Power play', (t) => t.powerPlayPct * 100, 1, '%', true],
+    ['pk', 'Penalty kill', (t) => t.penaltyKillPct * 100, 1, '%', true],
+    ['gfpg', 'Goals for / game', (t) => t.goalsForPerGame, 2, '', true],
+    ['gapg', 'Goals against / game', (t) => t.goalsAgainstPerGame, 2, '', false],
+    ['sfpg', 'Shots for / game', (t) => t.shotsForPerGame, 1, '', true],
+    ['sapg', 'Shots against / game', (t) => t.shotsAgainstPerGame, 1, '', false],
+    ['fo', 'Faceoffs won', (t) => t.faceoffWinPct * 100, 1, '%', true],
+    ['shpct', 'Shooting', (t) => (t.shotsForPerGame ? (t.goalsForPerGame / t.shotsForPerGame) * 100 : 0), 1, '%', true],
+    ['svpct', 'Team save %', (t) => (t.shotsAgainstPerGame ? (1 - t.goalsAgainstPerGame / t.shotsAgainstPerGame) * 100 : 0), 1, '%', true],
+    ['ptspct', 'Points %', (t) => t.pointPct * 100, 1, '%', true],
+    ['gdpg', 'Goal diff / game', (t) => t.goalsForPerGame - t.goalsAgainstPerGame, 2, '', true],
+  ];
+  const stats = {};
+  if (summary.length && myId) for (const [key, label, fn, dp, unit, high] of statDefs) {
+    const vals = summary.map((t) => ({ id: t.teamId, name: t.teamFullName, v: fn(t) || 0 }));
+    vals.sort((x, y) => (high ? y.v - x.v : x.v - y.v));
+    const i = vals.findIndex((x) => x.id === myId);
+    const avg = vals.reduce((a, x) => a + x.v, 0) / vals.length;
+    const f = (v) => (key === 'gdpg' && v > 0 ? '+' : '') + v.toFixed(dp);
+    stats[key] = { label, value: f(vals[i].v), unit, rank: i + 1, of: vals.length, avg: f(avg), best: `${vals[0].name} ${f(vals[0].v)}${unit}` };
+  }
+  // NHL EDGE: values arrive with their league rank and average
+  const edge = (key, label, node, value, unit, dp, by) => {
+    if (!node || node.rank == null || value == null) return;
+    const avg = node.leagueAvg ? (node.leagueAvg.imperial ?? node.leagueAvg.value) : null;
+    stats[key] = { label, value: Number(value).toFixed(dp), unit, rank: node.rank, of: 32, edge: true,
+      avg: avg != null ? Number(avg).toFixed(dp) : '', by: by || '' };
+  };
+  const who = (o) => (o?.overlay?.player ? `${o.overlay.player.firstName.default} ${o.overlay.player.lastName.default}, ${o.overlay.gameDate}` : '');
+  if (edgeTeam) {
+    const sp = edgeTeam.skatingSpeed || {}, sh = edgeTeam.shotSpeed || {}, ds = edgeTeam.distanceSkated?.total;
+    const loc = (c) => (edgeTeam.sogSummary || []).find((x) => x.locationCode === c);
+    edge('topSpeed', 'Top skating speed', sp.speedMax, sp.speedMax?.imperial, ' mph', 1, who(sp.speedMax));
+    edge('bursts20', 'Bursts over 20 mph', sp.burstsOver20, sp.burstsOver20?.value, '', 0);
+    edge('bursts22', 'Bursts over 22 mph', sp.burstsOver22, sp.burstsOver22?.value, '', 0);
+    edge('topShot', 'Hardest shot', sh.topShotSpeed, sh.topShotSpeed?.imperial, ' mph', 1, who(sh.topShotSpeed));
+    edge('shots90', 'Shots over 90 mph', sh.shotAttemptsOver90, sh.shotAttemptsOver90?.value, '', 0);
+    edge('distance', 'Distance skated', ds, ds?.imperial, ' mi', 0);
+    const hi = loc('high');
+    if (hi) {
+      stats.hdShots = { label: 'High-danger shots', value: String(hi.shots), unit: '', rank: hi.shotsRank, of: 32, edge: true, avg: hi.shotsLeagueAvg.toFixed(0) };
+      stats.hdPct = { label: 'High-danger shooting', value: (hi.shootingPctg * 100).toFixed(1), unit: '%', rank: hi.shootingPctgRank, of: 32, edge: true, avg: (hi.shootingPctgLeagueAvg * 100).toFixed(1) };
+    }
+  }
+  const zAll = edgeZone?.zoneTimeDetails?.find((z) => z.strengthCode === 'all');
+  if (zAll) {
+    stats.ozTime = { label: 'Offensive-zone time', value: (zAll.offensiveZonePctg * 100).toFixed(1), unit: '%', rank: zAll.offensiveZoneRank, of: 32, edge: true, avg: (zAll.offensiveZoneLeagueAvg * 100).toFixed(1) };
+    stats.dzTime = { label: 'Defensive-zone time', value: (zAll.defensiveZonePctg * 100).toFixed(1), unit: '%', rank: zAll.defensiveZoneRank, of: 32, edge: true, avg: (zAll.defensiveZoneLeagueAvg * 100).toFixed(1) };
+  }
+  const sd = edgeZone?.shotDifferential;
+  if (sd) stats.satDiff = { label: 'Shot-attempt diff / game', value: (sd.shotAttemptDifferential > 0 ? '+' : '') + sd.shotAttemptDifferential.toFixed(1), unit: '', rank: sd.shotAttemptDifferentialRank, of: 32, edge: true, avg: '' };
 
   // ---------- leaders ----------
   const skaters = clubStats.skaters || [];
@@ -357,6 +439,52 @@ async function buildTeam(TEAM) {
       full: `${sog.firstName.default} ${sog.lastName.default}`, stats: skaterLine(sog),
     });
   const minGp = Math.max(1, Math.round(meRow.gamesPlayed / 6));
+  const fullName = (x) => `${x.firstName.default} ${x.lastName.default}`;
+  const skaterCats = [
+    ['points', 'Points', (x) => x.points, (x) => String(x.points), (x) => `${plural(x.goals, 'goal')}, ${plural(x.assists, 'assist')}`],
+    ['goals', 'Goals', (x) => x.goals, (x) => String(x.goals), (x) => `${plural(x.shots, 'shot')}, ${((x.shootingPctg || 0) * 100).toFixed(1)}%`],
+    ['assists', 'Assists', (x) => x.assists, (x) => String(x.assists), (x) => `${plural(x.points, 'point')} in ${x.gamesPlayed} GP`],
+    ['shots', 'Shots on goal', (x) => x.shots, (x) => String(x.shots), (x) => `${plural(x.goals, 'goal')}, ${((x.shootingPctg || 0) * 100).toFixed(1)}% shooting`],
+    ['plusminus', 'Plus / minus', (x) => x.plusMinus, (x) => (x.plusMinus > 0 ? `+${x.plusMinus}` : String(x.plusMinus)), (x) => `${x.gamesPlayed} games`],
+    ['ppg', 'Power-play goals', (x) => x.powerPlayGoals, (x) => String(x.powerPlayGoals), (x) => `${plural(x.goals, 'goal')} total`],
+    ['gwg', 'Game-winning goals', (x) => x.gameWinningGoals, (x) => String(x.gameWinningGoals), (x) => `${plural(x.goals, 'goal')} total`],
+    ['toi', 'Ice time / game', (x) => x.avgTimeOnIcePerGame, (x) => toi(x.avgTimeOnIcePerGame || 0), (x) => `${x.gamesPlayed} games`],
+    ['pim', 'Penalty minutes', (x) => x.penaltyMinutes, (x) => String(x.penaltyMinutes), (x) => `${x.gamesPlayed} games`],
+  ];
+  const leaderBoard = {};
+  for (const [key, label, sortV, valueF, subF] of skaterCats) {
+    const x = [...skaters].sort((a, b) => sortV(b) - sortV(a) || b.points - a.points)[0];
+    if (x) leaderBoard[key] = { label, name: initialName(x), full: fullName(x), headshot: x.headshot, value: valueF(x), sub: subF(x), stats: skaterLine(x) };
+  }
+  const gl = (x) => [
+    ['GP', x.gamesPlayed], ['Record', rec(x.wins, x.losses, x.overtimeLosses)],
+    ['SV%', x.savePercentage.toFixed(3).replace(/^0/, '')], ['GAA', x.goalsAgainstAverage.toFixed(2)],
+    ['Saves', `${x.saves}/${x.shotsAgainst}`], ['Shutouts', x.shutouts],
+  ];
+  const qualified = [...goalies].filter((g) => g.gamesPlayed >= minGp);
+  const goalieCats = [
+    ['svpct', 'Save percentage', qualified, (x) => x.savePercentage, (x) => x.savePercentage.toFixed(3).replace(/^0/, ''), (x) => `${plural(x.gamesPlayed, 'game')}, ${x.goalsAgainstAverage.toFixed(2)} GAA`],
+    ['gaa', 'Goals against avg', qualified, (x) => -x.goalsAgainstAverage, (x) => x.goalsAgainstAverage.toFixed(2), (x) => `${plural(x.gamesPlayed, 'game')}, ${x.savePercentage.toFixed(3).replace(/^0/, '')} SV%`],
+    ['wins', 'Goalie wins', goalies, (x) => x.wins, (x) => String(x.wins), (x) => `${rec(x.wins, x.losses, x.overtimeLosses)} in ${x.gamesPlayed} GP`],
+    ['shutouts', 'Shutouts', goalies, (x) => x.shutouts, (x) => String(x.shutouts), (x) => `${plural(x.gamesPlayed, 'game')}, ${x.savePercentage.toFixed(3).replace(/^0/, '')} SV%`],
+  ];
+  // NHL EDGE player leaders: fastest skater and hardest shot on the team
+  const byId = (id) => skaters.find((x) => x.playerId === id);
+  const fast = edgeSpeed?.topSkatingSpeeds?.[0], hard = edgeShot?.hardestShots?.[0];
+  if (fast && byId(fast.player.id)) {
+    const x = byId(fast.player.id);
+    leaderBoard.fastest = { label: 'Fastest skater (EDGE)', name: initialName(x), full: fullName(x), headshot: x.headshot, value: fast.skatingSpeed.imperial.toFixed(1),
+      sub: `mph, ${fast.gameDate}`, stats: skaterLine(x) };
+  }
+  if (hard && byId(hard.player.id)) {
+    const x = byId(hard.player.id);
+    leaderBoard.hardest = { label: 'Hardest shot (EDGE)', name: initialName(x), full: fullName(x), headshot: x.headshot, value: hard.shotSpeed.imperial.toFixed(1),
+      sub: `mph, ${hard.gameDate}`, stats: skaterLine(x) };
+  }
+  for (const [key, label, pool, sortV, valueF, subF] of goalieCats) {
+    const x = [...pool].sort((a, b) => sortV(b) - sortV(a) || b.gamesPlayed - a.gamesPlayed)[0];
+    if (x) leaderBoard[key] = { label, name: initialName(x), full: fullName(x), headshot: x.headshot, value: valueF(x), sub: subF(x), stats: gl(x) };
+  }
   const sv = [...goalies].filter((g) => g.gamesPlayed >= minGp)
     .sort((x, y) => y.savePercentage - x.savePercentage)[0];
   if (sv)
@@ -407,6 +535,8 @@ async function buildTeam(TEAM) {
         logo: logoOf(p.opp, p.them.darkLogo || p.them.logo),
         result: p.result === 'W' ? 'W' : p.result === 'O' ? (p.last === 'SO' ? 'SO' : 'OT') : 'L',
         score: `${hi}-${lo}`,
+        dow: fmt(new Date(g.startTimeUTC), { weekday: 'short' }).toUpperCase(),
+        day: fmt(new Date(g.startTimeUTC), { day: 'numeric' }),
         info: gameInfo(g),
       };
     });
@@ -424,16 +554,14 @@ async function buildTeam(TEAM) {
     altLogo: altLogoFor(TEAM, palette, meRow),
     },
     header,
-    // every team's name and points %, for popups (toughest opponents left, etc.)
-    league: Object.fromEntries(abbrevs.map((a) => [a, {
-      name: teamInfo[a].row.teamName.default, pct: teamInfo[a].row.pointPctg, logo: teamInfo[a].logo,
-    }])),
+    teams: teamsOut,
     season: { games, played, total: games.length },
     playoffLine,
     divisions,
-    picture: { divisionName: meRow.divisionName, divRows, wcRows, outRows },
-    specialTeams,
-    leaders,
+    pictures,
+    race,
+    stats,
+    leaderBoard,
     nextGames,
     lastGames,
   };
@@ -454,6 +582,7 @@ for (const team of only) {
 const teamsIndex = {
   generatedAt: now.toISOString(),
   default: teamInfo[DEFAULT_TEAM] ? DEFAULT_TEAM : built[0],
+  layout: config.layout || null,   // optional default board layout (see README)
   teams: standings
     .map((t) => ({
       abbrev: t.teamAbbrev.default,

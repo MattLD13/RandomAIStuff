@@ -110,21 +110,58 @@ three-letter abbreviation (`/nyr`). Names are set in `config.json`.
 
 ## Tap for details
 
-On the live page, everything is clickable and opens a small popup in the board's style:
+On the live page, each piece of information opens from exactly one place, in a small popup in
+the board's style:
 
-- **Game bars, home/away dots and division-grid icons:** date, score, arena, TV,
-  winning goal and goalie, and a Game Center link.
-- **Playoff-line points:** the margin after that game and the change it caused.
-- **Playoff picture rows:** record, points %, goals for and against, home and road,
-  last 10, streak.
-- **Next 5:** puck drop, arena, TV.
-- **Last 5:** the result summary.
-- **Leaders:** the player's full stat line.
-- **Power play / penalty kill:** rank and league average.
-- **The record:** points pace, goal difference, league and conference rank.
+| Tap | Shows |
+| --- | --- |
+| A played game's column in the season chart | That game: score, arena, TV, winning goal and goalie, Game Center link (the only place scores open) |
+| Next 5 | Puck drop, arena, TV |
+| Last 5 | Recent form: record, goals, streak |
+| A division-grid row | The season series vs that team (results, dates) |
+| A division heading | Record vs every team in that division |
+| Playoff-line / goal-diff / race chart columns | The value after that game |
+| Playoff picture or standings-table row | That team's record, points %, goals, home/road, last 10, streak |
+| A stat box | Value, league rank, league average |
+| A leader row | The player's full stat line |
+| The record, the splits line, "Schedule left" | Pace and ranks, home/road/last-10 detail, strength of schedule |
+| The section titles | Season summary; the playoff cut |
 
 Tap outside or press Esc to close. Lock-screen wallpapers (`?wallpaper` and the PNGs) have
 no popups.
+
+## Customize the board
+
+Tap the team logo (or RINKSIDE, or press `c`) and choose **Customize board**. Every panel
+gets a ⇄ button; tap a panel to pick what it shows. Choices are saved in your browser.
+**Copy link** shares the layout (`?layout=…`), and that link also works on
+`?wallpaper` pages. **Reset** goes back to the original layout.
+
+| Slot | Options |
+| --- | --- |
+| Top and middle charts | Game by game (goal margin), playoff line, goal differential, division points race |
+| The four grid sections | Any division's results grid, any division's standings, league top 8, conference top 8 |
+| Playoff picture | Your conference, or the other conference |
+| The two stat boxes (22 options) | Power play, penalty kill, goals for/against per game, shots for/against per game, faceoffs, shooting %, team save %, points %, goal diff per game, plus NHL EDGE: top skating speed, bursts over 20/22 mph, hardest shot, shots over 90 mph, distance skated, high-danger shots and shooting %, offensive/defensive-zone time, shot-attempt differential |
+| The three leader rows (15 options) | Points, goals, assists, shots, +/-, power-play goals, game-winners, ice time, PIM, save %, GAA, goalie wins, shutouts, plus EDGE fastest skater and hardest shot |
+| Upper / lower lists | Next 5 or Last 5, as cards or as a list |
+
+To change the default for everyone (and the published wallpapers), add `"layout"` to
+`config.json` with the slots you want to change, e.g.
+`"layout": { "chart2": "goalDiff", "boxes": ["pp", "topSpeed"] }`.
+
+NHL EDGE is the league's puck- and player-tracking data (`api-web.nhle.com/v1/edge/...`):
+skating and shot speeds, distance skated, zone time and shot locations, each with a league
+rank. Individual players' EDGE pages (percentiles for speed, shot speed, distance and zone
+time) are also available if you want more panels later.
+
+## Screen sizes
+
+- **Phones (under 700px wide):** the board reflows into a two-column phone layout at
+  readable text sizes and scrolls vertically.
+- **Tablets and computers:** the full board, scaled to the window (up to 1.6×).
+- **Rotating a phone** switches between the two.
+- **Wallpapers** always use the original lock-screen layout.
 
 **Adding your own alternate logos without a computer:** on github.com, open
 `rinkside/site/alt/`, choose **Add file → Upload files**, drop in images named like
