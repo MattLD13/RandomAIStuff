@@ -139,6 +139,8 @@ async function buildTeam(TEAM) {
   const myRegular = mySchedule.filter((g) => g.gameType === 2);
   const myId = (myRegular[0]?.homeTeam.abbrev === TEAM ? myRegular[0].homeTeam : myRegular[0]?.awayTeam)?.id;
 
+  const logoOf = (a, fallback) => teamInfo[a]?.logo || fallback;
+
   // ---------- header ----------
   const streak = (() => {
     const n = meRow.streakCount, c = meRow.streakCode;
@@ -154,6 +156,13 @@ async function buildTeam(TEAM) {
   const header = {
     record: rec(meRow.wins, meRow.losses, meRow.otLosses),
     points: meRow.points,
+    info: {
+      gf: meRow.goalFor, ga: meRow.goalAgainst, diff: meRow.goalDifferential,
+      ptsPct: meRow.pointPctg.toFixed(3).replace(/^0/, ''),
+      pace: Math.round(meRow.pointPctg * 2 * myRegular.length),
+      rw: meRow.regulationWins, row: meRow.regulationPlusOtWins,
+      leagueRank: meRow.leagueSequence, confRank: meRow.conferenceSequence,
+    },
     summary: [`${ordinal(meRow.divisionSequence)} in the ${meRow.divisionName}`, streak].filter(Boolean).join(', '),
     date: fmt(now, { weekday: 'long', month: 'long', day: 'numeric' }),
     splits: `Home ${rec(meRow.homeWins, meRow.homeLosses, meRow.homeOtLosses)} · Road ${rec(
@@ -165,6 +174,33 @@ async function buildTeam(TEAM) {
   };
 
   // ---------- season game by game ----------
+  // Everything a game popup shows.
+  const nameOf = (side) => `${side.placeName?.default ?? ''} ${side.commonName?.default ?? ''}`.trim() || side.abbrev;
+  const person = (x) => (x ? `${x.firstInitial?.default ?? ''} ${x.lastName?.default ?? ''}`.trim() : null);
+  const gameInfo = (g) => {
+    const p = perspective(g, TEAM);
+    const d = new Date(g.startTimeUTC);
+    const live = g.gameState === 'LIVE' || g.gameState === 'CRIT';
+    const last = g.gameOutcome?.lastPeriodType;
+    return {
+      date: fmt(d, { weekday: 'short', month: 'short', day: 'numeric' }),
+      time: g.gameScheduleState === 'TBD' ? 'TBD' : fmt(d, { hour: 'numeric', minute: '2-digit', hour12: true }).replace(' ', '').toLowerCase() + ' ET',
+      opp: nameOf(p.them),
+      oppAbbrev: p.opp,
+      oppLogo: logoOf(p.opp, p.them.darkLogo || p.them.logo),
+      home: p.home,
+      venue: g.venue?.default || '',
+      status: isFinal(g) ? (last && last !== 'REG' ? `Final/${last}` : 'Final') : live ? 'Live' : g.gameScheduleState === 'PPD' ? 'Postponed' : 'Upcoming',
+      us: p.us.score ?? null,
+      them: p.them.score ?? null,
+      result: p.result,
+      tv: [...new Set((g.tvBroadcasts || []).map((b) => b.network))].join(', '),
+      gwg: person(g.winningGoalScorer),
+      winGoalie: person(g.winningGoalie),
+      link: g.gameCenterLink ? `https://www.nhl.com${g.gameCenterLink}` : null,
+    };
+  };
+
   const games = myRegular.map((g) => {
     const p = perspective(g, TEAM);
     const d = new Date(g.startTimeUTC);
@@ -175,6 +211,7 @@ async function buildTeam(TEAM) {
       opp: p.opp,
       result: p.result,
       margin: p.result ? p.us.score - p.them.score : null,
+      info: gameInfo(g),
     };
   });
   const played = games.filter((g) => g.result).length;
@@ -229,7 +266,8 @@ async function buildTeam(TEAM) {
         .map((t) => ({
           abbrev: t.teamAbbrev.default,
           logo: teamInfo[t.teamAbbrev.default].logo,
-          games: games.filter((g) => g.opp === t.teamAbbrev.default).map((g) => ({ home: g.home, result: g.result })),
+          games: games.map((g, gi) => ({ g, gi })).filter(({ g }) => g.opp === t.teamAbbrev.default)
+          .map(({ g, gi }) => ({ home: g.home, result: g.result, gi })),
         }));
       const all = teams.flatMap((t) => t.games);
       const c = (r) => all.filter((g) => g.result === r).length;
@@ -245,6 +283,17 @@ async function buildTeam(TEAM) {
     gp: t.gamesPlayed,
     pts: t.points,
     me: t.teamAbbrev.default === TEAM,
+    info: {
+      name: t.teamName.default,
+      record: rec(t.wins, t.losses, t.otLosses),
+      ptsPct: t.pointPctg.toFixed(3).replace(/^0/, ''),
+      rw: t.regulationWins,
+      gf: t.goalFor, ga: t.goalAgainst, diff: t.goalDifferential,
+      l10: rec(t.l10Wins, t.l10Losses, t.l10OtLosses),
+      streak: t.streakCode ? `${t.streakCode}${t.streakCount}` : '–',
+      home: rec(t.homeWins, t.homeLosses, t.homeOtLosses),
+      road: rec(t.roadWins, t.roadLosses, t.roadOtLosses),
+    },
   });
   const divRows = standings
     .filter((t) => t.divisionName === meRow.divisionName)
@@ -261,7 +310,12 @@ async function buildTeam(TEAM) {
   const rankOf = (key) => {
     const sorted = [...summary].sort((x, y) => (y[key] ?? 0) - (x[key] ?? 0));
     const i = sorted.findIndex((t) => t.teamId === myId);
-    return { rank: i + 1, of: sorted.length, pct: ((sorted[i]?.[key] ?? 0) * 100).toFixed(1) };
+    const avg = sorted.reduce((a, t) => a + (t[key] ?? 0), 0) / (sorted.length || 1);
+    const best = sorted[0];
+    return {
+      rank: i + 1, of: sorted.length, pct: ((sorted[i]?.[key] ?? 0) * 100).toFixed(1),
+      avg: (avg * 100).toFixed(1), best: best ? `${best.teamFullName} ${((best[key] ?? 0) * 100).toFixed(1)}%` : '',
+    };
   };
   const specialTeams = summary.length && myId
     ? { pp: rankOf('powerPlayPct'), pk: rankOf('penaltyKillPct') }
@@ -271,17 +325,25 @@ async function buildTeam(TEAM) {
   const skaters = clubStats.skaters || [];
   const goalies = clubStats.goalies || [];
   const leaders = [];
+  const toi = (sec) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')}`;
+  const skaterLine = (x) => [
+    ['GP', x.gamesPlayed], ['G', x.goals], ['A', x.assists], ['P', x.points],
+    ['+/-', x.plusMinus > 0 ? `+${x.plusMinus}` : x.plusMinus], ['Shots', x.shots],
+    ['PPG', x.powerPlayGoals], ['TOI', toi(x.avgTimeOnIcePerGame || 0)],
+  ];
   const pts = [...skaters].sort((x, y) => y.points - x.points || y.goals - x.goals)[0];
   if (pts)
     leaders.push({
       label: 'Points', name: initialName(pts), headshot: pts.headshot, value: String(pts.points),
       sub: `${plural(pts.goals, 'goal')}, ${plural(pts.assists, 'assist')}`,
+      full: `${pts.firstName.default} ${pts.lastName.default}`, stats: skaterLine(pts),
     });
   const sog = [...skaters].sort((x, y) => y.shots - x.shots || y.goals - x.goals)[0];
   if (sog)
     leaders.push({
       label: 'Shots on goal', name: initialName(sog), headshot: sog.headshot, value: String(sog.shots),
       sub: `${plural(sog.goals, 'goal')}, ${((sog.shootingPctg || 0) * 100).toFixed(1)}% shooting`,
+      full: `${sog.firstName.default} ${sog.lastName.default}`, stats: skaterLine(sog),
     });
   const minGp = Math.max(1, Math.round(meRow.gamesPlayed / 6));
   const sv = [...goalies].filter((g) => g.gamesPlayed >= minGp)
@@ -291,10 +353,15 @@ async function buildTeam(TEAM) {
       label: 'Save percentage', name: initialName(sv), headshot: sv.headshot,
       value: sv.savePercentage.toFixed(3).replace(/^0/, ''),
       sub: `${plural(sv.gamesPlayed, 'game')}, ${sv.goalsAgainstAverage.toFixed(2)} GAA`,
+      full: `${sv.firstName.default} ${sv.lastName.default}`,
+      stats: [
+        ['GP', sv.gamesPlayed], ['Record', rec(sv.wins, sv.losses, sv.overtimeLosses)],
+        ['SV%', sv.savePercentage.toFixed(3).replace(/^0/, '')], ['GAA', sv.goalsAgainstAverage.toFixed(2)],
+        ['Saves', `${sv.saves}/${sv.shotsAgainst}`], ['Shutouts', sv.shutouts],
+      ],
     });
 
   // ---------- next 5 / last 5 ----------
-  const logoOf = (a, fallback) => teamInfo[a]?.logo || fallback;
   const nextGames = mySchedule
     .filter((g) => (g.gameType === 2 || g.gameType === 3) && !isFinal(g))
     .slice(0, 5)
@@ -314,6 +381,7 @@ async function buildTeam(TEAM) {
           : tbd
             ? 'TBD'
             : fmt(d, { hour: 'numeric', minute: '2-digit', hour12: true }).replace(' ', '').toLowerCase(),
+        info: gameInfo(g),
       };
     });
   const lastGames = mySchedule
@@ -328,6 +396,7 @@ async function buildTeam(TEAM) {
         logo: logoOf(p.opp, p.them.darkLogo || p.them.logo),
         result: p.result === 'W' ? 'W' : p.result === 'O' ? (p.last === 'SO' ? 'SO' : 'OT') : 'L',
         score: `${hi}-${lo}`,
+        info: gameInfo(g),
       };
     });
 

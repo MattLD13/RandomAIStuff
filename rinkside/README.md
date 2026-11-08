@@ -108,6 +108,28 @@ three-letter abbreviation (`/nyr`). Names are set in `config.json`.
 - On the board, tap the team logo (top-left) or the RINKSIDE mark, or press `t`, to switch
   teams.
 
+## Tap for details
+
+On the live page, everything is clickable and opens a small popup in the board's style:
+
+- **Game bars, home/away dots and division-grid icons:** date, score, arena, TV,
+  winning goal and goalie, and a Game Center link.
+- **Playoff-line points:** the margin after that game and the change it caused.
+- **Playoff picture rows:** record, points %, goals for and against, home and road,
+  last 10, streak.
+- **Next 5:** puck drop, arena, TV.
+- **Last 5:** the result summary.
+- **Leaders:** the player's full stat line.
+- **Power play / penalty kill:** rank and league average.
+- **The record:** points pace, goal difference, league and conference rank.
+
+Tap outside or press Esc to close. Lock-screen wallpapers (`?wallpaper` and the PNGs) have
+no popups.
+
+**Adding your own alternate logos without a computer:** on github.com, open
+`rinkside/site/alt/`, choose **Add file → Upload files**, drop in images named like
+`NYR.png`, and commit. The site rebuilds with them within a couple of minutes.
+
 ## Remix background
 
 Behind each board, the team's alternate logo is tiled faintly, like the NHL's remix and

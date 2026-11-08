@@ -10,10 +10,12 @@
   // ---------- tiny DOM helpers ----------
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const logo = (src, alt = '') => `<img class="logo" src="${esc(src)}" alt="${esc(alt)}" loading="eager" decoding="async">`;
-  const icon = (home, result) =>
-    `<svg class="icon ${home ? 'home' : 'away'} ${result || ''}"><use href="#i-${home ? 'home' : 'away'}"/></svg>`;
+  const icon = (home, result, key = '') =>
+    `<svg class="icon ${home ? 'home' : 'away'} ${result || ''}"${key}><use href="#i-${home ? 'home' : 'away'}"/></svg>`;
   const at = (x, y, w, html, cls = '') =>
     `<div class="abs ${cls}" style="left:${x}px;top:${y}px;${w ? `width:${w}px;` : ''}">${html}</div>`;
+  const I = !wallpaper; // interactive extras (popups) only on the live page
+  const pop = (key) => (I ? ` data-pop="${key}"` : '');
   const color = (r) => (r === 'W' ? 'var(--win)' : r === 'L' ? 'var(--loss)' : r === 'O' ? 'var(--otl)' : 'var(--future)');
 
   // ---------- charts ----------
@@ -56,8 +58,11 @@
     let prev = null;
     season.games.forEach((g, i) => {
       if (g.month !== prev && count[g.month] >= 3)
-        s += `<text x="${cx(i).toFixed(1)}" y="191" fill="#9a9a9a" font-size="13" font-weight="500" text-anchor="middle">${esc(g.month)}</text>`;
+        s += `<text x="${Math.min(Math.max(cx(i), 13), PLOT_X1 - 13).toFixed(1)}" y="191" fill="#9a9a9a" font-size="13" font-weight="500" text-anchor="middle">${esc(g.month)}</text>`;
       prev = g.month;
+    });
+    if (I) season.games.forEach((g, i) => {
+      s += `<rect class="hit"${pop(`game:${i}`)} x="${(cx(i) - slot / 2).toFixed(2)}" y="2" width="${slot.toFixed(2)}" height="174"/>`;
     });
     return `<svg class="abs" style="left:40px;top:145px" width="840" height="200" viewBox="0 0 840 200">${s}</svg>`;
   }
@@ -85,20 +90,22 @@
     }
     const [lx, ly] = pts[pts.length - 1] || [xk(0), zero];
     s += `<circle cx="${lx}" cy="${ly}" r="4.4" fill="#fff"/>`;
+    if (I) for (let k = 1; k < line.history.length; k++)
+      s += `<rect class="hit"${pop(`line:${k}`)} x="${(xk(k) - slot / 2).toFixed(2)}" y="2" width="${slot.toFixed(2)}" height="104"/>`;
     return `<svg class="abs" style="left:40px;top:380px" width="840" height="110" viewBox="0 0 840 110">${s}</svg>`;
   }
 
   // ---------- columns ----------
   function division(d) {
     const rows = d.teams
-      .map((t) => `<div class="drow">${logo(t.logo, t.abbrev)}<div class="icons">${t.games.map((g) => icon(g.home, g.result)).join('')}</div></div>`)
+      .map((t) => `<div class="drow">${logo(t.logo, t.abbrev)}<div class="icons">${t.games.map((g) => icon(g.home, g.result, pop(`game:${g.gi}`))).join('')}</div></div>`)
       .join('');
     return `<section class="div"><div class="colhead"><span class="t">${esc(d.name)}</span><span class="r">${esc(d.record)}</span></div><div class="drows">${rows}</div></section>`;
   }
 
   function pictureRows(rows) {
     return rows
-      .map((r) => `<div class="prow${r.me ? ' me' : ''}"><span class="lbl">${esc(r.label)}</span>${logo(r.logo, r.abbrev)}<span class="ab">${esc(r.abbrev)}</span><span class="gp">${r.gp}</span><span class="pts">${r.pts}</span></div>`)
+      .map((r) => `<div class="prow${r.me ? ' me' : ''}"${pop(`team:${r.abbrev}`)}><span class="lbl">${esc(r.label)}</span>${logo(r.logo, r.abbrev)}<span class="ab">${esc(r.abbrev)}</span><span class="gp">${r.gp}</span><span class="pts">${r.pts}</span></div>`)
       .join('');
   }
 
@@ -112,12 +119,12 @@
     s += `<div class="cutline"></div>`;
     s += pictureRows(p.outRows);
     if (d.specialTeams) {
-      const box = (k, v) => `<div class="box"><div class="k">${k}</div><div class="rk">· ${v.rank}${suffix(v.rank)} of ${v.of}</div><div class="v">${v.pct}<small> %</small></div></div>`;
+      const box = (k, v) => `<div class="box"${pop(`st:${k === 'Power play' ? 'pp' : 'pk'}`)}><div class="k">${k}</div><div class="rk">· ${v.rank}${suffix(v.rank)} of ${v.of}</div><div class="v">${v.pct}<small> %</small></div></div>`;
       s += `<div class="st">${box('Power play', d.specialTeams.pp)}${box('Penalty kill', d.specialTeams.pk)}</div>`;
     }
     s += `<div class="colhead big lhead"><span class="t">Team leaders</span></div><div class="leaders">`;
     s += d.leaders
-      .map((l) => `<div class="lrow"><div class="face"><img src="${esc(l.headshot)}" alt=""></div><div class="who"><div class="k">${esc(l.label)}</div><div class="n">${esc(l.name)}</div><div class="s">${esc(l.sub)}</div></div><div class="v">${esc(l.value)}</div></div>`)
+      .map((l, i) => `<div class="lrow"${pop(`leader:${i}`)}><div class="face"><img src="${esc(l.headshot)}" alt=""></div><div class="who"><div class="k">${esc(l.label)}</div><div class="n">${esc(l.name)}</div><div class="s">${esc(l.sub)}</div></div><div class="v">${esc(l.value)}</div></div>`)
       .join('');
     return s + `</div>`;
   }
@@ -126,12 +133,12 @@
     let s = `<div class="colhead big"><span class="t">Next 5</span><span class="r small">EASTERN TIME</span></div><div class="nlist">`;
     s += d.nextGames.length
       ? d.nextGames
-          .map((g) => `<div class="ncard"><div class="date"><span class="dow">${esc(g.dow)}</span><span class="day">${esc(g.day)}</span></div><span class="at">${g.home ? 'vs' : '@'}</span>${logo(g.logo, g.opp)}<span class="time">${esc(g.time)}</span></div>`)
+          .map((g, i) => `<div class="ncard"${pop(`next:${i}`)}><div class="date"><span class="dow">${esc(g.dow)}</span><span class="day">${esc(g.day)}</span></div><span class="at">${g.home ? 'vs' : '@'}</span>${logo(g.logo, g.opp)}<span class="time">${esc(g.time)}</span></div>`)
           .join('')
       : `<div class="note" style="margin-top:12px">No games scheduled</div>`;
     s += `</div><div class="colhead big l5head"><span class="t">Last 5</span></div><div class="llist">`;
     s += d.lastGames
-      .map((g) => `<div class="lgrow">${logo(g.logo, g.opp)}<span class="res ${g.result}">${esc(g.result)}</span><span class="sc">${esc(g.score.replace('-', '\u2013'))}</span></div>`)
+      .map((g, i) => `<div class="lgrow"${pop(`last:${i}`)}>${logo(g.logo, g.opp)}<span class="res ${g.result}">${esc(g.result)}</span><span class="sc">${esc(g.score.replace('-', '\u2013'))}</span></div>`)
       .join('');
     return s + `</div>`;
   }
@@ -165,8 +172,8 @@
         <polygon points="196,0 204,0 179,95 171,95" fill="var(--accent)"/>
       </svg>
       <div class="band" style="background:none" title="Change team"${wallpaper ? '' : ' role="button" tabindex="0"'}><img src="${esc(d.team.logo)}" alt="${esc(d.team.name)}"></div>
-      <div class="record">${esc(h.record)}</div>
-      <div class="summary"><b>${h.points} points</b>, ${esc(h.summary)}</div>
+      <div class="record"${pop('record')}>${esc(h.record)}</div>
+      <div class="summary"${pop('record')}><b>${h.points} points</b>, ${esc(h.summary)}</div>
       <div class="meta"><div>${esc(h.date)}</div><div>${esc(h.splits)}</div><div>${esc(h.schedule)}</div></div>
     </header>`;
 
@@ -193,7 +200,134 @@
       <span class="brand" title="Change team">RINKSIDE</span>
     </footer>`;
     board.innerHTML = s;
+    current = d;
+    closePop();
     fit();
+  }
+
+  // ---------- detail popups ----------
+  let current = null;   // the board's data
+  let popEl = null, popKey = null;
+  const sign = (n) => (n > 0 ? `+${n}` : n < 0 ? `\u2212${-n}` : '0');
+  const dash = (sc) => String(sc).replace('-', '\u2013');
+  const resChip = (r, last) => {
+    const t = r === 'W' ? 'W' : r === 'O' ? (last || 'OT') : 'L';
+    return `<span class="res ${t}">${t}</span>`;
+  };
+  const rowsHtml = (rows) => `<dl class="prows">${rows.filter((r) => r && r[1] !== '' && r[1] != null)
+    .map(([k, v, mono]) => `<div><dt>${esc(k)}</dt><dd${mono ? ' class="m"' : ''}>${esc(v)}</dd></div>`).join('')}</dl>`;
+
+  function gamePop(info, kicker) {
+    const final = info.status.startsWith('Final');
+    const last = info.status.split('/')[1];
+    let h = `<div class="pk">${esc(kicker)}</div>`;
+    h += `<div class="pt">${logo(info.oppLogo, info.oppAbbrev)}<span>${info.home ? 'vs' : '@'} ${esc(info.opp)}</span></div>`;
+    if (final) h += `<div class="ps">${resChip(info.result, last)}<span class="psc">${info.us}\u2013${info.them}</span><span class="pst">${esc(info.status)}</span></div>`;
+    else if (info.status === 'Live') h += `<div class="ps"><span class="res live">LIVE</span><span class="psc">${info.us ?? 0}\u2013${info.them ?? 0}</span></div>`;
+    h += rowsHtml([
+      ['Date', info.date], [final ? 'Started' : 'Puck drop', info.time], ['Arena', info.venue], ['TV', info.tv],
+      final && info.gwg ? ['Winning goal', info.gwg] : null, final && info.winGoalie ? ['Winning goalie', info.winGoalie] : null,
+    ]);
+    if (info.link) h += `<a class="plink" href="${esc(info.link)}" target="_blank" rel="noopener">Game Center \u2197</a>`;
+    return h;
+  }
+
+  function popContent(key) {
+    const d = current;
+    const [kind, arg] = key.split(':');
+    if (kind === 'game') {
+      const g = d.season.games[+arg];
+      return gamePop(g.info, `Game ${+arg + 1} of ${d.season.total}`);
+    }
+    if (kind === 'line') {
+      const k = +arg;
+      const played = d.season.games.filter((g) => g.result);
+      const g = played[k - 1];
+      const v = d.playoffLine.history[k], prev = d.playoffLine.history[k - 1];
+      let h = `<div class="pk">Playoff line \u00b7 after game ${k}</div>`;
+      h += `<div class="pt"><span class="big m">${sign(v)}</span><span>${v >= 0 ? 'points clear of the line' : 'points behind the line'}</span></div>`;
+      if (g) h += `<div class="ps">${resChip(g.result, g.info.status.split('/')[1])}<span class="psc">${g.info.us}\u2013${g.info.them}</span><span class="pst">${g.info.home ? 'vs' : '@'} ${esc(g.info.oppAbbrev)} \u00b7 ${esc(g.info.date)}</span></div>`;
+      h += rowsHtml([['Change', `${sign(v - prev)} on the game`, true], ['Season low', sign(Math.min(...d.playoffLine.history.slice(1, k + 1))), true],
+        ['Season high', sign(Math.max(...d.playoffLine.history.slice(1, k + 1))), true]]);
+      return h;
+    }
+    if (kind === 'team') {
+      const rows = [...d.picture.divRows, ...d.picture.wcRows, ...d.picture.outRows];
+      const r = rows.find((x) => x.abbrev === arg);
+      const t = r.info;
+      const where = r.label ? (r.label.startsWith('WC') ? `Wild card ${r.label.slice(2)}` : `${d.picture.divisionName} \u00b7 ${r.label.slice(1)}${suffix(+r.label.slice(1))}`) : 'Outside the playoffs';
+      let h = `<div class="pk">${esc(where)}</div><div class="pt">${logo(r.logo, r.abbrev)}<span>${esc(t.name)}</span></div>`;
+      h += rowsHtml([['Record', t.record, true], ['Points', `${r.pts} in ${r.gp} GP`, true], ['Points %', t.ptsPct, true],
+        ['Goals', `${t.gf}\u2013${t.ga} (${sign(t.diff)})`, true], ['Home', t.home, true], ['Road', t.road, true],
+        ['Last 10', t.l10, true], ['Streak', t.streak, true], ['Regulation wins', t.rw, true]]);
+      return h;
+    }
+    if (kind === 'st') {
+      const v = d.specialTeams[arg];
+      const name = arg === 'pp' ? 'Power play' : 'Penalty kill';
+      let h = `<div class="pk">Special teams</div><div class="pt"><span>${name}</span></div>`;
+      h += `<div class="ps"><span class="psc">${v.pct}%</span><span class="pst">${v.rank}${suffix(v.rank)} of ${v.of}</span></div>`;
+      h += rowsHtml([['League average', `${v.avg}%`, true], ['League best', v.best],
+        ['vs average', `${sign(+(v.pct - v.avg).toFixed(1))} pts`, true]]);
+      return h;
+    }
+    if (kind === 'leader') {
+      const l = d.leaders[+arg];
+      let h = `<div class="pk">${esc(l.label)} leader</div><div class="pt"><span class="face sm"><img src="${esc(l.headshot)}" alt=""></span><span>${esc(l.full || l.name)}</span></div>`;
+      h += `<div class="pgrid">${(l.stats || []).map(([k, v]) => `<div><b class="m">${esc(v)}</b><span>${esc(k)}</span></div>`).join('')}</div>`;
+      return h;
+    }
+    if (kind === 'next') return gamePop(d.nextGames[+arg].info, `Next up \u00b7 game ${+arg + 1} of 5`);
+    if (kind === 'last') return gamePop(d.lastGames[+arg].info, +arg === 0 ? 'Most recent game' : `${+arg + 1} games ago`);
+    if (kind === 'record') {
+      const h0 = d.header, t = h0.info;
+      let h = `<div class="pk">${esc(h0.date)}</div><div class="pt"><span>${esc(d.team.name)}</span></div>`;
+      h += `<div class="ps"><span class="psc">${esc(h0.record)}</span><span class="pst">${h0.points} points</span></div>`;
+      h += rowsHtml([['Points %', t.ptsPct, true], ['On pace for', `${t.pace} points`, true], ['Goals', `${t.gf}\u2013${t.ga} (${sign(t.diff)})`, true],
+        ['League rank', `${t.leagueRank}${suffix(t.leagueRank)} of 32`, true], ['Conference rank', `${t.confRank}${suffix(t.confRank)}`, true],
+        ['Regulation wins', t.rw, true], ['Reg. + OT wins', t.row, true]]);
+      return h;
+    }
+    return '';
+  }
+
+  function closePop() {
+    popEl?.remove(); popEl = null; popKey = null;
+    board.querySelectorAll('.is-active').forEach((e) => e.classList.remove('is-active'));
+  }
+
+  function openPop(target) {
+    const key = target.dataset.pop;
+    if (popKey === key) return closePop();
+    closePop();
+    const html = popContent(key);
+    if (!html) return;
+    popKey = key;
+    target.classList.add('is-active');
+    popEl = document.createElement('div');
+    popEl.className = 'pop';
+    popEl.setAttribute('role', 'dialog');
+    popEl.innerHTML = `<button class="px" aria-label="Close">\u00d7</button>${html}`;
+    document.body.appendChild(popEl);
+    // place it beside the target, inside the viewport
+    const r = target.getBoundingClientRect();
+    const pw = popEl.offsetWidth, ph = popEl.offsetHeight, gap = 8, m = 10;
+    let x = r.left + r.width / 2 - pw / 2;
+    x = Math.max(m, Math.min(x, document.documentElement.clientWidth - pw - m));
+    let y = r.bottom + gap;
+    if (y + ph > innerHeight - m && r.top - gap - ph > m) y = r.top - gap - ph;
+    popEl.style.left = `${x + scrollX}px`;
+    popEl.style.top = `${Math.max(m, y) + scrollY}px`;
+    popEl.querySelector('.px').addEventListener('click', closePop);
+  }
+
+  if (I) {
+    board.addEventListener('click', (e) => {
+      const t = e.target.closest('[data-pop]');
+      if (t && board.contains(t)) { e.stopPropagation(); openPop(t); }
+    });
+    document.addEventListener('click', (e) => { if (popEl && !popEl.contains(e.target)) closePop(); });
+    addEventListener('resize', closePop);
   }
 
   // ---------- scaling ----------
@@ -279,7 +413,7 @@
   if (!wallpaper) {
     board.addEventListener('click', (e) => { if (e.target.closest('.hdr .band, .foot .brand')) openPicker(); });
     addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closePicker();
+      if (e.key === 'Escape') { closePicker(); closePop(); }
       else if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('.hdr .band')) { e.preventDefault(); openPicker(); }
       else if (e.key.toLowerCase() === 't' && !picker && !e.metaKey && !e.ctrlKey) openPicker();
     });
