@@ -2,7 +2,7 @@
 
 Open the Claude desktop app, start a chat with **Claude in Chrome** (or computer use)
 turned on, make sure you're signed in to GitHub and to wherever mattdicks.org's DNS is
-managed, and paste this:
+managed (Cloudflare for mattdicks.org), and paste this:
 
 ---
 
@@ -16,10 +16,10 @@ my browser and ask me before anything that needs a password or a payment. Do the
 3. Open https://github.com/MattLD13/RandomAIStuff/actions/workflows/rinkside.yml, click
    "Run workflow" on branch `main`, and wait for both jobs to go green. Then check that
    https://mattld13.github.io/RandomAIStuff/rangers/ shows a Rangers dashboard.
-4. Find where the DNS for mattdicks.org is managed (look up its nameservers if you need to,
-   e.g. Cloudflare, Squarespace, GoDaddy, Namecheap, Porkbun). Add a DNS record:
-   type CNAME, name/host `hockey`, target/value `mattld13.github.io`, TTL automatic. If it's
-   Cloudflare, set the proxy status to "DNS only" (grey cloud). Don't change any other records.
+4. mattdicks.org was bought through Cloudflare, so its DNS is in the Cloudflare dashboard
+   (https://dash.cloudflare.com). Open mattdicks.org → DNS → Records → Add record:
+   type CNAME, name `hockey`, target `mattld13.github.io`, proxy status "DNS only" (grey
+   cloud, not orange), TTL Auto. Save it. Don't change any other records.
 5. Back on https://github.com/MattLD13/RandomAIStuff/settings/pages, enter
    `hockey.mattdicks.org` under Custom domain and click Save. Wait for the DNS check to pass.
    Once HTTPS is available, tick "Enforce HTTPS" (this can take up to an hour; come back to it).

@@ -329,6 +329,7 @@ async function buildTeam(TEAM) {
       logo: palette.bandLogo === 'dark' ? meRow.teamLogoDark : meRow.teamLogo,
       primaryColor: palette.primary || '#333333',
       accentColor: palette.accent || '#888888',
+    motif: palette.motif || 'stripes',
     },
     header,
     season: { games, played, total: games.length },

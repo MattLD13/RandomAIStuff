@@ -14,8 +14,17 @@ GitHub Pages hosts it.
 
 Every number on the board comes from the NHL's public, keyless APIs. The board is one
 fixed-size layout (921 x 1145 design pixels) rendered to an image and placed about a fifth
-of the way down an iPhone lock screen. Type is Barlow Semi Condensed for words and IBM Plex
-Mono for numbers. The home/away icons are Material-style house and plane shapes.
+of the way down an iPhone lock screen. Each element's font was identified by rendering about
+90 candidates and scoring them pixel by pixel against the screenshot:
+
+- **Headings, names, times, scores:** Barlow Condensed Bold (0.98 correlation).
+- **Small text:** Barlow Semi Condensed.
+- **Numbers:** a sporty athletic numeral with 45° chamfered corners, spur terminals, a
+  dotted zero and no curves. No public font matched, so `fonts/build-font.py` draws one,
+  **Rinkside Mono**, from straight-line geometry measured off the screenshot (0.86–0.91
+  correlation per digit).
+
+The home/away icons are Material-style house and plane shapes.
 
 | Panel | Source | How it is computed |
 | --- | --- | --- |
@@ -41,7 +50,9 @@ rinkside/
   config.json                  default team; per-team colours, logo variant, URL name + aliases
   scripts/build-data.mjs       NHL API -> site/data/*.json + one site/<name>/ page per team name (Node 18+, no deps)
   scripts/render-wallpaper.mjs site -> site/<name>/wallpaper.png (1179x2556) via Playwright
-  site/                        the board (index.html, style.css, app.js) and the team picker
+  site/                        the board (index.html, style.css, app.js), team picker, motifs.js
+  site/fonts/RinksideMono.woff2  the numeral font (built by fonts/build-font.py, committed)
+  fonts/build-font.py          draws Rinkside Mono (pip install fonttools brotli shapely)
   SETUP-WITH-CLAUDE.md         a prompt that has Claude (desktop) do the setup below for you
 .github/workflows/rinkside.yml runs every 30 min and on every push to main, deploys to GitHub Pages
 ```
@@ -56,8 +67,9 @@ Chrome or computer use) to do all of this in your browser. Doing it by hand:
 2. **GitHub → repo Settings → Pages → Source:** **GitHub Actions**.
 3. **Actions → Rinkside → Run workflow.** When it finishes,
    https://mattld13.github.io/RandomAIStuff/rangers/ should load.
-4. **DNS** (wherever mattdicks.org's DNS is managed): add a `CNAME` record, name `hockey`,
-   target `mattld13.github.io`. If you use Cloudflare, set it to **DNS only** (grey cloud).
+4. **DNS** (Cloudflare dashboard → mattdicks.org → DNS → Records → Add record): type
+   `CNAME`, name `hockey`, target `mattld13.github.io`, proxy status **DNS only** (grey
+   cloud). GitHub needs the grey cloud to issue the HTTPS certificate.
 5. **GitHub → repo Settings → Pages → Custom domain:** `hockey.mattdicks.org` → Save. Once
    the DNS check passes and the certificate is issued (minutes to an hour), tick
    **Enforce HTTPS**.
@@ -93,6 +105,17 @@ three-letter abbreviation (`/nyr`). Names are set in `config.json`.
 - `hockey.mattdicks.org/rangers/?wallpaper` previews the board in its lock-screen position.
 - On the board, tap the team logo (top-left) or the RINKSIDE mark, or press `t`, to switch
   teams.
+
+## Hometown remix
+
+Like the NHL's hometown remix jerseys, each team's board carries a motif of its city: a
+skyline for New York and Chicago, waves for Seattle, San Jose and Long Island, music notes for
+St. Louis and Nashville, card suits for Vegas, bridge arches for Pittsburgh, Motor City gears
+for Detroit, and so on. The motif sits in the header band and as a faint texture behind the
+board. Motifs are generic hometown imagery, not team marks, and are drawn in `site/motifs.js`.
+Set a team's motif with `"motif"` in `config.json`. The options are skyline, waves, peaks,
+notes, stars, bolts, pines, snow, suits, gears, drops, palms, leaves, brick, arches, spiral,
+flames and stripes.
 
 ## Run locally
 
