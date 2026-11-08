@@ -12,7 +12,7 @@
   --otl: #c9ae7c;
   --future: #3e3e3e;
   --gold: #a68a52;
-  --me-row: #1b2c63;
+  --me-row: color-mix(in srgb, var(--primary) 45%, #2a2a2a);
   --primary: #0038a8;
   --accent: #ce1126;
   --cond: 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
@@ -102,7 +102,7 @@ svg text { font-family: var(--cond); }
 /* leaders */
 .leaders { margin-top: 0; }
 .lrow { display: flex; align-items: center; height: 55px; }
-.lrow .face { width: 46px; height: 46px; border-radius: 50%; background: #1d3576; overflow: hidden; flex: none; border: 1.5px solid #3c5594; }
+.lrow .face { width: 46px; height: 46px; border-radius: 50%; background: color-mix(in srgb, var(--primary) 60%, #2a2a2a); overflow: hidden; flex: none; border: 1.5px solid color-mix(in srgb, var(--primary) 60%, #666); }
 .lrow .face img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
 .lrow .who { margin-left: 10px; line-height: 1; }
 .lrow .k { font: 600 10px var(--cond); letter-spacing: 0.12em; color: var(--otl); text-transform: uppercase; }
@@ -157,3 +157,26 @@ svg text { font-family: var(--cond); }
 .nlist { padding-top: 5px; }
 .l5head { margin-top: 15px; }
 .llist { padding-top: 13px; }
+
+/* team picker (not shown in wallpaper mode) */
+.hdr .band[role="button"], .foot .brand { cursor: pointer; }
+.picker {
+  position: fixed; inset: 0; z-index: 10; background: rgba(0, 0, 0, 0.78);
+  display: grid; place-items: center; padding: 16px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.picker .sheet {
+  width: min(720px, 100%); max-height: calc(100vh - 32px); overflow: auto;
+  background: #121212; border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px 18px;
+}
+.picker .ph { display: flex; justify-content: space-between; align-items: center; font-size: 20px; font-weight: 700; }
+.picker .x { background: none; border: 0; color: var(--muted); font-size: 28px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.picker .pgt { margin: 14px 0 6px; font: 700 11px var(--cond); letter-spacing: 0.12em; text-transform: uppercase; color: var(--otl); }
+.picker .pgl { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; }
+.picker .pt {
+  display: flex; align-items: center; gap: 10px; padding: 6px 8px; min-height: 44px;
+  background: var(--card); border: 1px solid transparent; border-radius: 4px;
+  color: var(--fg); font: 600 15px var(--cond); text-align: left; cursor: pointer;
+}
+.picker .pt img.logo { width: 30px; height: 30px; transform: scale(1.4); flex: none; }
+.picker .pt:hover, .picker .pt:focus-visible { border-color: #555; outline: none; }
+.picker .pt.on { border-color: var(--gold); }

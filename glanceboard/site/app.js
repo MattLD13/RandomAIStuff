@@ -154,7 +154,7 @@
         <polygon points="0,0 196,0 171,95 0,95" fill="var(--primary)"/>
         <polygon points="196,0 204,0 179,95 171,95" fill="var(--accent)"/>
       </svg>
-      <div class="band" style="background:none"><img src="${esc(d.team.logo)}" alt="${esc(d.team.name)}"></div>
+      <div class="band" style="background:none" title="Change team"${wallpaper ? '' : ' role="button" tabindex="0"'}><img src="${esc(d.team.logo)}" alt="${esc(d.team.name)}"></div>
       <div class="record">${esc(h.record)}</div>
       <div class="summary"><b>${h.points} points</b>, ${esc(h.summary)}</div>
       <div class="meta"><div>${esc(h.date)}</div><div>${esc(h.splits)}</div><div>${esc(h.schedule)}</div></div>
@@ -180,7 +180,7 @@
       <span class="k"><i class="sw" style="background:var(--otl)"></i>OT/SO loss</span>
       <span class="k"><i class="sw" style="background:var(--future)"></i>Still to play</span>
       <span class="k">Filled dot or house = home, ring or plane = away</span>
-      <span class="brand">GLANCEBOARD</span>
+      <span class="brand" title="Change team">GLANCEBOARD</span>
     </footer>`;
     board.innerHTML = s;
     fit();
@@ -205,20 +205,91 @@
   }
   addEventListener('resize', fit);
 
+  // ---------- team choice ----------
+  const STORE = 'glanceboard-team';
+  const store = {
+    get() { try { return localStorage.getItem(STORE); } catch { return null; } },
+    set(v) { try { localStorage.setItem(STORE, v); } catch {} },
+  };
+  let index = null;   // data/teams.json
+  let team = null;
+
+  function pickTeam() {
+    const ok = (a) => a && index.teams.some((t) => t.abbrev === a);
+    const fromUrl = (params.get('team') || '').toUpperCase();
+    if (ok(fromUrl)) { store.set(fromUrl); return fromUrl; }
+    const saved = (store.get() || '').toUpperCase();
+    return ok(saved) ? saved : index.default;
+  }
+
+  function setTeam(abbrev) {
+    team = abbrev;
+    store.set(abbrev);
+    const url = new URL(location.href);
+    url.searchParams.set('team', abbrev);
+    history.replaceState(null, '', url);
+    lastStamp = null;
+    closePicker();
+    load();
+  }
+
+  // Team picker: tap the team band (or the GLANCEBOARD mark, or press "t").
+  let picker = null;
+  function openPicker() {
+    if (!index || wallpaper) return;
+    closePicker();
+    const order = ['Atlantic', 'Metropolitan', 'Central', 'Pacific'];
+    const groups = order
+      .map((d) => [d, index.teams.filter((t) => t.division === d)])
+      .filter(([, ts]) => ts.length);
+    picker = document.createElement('div');
+    picker.className = 'picker';
+    picker.setAttribute('role', 'dialog');
+    picker.setAttribute('aria-label', 'Choose a team');
+    picker.innerHTML = `<div class="sheet"><div class="ph"><span>Choose a team</span><button class="x" aria-label="Close">×</button></div>${groups
+      .map(([d, ts]) => `<div class="pg"><div class="pgt">${esc(d)}</div><div class="pgl">${ts
+        .map((t) => `<button class="pt${t.abbrev === team ? ' on' : ''}" data-team="${esc(t.abbrev)}">${logo(t.logo)}<span>${esc(t.name)}</span></button>`)
+        .join('')}</div></div>`)
+      .join('')}</div>`;
+    picker.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-team]');
+      if (b) return setTeam(b.dataset.team);
+      if (e.target === picker || e.target.closest('.x')) closePicker();
+    });
+    document.body.appendChild(picker);
+    picker.querySelector('.pt.on, .pt')?.focus();
+  }
+  function closePicker() { picker?.remove(); picker = null; }
+  if (!wallpaper) {
+    board.addEventListener('click', (e) => { if (e.target.closest('.hdr .band, .foot .brand')) openPicker(); });
+    addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closePicker();
+      else if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('.hdr .band')) { e.preventDefault(); openPicker(); }
+      else if (e.key.toLowerCase() === 't' && !picker && !e.metaKey && !e.ctrlKey) openPicker();
+    });
+  }
+
   // ---------- load + refresh ----------
   let lastStamp = null;
+  async function getJSON(path) {
+    const res = await fetch(`${path}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`${path}: ${res.status}`);
+    return res.json();
+  }
   async function load() {
+    document.body.dataset.ready = '';
     try {
-      const res = await fetch(`data.json?t=${Date.now()}`, { cache: 'no-store' });
-      if (!res.ok) throw new Error(res.status);
-      const d = await res.json();
-      if (d.generatedAt !== lastStamp) {
+      if (!index) index = await getJSON('data/teams.json');
+      if (!team) team = pickTeam();
+      const d = await getJSON(`data/${team}.json`);
+      if (d.generatedAt !== lastStamp || d.team.abbrev !== board.dataset.team) {
         lastStamp = d.generatedAt;
+        board.dataset.team = d.team.abbrev;
         render(d);
       }
       document.body.dataset.ready = '1';
     } catch (err) {
-      if (!lastStamp) board.innerHTML = `<div class="msg">Couldn't load data.json (${esc(err.message)})</div>`;
+      if (!lastStamp) board.innerHTML = `<div class="msg">Couldn't load the board (${esc(err.message)})</div>`;
       document.body.dataset.ready = 'error';
       fit();
     }
