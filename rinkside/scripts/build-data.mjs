@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Builds site/data/<TEAM>.json for every NHL team (plus site/data/teams.json) from the public NHL APIs.
 // Run: node scripts/build-data.mjs   (TEAMS=NYR,BOS limits the build; DEFAULT_TEAM overrides config.json)
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -119,6 +119,17 @@ const tableAtCached = (d) => {
 };
 const rankSort = (x, y) =>
   y.pts - x.pts || x.gp - y.gp || y.rw - x.rw || y.row - x.row || y.w - x.w || x.a.localeCompare(y.a);
+
+// Background logo: a file dropped in site/alt/<TEAM>.(png|svg|webp|gif|jpg) wins; otherwise config.json
+// "altLogo" (a bare name is an NHL logo file, a path or URL is used as given); otherwise the dark logo.
+const altFiles = await readdir(join(ROOT, 'site', 'alt')).catch(() => []);
+function altLogoFor(team, palette, row) {
+  const own = altFiles.find((f) => new RegExp(`^${team}\\.(png|svg|webp|gif|jpe?g)$`, 'i').test(f));
+  if (own) return `alt/${own}`;
+  const v = palette.altLogo;
+  if (!v) return row.teamLogoDark;
+  return /[/:]/.test(v) ? v : `https://assets.nhle.com/logos/nhl/svg/${v}`;
+}
 
 // ---------- per-team board ----------
 async function buildTeam(TEAM) {
@@ -330,10 +341,7 @@ async function buildTeam(TEAM) {
       primaryColor: palette.primary || '#333333',
       accentColor: palette.accent || '#888888',
     // alternate / throwback logo tiled behind the board (config.json "altLogo")
-    // a bare file name is an NHL logo file; a path (alt/NYR.png) or URL is used as given
-    altLogo: !palette.altLogo
-      ? meRow.teamLogoDark
-      : /[/:]/.test(palette.altLogo) ? palette.altLogo : `https://assets.nhle.com/logos/nhl/svg/${palette.altLogo}`,
+    altLogo: altLogoFor(TEAM, palette, meRow),
     },
     header,
     season: { games, played, total: games.length },

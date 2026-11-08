@@ -2,7 +2,7 @@
   "defaultTeam": "NYR",
   "teams": {
     "ANA": { "primary": "#F47A38", "accent": "#B9975B", "slug": "ducks", "altLogo": "ANA_19931994-19951996_dark.svg" },
-    "BOS": { "primary": "#FFB81C", "accent": "#FFFFFF", "slug": "bruins", "aliases": ["bs"], "altLogo": "BOS_19261927-19311932_dark.svg" },
+    "BOS": { "primary": "#FFB81C", "accent": "#FFFFFF", "slug": "bruins", "aliases": ["bs"], "altLogo": "BOS_alt.svg" },
     "BUF": { "primary": "#003087", "accent": "#FFB81C", "slug": "sabres", "altLogo": "BUF_19961997-19981999_dark.svg" },
     "CAR": { "primary": "#CC0000", "accent": "#A2AAAD", "bandLogo": "dark", "slug": "hurricanes", "aliases": ["canes"], "altLogo": "CAR_19971998-19981999_dark.svg" },
     "CBJ": { "primary": "#002654", "accent": "#CE1126", "slug": "bluejackets", "aliases": ["jackets"], "altLogo": "CBJ_20002001-20062007_dark.svg" },

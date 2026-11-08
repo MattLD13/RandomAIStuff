@@ -1,7 +1,12 @@
-Put your own alternate-logo images here (PNG or SVG, transparent background works best),
-for example `NYR.png`, then point the team at it in `rinkside/config.json`:
+# Your own alternate logos
 
-    "NYR": { ..., "altLogo": "alt/NYR.png" }
+Drop an image here named with the team's three-letter code, and that team's background
+uses it automatically on the next build. No config change is needed.
 
-`altLogo` can also be a full image URL. A bare file name such as `TBL_alt.svg` means a logo
-file on the NHL's own server (assets.nhle.com/logos/nhl/svg/).
+    NYR.png   STL.png   SEA.svg   PIT.webp   ...
+
+PNG or SVG with a transparent background works best (around 300px or larger). Browse the
+current alternates on https://www.sportslogos.net/ and save the one you like.
+
+Teams without a file here use `"altLogo"` in `rinkside/config.json`: the official NHL
+alternate where one exists, otherwise a classic throwback.
