@@ -12,6 +12,10 @@
   --otl: #c9ae7c;
   --future: #3e3e3e;
   --gold: #a68a52;
+  --gold-hi: #d4b26a;
+  --team-hi: #3d6fd6;
+  --df1: #d4b26a;
+  --df2: #8a7140;
   --me-row: color-mix(in srgb, var(--primary) 45%, #2a2a2a);
   --primary: #0038a8;
   --accent: #ce1126;
@@ -580,7 +584,9 @@ body:not(.stack) .tallcol .ch .chf { flex-wrap: wrap; justify-content: flex-star
 .rb { display: grid; grid-template-columns: 1fr 70px 26px; align-items: center; gap: 8px; height: 22px; }
 .rbl { font-size: 13.5px; color: #d6d6d6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rbt { position: relative; height: 4px; background: repeating-linear-gradient(to right, #3a3a3a 0 3px, transparent 3px 5px); }
-.rbt i { position: absolute; left: 0; top: 0; bottom: 0; }
+.rbt i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--team-hi); }
+.rbt.mini { width: 44px; flex: none; height: 3px; margin-left: auto; }
+.wr .rbt.mini { width: 36px; }
 .rb b { text-align: right; font-size: 15px; }
 .rrow .rv { width: 38px; text-align: right; font-size: 16px; }
 .wr .rv { width: 32px; text-align: right; font-size: 17px; }
@@ -629,3 +635,14 @@ body:not(.stack) .tallcol .ch .chf { flex-wrap: wrap; justify-content: flex-star
   .wheelcard .st .k { font-size: 8.5px; letter-spacing: 0.04em; }
   .wheelcard .st .v { font-size: 15px; }
 }
+
+/* team colour + gold touches */
+.pc-chart { margin-top: 12px; padding: 7px 9px 4px; background: var(--card); border-radius: 3px; }
+.pc-ch { display: flex; align-items: baseline; justify-content: space-between; color: var(--muted); font-size: 12.5px; margin-bottom: 4px; }
+.pc-ch .k { font: 700 10.5px var(--cond); letter-spacing: 0.1em; color: var(--otl); text-transform: uppercase; }
+.pc-ch b { font-size: 14px; }
+.pc-chart svg { display: block; overflow: visible; }
+.pc-chart .pcv { fill: #8a8a8a; font: 400 10px var(--mono); }
+.pcard { border-top-color: var(--team-hi); }
+.pc-n { border-bottom: 2px solid var(--gold); padding-bottom: 3px; display: inline-block; }
+.rrow .rv { margin-left: 8px; }

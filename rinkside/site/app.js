@@ -645,13 +645,48 @@
   };
 
   // ======================= player cards, ratings, odds =======================
-  // good / middling / poor, in the board's own win and loss colours
-  const tone = (p) => (p == null ? 'var(--dim)' : p >= 67 ? 'var(--win)' : p <= 33 ? 'var(--loss)' : 'var(--fg)');
-  const garTone = (v, s = 0.1) => (v >= s ? 'var(--win)' : v <= -s ? 'var(--loss)' : 'var(--fg)');
-  const rbar = (label, p) => `<div class="rb"><span class="rbl">${esc(label)}</span><span class="rbt"><i style="width:${p ?? 0}%;background:${tone(p)}"></i></span><b class="m" style="color:${tone(p)}">${p ?? '\u2013'}</b></div>`;
+  // numbers: gold when elite, red when poor; bars in the team's colour (lifted so it shows on black)
+  const tone = (p) => (p == null ? 'var(--dim)' : p >= 80 ? 'var(--gold-hi)' : p <= 20 ? 'var(--loss)' : 'var(--fg)');
+  const garTone = (v, s = 0.1) => (v >= s ? 'var(--gold-hi)' : v <= -s ? 'var(--loss)' : 'var(--fg)');
+  const rbar = (label, p) => `<div class="rb"><span class="rbl">${esc(label)}</span><span class="rbt"><i style="width:${p ?? 0}%"></i></span><b class="m" style="color:${tone(p)}">${p ?? '\u2013'}</b></div>`;
+  const miniBar = (pct) => `<span class="rbt mini"><i style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></i></span>`;
+  const rgbOf = (hex) => { const n = parseInt(String(hex).replace('#', ''), 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+  function teamColours(hex) {
+    let c = rgbOf(hex);
+    for (let i = 0; i < 20 && lum(c) < 0.12; i++) c = c.map((v) => Math.round(v + (255 - v) * 0.12));
+    const [r, g, b] = c.map((v) => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), sat = mx ? (mx - mn) / mx : 0;
+    const hue = mx === mn ? 0 : mx === r ? (60 * ((g - b) / (mx - mn)) + 360) % 360 : mx === g ? 60 * ((b - r) / (mx - mn)) + 120 : 60 * ((r - g) / (mx - mn)) + 240;
+    const goldish = sat > 0.4 && hue >= 28 && hue <= 58;
+    return { hi: `rgb(${c.join(',')})`, d1: goldish ? '#cfd3d6' : '#d4b26a', d2: goldish ? '#8c9196' : '#8a7140' };
+  }
   const cardKey = (d, id) => (id && d.cards && d.cards[id] ? `card:${id}` : null);
 
 
+  // the player's goals above replacement in every game, like the season chart: team colour up, red down
+  function playerGameChart(d, id, isG) {
+    if (!d.war) return '';
+    const pts = warGames(d).map(([g]) => {
+      const w = d.war.games[g.id], r = isG ? w.g.find((x) => x[0] === id) : w.rows.find((x) => x[0] === id);
+      return r ? { v: isG ? r[4] : r[10], g } : null;
+    });
+    const played = pts.filter(Boolean);
+    if (played.length < 2) return '';
+    const W = 400, H = 86, PW = W - 34, n = pts.length, step = PW / n, bw = Math.max(2, Math.min(12, step * 0.72));
+    const max = Math.max(isG ? 0.5 : 0.15, ...played.map((p) => Math.abs(p.v))), y0 = H / 2, sc = (H / 2 - 5) / max;
+    let s = `<line x1="0" x2="${PW}" y1="${y0}" y2="${y0}" stroke="#6f6f6f" stroke-dasharray="3 3"/>` +
+      `<text x="${W}" y="${(y0 - max * sc + 8).toFixed(1)}" text-anchor="end" class="pcv">${gsign(max, isG ? 1 : 2)}</text>` +
+      `<text x="${W}" y="${(y0 + max * sc).toFixed(1)}" text-anchor="end" class="pcv">${gsign(-max, isG ? 1 : 2)}</text>`;
+    pts.forEach((p, k) => {
+      const x = (k * step + (step - bw) / 2).toFixed(1);
+      if (!p) { s += `<rect x="${x}" y="${y0 - 1}" width="${bw.toFixed(1)}" height="2" fill="#3e3e3e"/>`; return; }
+      const h = Math.max(1.5, Math.abs(p.v) * sc);
+      s += `<rect x="${x}" y="${(p.v >= 0 ? y0 - h : y0).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${p.v >= 0 ? 'var(--team-hi)' : 'var(--loss)'}"><title>${esc(p.g.info.date)} ${p.g.home ? 'vs' : '@'} ${esc(p.g.opp)}: ${gsign(p.v)}</title></rect>`;
+    });
+    const last10 = played.slice(-10).reduce((a, p) => a + p.v, 0);
+    return `<div class="pc-chart"><div class="pc-ch"><span class="k">Game by game</span><span>last 10 <b class="m" style="color:${garTone(last10, 0.3)}">${gsign(last10, 1)}</b> GAR</span></div>` +
+      `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="height:${H}px">${s}</svg></div>`;
+  }
   function cardHtml(d, id) {
     const c = d.cards[id];
     if (!c) return '';
@@ -668,6 +703,7 @@
     ].filter(Boolean);
     h += `<div class="st">${boxes.map(([k, v, rk]) => `<div class="box"><div class="k">${k}</div><div class="rk">${esc(rk)}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>`;
     if (c.qualified) h += `<div class="rbs${isG ? ' one' : ''}">${c.tiles.map(([label, p]) => rbar(label, p)).join('')}</div>`;
+    h += playerGameChart(d, id, isG);
     h += `<div class="pgrid">${(c.stats || []).map(([k, v]) => `<div><b class="m">${esc(v)}</b><span>${esc(k)}</span></div>`).join('')}</div>`;
     return h;
   }
@@ -688,7 +724,7 @@
   function ratingsPanel(d, n, title = 'Player ratings') {
     const list = (d.ratings || []).slice(0, n);
     return `<div class="colhead big"><span class="t">${esc(title)}</span><span class="r small">OVERALL</span></div><div class="rlist">` +
-      list.map((r) => `<div class="rrow"${pop(`card:${r.id}`)}><span class="rn m">${r.number ?? ''}</span><span class="rname"><b>${esc(r.name)}</b><small>${esc(r.pos)}</small></span><span class="rv m" style="color:${tone(r.overall)}">${r.overall}</span></div>`).join('') + '</div>';
+      list.map((r) => `<div class="rrow"${pop(`card:${r.id}`)}><span class="rn m">${r.number ?? ''}</span><span class="rname"><b>${esc(r.name)}</b><small>${esc(r.pos)}</small></span>${miniBar(r.overall)}<span class="rv m" style="color:${tone(r.overall)}">${r.overall}</span></div>`).join('') + '</div>';
   }
   function oddsPanel(d) {
     const me = d.team.abbrev, conf = d.teams[me].conf;
@@ -926,6 +962,7 @@
     const root = document.documentElement.style;
     if (d.team.primaryColor) root.setProperty('--primary', d.team.primaryColor);
     if (d.team.accentColor) root.setProperty('--accent', d.team.accentColor);
+    { const tc = teamColours(d.team.primaryColor || '#888888'); root.setProperty('--team-hi', tc.hi); root.setProperty('--df1', tc.d1); root.setProperty('--df2', tc.d2); }
     document.title = `${d.team.name} · Rinkside`;
 
     const remix = document.getElementById('remix');
@@ -1154,9 +1191,9 @@
     return Object.entries(d.war?.season || {}).filter(([id]) => d.cards?.[id]).map(([id, r]) => ({ id: +id, ...r })).sort((a, b) => b.war - a.war);
   }
   function warSeasonPanel(d, n, title = 'Wins above repl.') {
-    const list = warSeasonRows(d).slice(0, n);
+    const list = warSeasonRows(d).slice(0, n), top = Math.max(0.1, ...list.map((r) => r.war));
     return `<div class="colhead big"><span class="t">${esc(title)}</span><span class="r small">WAR</span></div><div class="rlist">` +
-      list.map((r) => `<div class="rrow"${pop(`card:${r.id}`)}><span class="rname"><b>${esc(r.n)}</b><small>${esc(r.pos)} · ${r.gp} GP</small></span><span class="rv m" style="color:${garTone(r.war, 0.25)}">${gsign(r.war, 1)}</span></div>`).join('') + '</div>';
+      list.map((r) => `<div class="rrow"${pop(`card:${r.id}`)}><span class="rname"><b>${esc(r.n)}</b><small>${esc(r.pos)}</small></span>${miniBar((100 * r.war) / top)}<span class="rv m" style="color:${garTone(r.war, 0.25)}">${gsign(r.war, 1)}</span></div>`).join('') + '</div>';
   }
   // last game, best first: the whole panel opens the table
   function warGamePanel(d, n) {
@@ -1193,23 +1230,24 @@
 
   // ---------- game score breakdown: every player's GAR as one bar, split into its pieces ----------
   // blues are offence, golds are defence; pieces above replacement stack right of zero, below it left
-  const WAR_PARTS = [['gc', 'Scoring', '#2f6fd1'], ['oio', 'Play driving', '#5b8fd6'], ['pp', 'Power play', '#9dbbe6'],
-    ['oid', 'Defence', '#e0b23a'], ['pen', 'Penalties', '#c9ae7c'], ['oth', 'Other', '#6f6f6f']];
+  // offence in the team's colour (full, tint, shade); defence in gold (silver for gold teams)
+  const WAR_PARTS = [['gc', 'Scoring', 'var(--team-hi)'], ['oio', 'Play driving', 'color-mix(in srgb, var(--team-hi) 62%, #fff)'], ['pp', 'Power play', 'color-mix(in srgb, var(--team-hi) 28%, #fff)'],
+    ['oid', 'Defence', 'var(--df1)'], ['pen', 'Penalties', 'var(--df2)'], ['oth', 'Other', '#5f5f5f']];
   const garLegend = () => `<span class="gleg">${WAR_PARTS.map(([, l, c]) => `<i style="background:${c}"></i>${esc(l)}`).join('')}</span>`;
   function garScale(rows) {
     let lo = -0.05, hi = 0.05;
     for (const r of rows) {
-      if (r.goalie) { lo = Math.min(lo, r.gar); hi = Math.max(hi, r.gar); continue; }
+      if (r.goalie) continue;   // a big goaltending night would flatten every skater's bar
       lo = Math.min(lo, WAR_PARTS.reduce((a, [k]) => a + Math.min(0, r[k]), 0));
       hi = Math.max(hi, WAR_PARTS.reduce((a, [k]) => a + Math.max(0, r[k]), 0));
     }
     return [lo * 1.04, hi * 1.04];
   }
   function garRow(r, lo, hi, attrs = '', value = gsign(r.gar), color = garTone(r.gar)) {
-    const X = (v) => ((v - lo) / (hi - lo)) * 100;
+    const X = (v) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
     const seg = (a, len, col, label) => `<i style="left:${X(a).toFixed(2)}%;width:${(X(a + len) - X(a)).toFixed(2)}%;background:${col}" title="${esc(label)}"></i>`;
     let s = '';
-    if (r.goalie) s = seg(Math.min(0, r.gar), Math.abs(r.gar), '#f4f4f4', `Goaltending ${gsign(r.gar)}`);
+    if (r.goalie) s = seg(Math.min(0, r.gar), Math.abs(r.gar), 'var(--df1)', `Goaltending ${gsign(r.gar)}`);
     else {
       let pos = 0, neg = 0;
       for (const [k, label, col] of WAR_PARTS) {
