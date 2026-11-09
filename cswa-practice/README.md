@@ -11,27 +11,35 @@ only gives you the drawings and checks your answers.
 
 ## Use it
 
-Open `index.html` in a browser; no install or server is needed. Keep SOLIDWORKS open beside it.
+**Online:** https://cswa.mattdicks.org (once the one-time setup below is done).
+**Offline:** open `site/index.html` in a browser. It needs no install or server. Keep SOLIDWORKS open beside it.
 
 | | |
 |---|---|
 | **Practice Exams 1–3** | 14 questions, 240 points, 180 minutes, pass mark 165: 3 drafting (5 pts), 2 basic part (15), 2 intermediate part (15), 3 advanced part (15), 4 assembly (30). Exams 1–2 aim at real-exam difficulty; Exam 3 is a little harder (angled hole, revolve with groove, three-link chain with relative angles). |
 | **Concepts Drill** | 16 quick multiple-choice questions on sketch relations, features, mates and drawing views. |
-| **Exam mode** | Timed. Answers are scored only when you end the exam (or time runs out). |
+| **Exam mode** | Timed. Answers are scored only when you click End Test (or time runs out). |
 | **Practice mode** | Untimed. **Check answer** shows right/wrong, the correct value and the working (volume × density, or a mass table for assemblies). |
 
 - Click a drawing to open the image viewer. Zoom with the mouse wheel or + / −, drag to pan, and use ◀ ▶ to switch views.
+- **Assembly questions come with the parts**, like the real exam: **Download parts (zip)** gives exact STEP files (true planes and cylinders, so mates work). Open each one in SOLIDWORKS, answer No to feature recognition, apply the materials from the question, then insert the Base first, fixed at the origin. Its part origin is already on the assembly origin shown in the images.
 - Fill-in answers are grams, numbers only. Answers within **1 %** of the correct value score full points.
 - Progress saves in the browser, so you can close the tab and resume. Past attempts are listed on the home screen with a Review button.
 - Keyboard: PageUp / PageDown move between questions; Esc closes the viewer.
 
-## How the answers are made
+## How the answers are made, and checked
 
 Each part is a parametric solid model in `tools/content/models.mjs`, built with
 [manifold-3d](https://github.com/elalish/manifold). The build script measures every mass and
 centre of mass straight from the geometry. Circles are polygons sized to the exact circle area,
 so the volumes match a real CAD model. The same model is rendered to the dimensioned drawing
 (three.js in headless Chromium), so the drawing and the answer key cannot disagree.
+
+The assembly parts are also built a second time, independently, as exact B-rep solids in
+CadQuery/OpenCascade (`tools/parts.py`); that is where the STEP files come from. Both models
+agree on every part's volume to better than 0.00001 %. `tools/check_assemblies.py` places the
+exact parts and recomputes each assembly's centre of mass; it agrees with the answer key to
+within 0.005 mm.
 
 Coordinates follow SOLIDWORKS: Y up, Front plane = XY, Top plane = XZ.
 
@@ -40,17 +48,44 @@ Coordinates follow SOLIDWORKS: Y up, Front plane = XY, Top plane = XZ.
 ```bash
 cd cswa-practice/tools
 npm install
-node build.mjs            # renders img/*.png and writes data/exams.js
+node build.mjs              # renders site/img/*.png and writes site/data/exams.js
 node build.mjs --no-images  # answers only, keeps the existing images
+python3 -m venv .venv && .venv/bin/pip install cadquery
+.venv/bin/python parts.py            # exact STEP parts -> site/parts/*.zip (checks volumes)
+.venv/bin/python check_assemblies.py # recomputes assembly answers with the exact parts
 ```
 
 - `tools/content/models.mjs`: part and assembly models, with their dimensioned views
 - `tools/content/exams.mjs`: question text, parameters, materials and multiple-choice distractors
 - `tools/content/drafting.mjs`: the drawing-sheet SVGs for the drafting questions
 - `tools/lib/geom.mjs`: modelling helpers and mass properties; `tools/lib/render.mjs` and `tools/render/`: the image renderer
+- `site/`: the deployed app (`index.html`, `app.css`, `app.js`, `data/`, `img/`, `parts/`)
 
-To add a question, add a model function (or reuse one with new parameters), add an entry in
-`exams.mjs`, and run the build.
+## Hosting at cswa.mattdicks.org
+
+GitHub Pages allows one site per repository, and Rinkside already uses this one
+(hockey.mattdicks.org). So CSWA is served by Cloudflare, where mattdicks.org's DNS already
+lives. It's a static-assets Worker (`wrangler.toml`), deployed by GitHub Actions
+(`.github/workflows/cswa.yml`) on every push to `main` that changes `cswa-practice/site/`.
+Cloudflare creates the `cswa` DNS record and HTTPS certificate itself.
+
+One-time setup:
+
+1. **Cloudflare → My Profile → API Tokens → Create Token → "Edit Cloudflare Workers" template.**
+   Under Account Resources pick your account. Under Zone Resources pick `mattdicks.org`, and
+   add one more permission row, **Zone · DNS · Edit**, so it can create the `cswa` record.
+   Create the token and copy it.
+2. **Cloudflare → Workers & Pages:** copy your **Account ID** from the right-hand sidebar.
+3. **GitHub → repo Settings → Secrets and variables → Actions → New repository secret:**
+   `CLOUDFLARE_API_TOKEN` = the token, `CLOUDFLARE_ACCOUNT_ID` = the account ID.
+4. Merge this branch into `main`. The **CSWA** workflow deploys on the merge; later you can
+   also start it from **Actions → CSWA → Run workflow**. https://cswa.mattdicks.org loads
+   within a minute or two.
+
+If the deploy says the hostname is taken, delete any existing `cswa` DNS record in
+Cloudflare and run the workflow again. If the token lacks DNS rights, add the domain by hand:
+**Workers & Pages → cswa-practice → Settings → Domains & Routes → Add → Custom domain →
+`cswa.mattdicks.org`**.
 
 ## Difficulty
 

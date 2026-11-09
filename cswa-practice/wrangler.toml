@@ -1,0 +1,14 @@
+# Cloudflare Worker that serves the static site in ./site at https://cswa.mattdicks.org.
+# Deployed by .github/workflows/cswa.yml on every push to main that touches cswa-practice/site.
+name = "cswa-practice"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# Cloudflare creates the DNS record and certificate for this hostname itself,
+# because mattdicks.org's DNS is already on Cloudflare.
+routes = [
+  { pattern = "cswa.mattdicks.org", custom_domain = true },
+]
+
+[assets]
+directory = "./site"

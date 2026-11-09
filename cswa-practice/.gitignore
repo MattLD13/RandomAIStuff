@@ -1,2 +1,4 @@
 tools/node_modules/
 tools/package-lock.json
+tools/.venv/
+tools/__pycache__/

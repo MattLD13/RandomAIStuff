@@ -1,0 +1,32 @@
+name: CSWA
+
+on:
+  push:
+    branches: [main]
+    paths: ["cswa-practice/site/**", "cswa-practice/wrangler.toml", ".github/workflows/cswa.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cswa-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: cswa
+      url: https://cswa.mattdicks.org
+    steps:
+      - uses: actions/checkout@v4
+
+      # The site is static and committed (images, answer key and part files are built
+      # locally by cswa-practice/tools), so deploying is just uploading the folder.
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cswa-practice
+          command: deploy

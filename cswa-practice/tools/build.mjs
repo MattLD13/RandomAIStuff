@@ -1,4 +1,4 @@
-// Builds ../img/* and ../data/exams.js from the models and exam definitions.
+// Builds ../site/img/* and ../site/data/exams.js from the models and exam definitions.
 //   cd cswa-practice/tools && npm install && node build.mjs [--no-images]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,7 +10,7 @@ import { DRAFTING } from './content/drafting.mjs';
 import { startRenderer } from './lib/render.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const OUT = path.resolve(HERE, '..');
+const OUT = path.resolve(HERE, '..', 'site');
 const IMG = path.join(OUT, 'img');
 const NO_IMAGES = process.argv.includes('--no-images');
 fs.mkdirSync(IMG, { recursive: true });
@@ -130,6 +130,12 @@ const NAMES = {
   guideBlock: 'Guide Block', shaftSupport: 'Shaft Support', housing: 'Housing', slideAssembly: 'Slide',
   angleSupport: 'Angle Support', steppedSpindle: 'Spindle', toolBlock: 'Tool Block', chainAssembly: 'Link Chain',
 };
+// Component part files for the assembly questions (made by tools/parts.py).
+const PARTS = {
+  exam1: 'parts/exam1-hinged-arm-parts.zip',
+  exam2: 'parts/exam2-slide-parts.zip',
+  exam3: 'parts/exam3-link-chain-parts.zip',
+};
 const f2 = (x) => (Math.abs(x) < 0.005 ? 0 : x).toFixed(2);
 const fmtCom = (c) => `X = ${f2(c[0])} mm, Y = ${f2(c[1])} mm, Z = ${f2(c[2])} mm`;
 
@@ -170,6 +176,7 @@ async function main() {
       else if (q.model) images = await renderPart(q.model.fn, q.model.params, q.id);
       else if (q.assembly) images = await renderAssembly(q.assembly.fn, q.assembly.params, q.id, exam.id);
       o.images = images;
+      if (q.assembly && PARTS[exam.id]) o.parts = PARTS[exam.id];
 
       if (q.kind === 'mc') {
         // shuffle fixed options too, so the right letter isn't predictable

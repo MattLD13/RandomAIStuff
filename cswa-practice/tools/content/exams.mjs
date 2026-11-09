@@ -109,7 +109,7 @@ const exam1 = {
       id: 'e1q11', section: 'asm', points: PTS.asm, kind: 'mc-com',
       assembly: { fn: 'hingeAssembly', params: { A: 30 } }, materials: E1_MAP,
       distract: [{ params: { A: 60 } }, { shift: [0, 0, 6] }, { shift: [4.3, -3.1, 0] }],
-      prompt: `<p>Build this assembly in SOLIDWORKS. It contains one Base, one Arm, two Pins and one Hanger.</p>
+      prompt: `<p>Build this assembly in SOLIDWORKS. It contains one Base, one Arm, two Pins and one Hanger. Download the attached parts and open them in SOLIDWORKS.</p>
 ${asmNotes(E1_MATS, [
   'The Base is fixed; the assembly origin is shown.',
   'The Arm sits centred between the ears and is concentric with the ear holes.',
@@ -213,7 +213,7 @@ const exam2 = {
       id: 'e2q11', section: 'asm', points: PTS.asm, kind: 'mc-com',
       assembly: { fn: 'slideAssembly', params: { A: 40, B: 0 } }, materials: E2_MAP,
       distract: [{ params: { A: 80, B: 0 } }, { shift: [0, 7.5, 0] }, { params: { A: 40, B: 90 } }],
-      prompt: `<p>Build this assembly in SOLIDWORKS. It contains one Rail, two End Caps, one Slider, one Post and one Handle.</p>
+      prompt: `<p>Build this assembly in SOLIDWORKS. It contains one Rail, two End Caps, one Slider, one Post and one Handle. Download the attached parts and open them in SOLIDWORKS.</p>
 ${asmNotes(E2_MATS, [
   'The Rail is fixed; the assembly origin is shown.',
   'The End Caps are flush with the ends, bottom, back and front of the Rail.',
@@ -254,7 +254,7 @@ const E3_MAP = { Base: 'AISI 1020', 'Link 1': '6061 Alloy', 'Link 2': '6061 Allo
 const exam3 = {
   id: 'exam3',
   title: 'CSWA Practice Exam 3',
-  blurb: 'A little harder than the real exam. Angle support, revolved spindle, tool block with an angled hole, two-link arm.',
+  blurb: 'A little harder than the real exam. Angle support, revolved spindle, tool block with an angled hole, three-link chain.',
   questions: [
     draft('e3q1', 'aligned-section',
       '<p>To create View B from View A, which SOLIDWORKS view type was inserted?</p>',
@@ -316,7 +316,7 @@ const exam3 = {
       id: 'e3q11', section: 'asm', points: PTS.asm, kind: 'mc-com',
       assembly: { fn: 'chainAssembly', params: { A: 45, B: 135, C: 135 } }, materials: E3_MAP,
       distract: [{ params: { A: 45, B: 135, C: 225 } }, { params: { A: 45, B: 225, C: 135 } }, { shift: [0, 0, -6] }],
-      prompt: `<p>Build this assembly in SOLIDWORKS. It contains one Base, Link 1 and Link 2 (100 centres), Link 3 (140 centres) and three Pins.</p>
+      prompt: `<p>Build this assembly in SOLIDWORKS. It contains one Base, Link 1 and Link 2 (100 centres), Link 3 (140 centres) and three Pins. Download the attached parts and open them in SOLIDWORKS.</p>
 ${asmNotes(E3_MATS, [
   'The Base is fixed; the assembly origin is shown.',
   'Link 1 is against the front face of the tongue; each following Link is against the front face of the one before it.',

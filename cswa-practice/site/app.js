@@ -86,7 +86,8 @@
       const best = tries.length ? Math.max(...tries.map((h) => h.score)) : null;
       const counts = {};
       ex.questions.forEach((q) => (counts[q.section] = (counts[q.section] || 0) + 1));
-      list.append(el('button', { class: 'exam-card', type: 'button', onclick: () => openIntro(ex.id) },
+      const tier = ex.id === 'exam3' ? ' tier-hard' : ex.id === 'drill' ? ' tier-drill' : '';
+      list.append(el('button', { class: 'exam-card' + tier, type: 'button', onclick: () => openIntro(ex.id) },
         el('div', null,
           el('h3', null, ex.title),
           el('p', null, ex.blurb),
@@ -241,10 +242,10 @@
   function renderQuestion() {
     const ex = activeExam(), q = ex.questions[curIdx()], ans = activeAnswers();
     const locked = !!reviewRec || !!(cur() && cur().checked[q.id]);
-    $('x-pos').textContent = `Question ${q.n} of ${ex.questions.length}`;
-    $('q-num').textContent = `Question ${q.n}`;
+    $('x-pos').innerHTML = `Question <b>${q.n}</b> of <b>${ex.questions.length}</b>`;
+    $('q-num').innerHTML = `Question <span class="num">${q.n}</span>`;
     $('q-sec').textContent = SECTIONS[q.section];
-    $('q-pts').textContent = `${q.points} points`;
+    $('q-pts').innerHTML = `<b>${q.points}</b>points`;
     $('q-prompt').innerHTML = (q.heading ? `<p class="q-heading">${q.heading}</p>` : '') + q.prompt;
 
     const th = $('q-thumbs');
@@ -253,6 +254,19 @@
       th.append(el('button', { class: 'thumb' + (q.images.length === 1 ? ' wide' : ''), type: 'button', onclick: () => openViewer(q.images, i), 'aria-label': `Open ${im.title} in the image viewer` },
         el('img', { src: im.src, alt: im.title, loading: 'lazy' }), el('span', null, `${i + 1}. ${im.title}`)));
     });
+
+    const dl = $('q-parts');
+    dl.textContent = '';
+    dl.hidden = !q.parts;
+    if (q.parts) {
+      const name = q.parts.split('/').pop();
+      const status = el('span', { class: 'small muted', role: 'status' });
+      dl.append(
+        el('div', { class: 'parts-row' },
+          el('button', { class: 'btn primary', type: 'button', onclick: () => downloadParts(q.parts, name, status) }, 'Download parts (zip)'),
+          el('span', { class: 'mono small' }, name), status),
+        el('p', { class: 'small muted' }, 'Open each .step file in SOLIDWORKS (answer No if it offers feature recognition) and save it as a part. Apply the materials listed in the question. Insert the Base first and leave it fixed at the assembly origin: its part origin is already on the origin shown in the image.'));
+    }
 
     const box = $('q-answer');
     box.textContent = '';
@@ -319,6 +333,29 @@
     }
   }
 
+  // Hosted page: the platform's save dialog. Local file: a plain download link.
+  let dlCap;
+  async function downloadParts(href, name, status) {
+    status.textContent = '';
+    try {
+      if (dlCap === undefined) dlCap = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
+    } catch (e) { dlCap = null; }
+    if (dlCap) {
+      try {
+        const blob = await (await fetch(href)).blob();
+        await dlCap.save({ filename: name, data: blob });
+        status.textContent = 'Saved.';
+      } catch (e) {
+        status.textContent = e && e.code === 'declined' ? 'Download cancelled.' : 'This view cannot save files. Open the app from the repo to download the parts.';
+      }
+      return;
+    }
+    const a = el('a', { href, download: name });
+    document.body.append(a);
+    a.click();
+    a.remove();
+  }
+
   function escapeHtml(s) { return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
   function setAnswer(q, v) {
@@ -369,7 +406,7 @@
       tb.append(el('tr', null, el('td', { class: 'mono' }, String(q.n)), el('td', null, SECTIONS[q.section]), el('td', null, String(q.points)), st,
         el('td', null, el('button', { class: 'btn sm', type: 'button', onclick: () => { show('exam'); setIdx(i); } }, 'Go to'))));
     });
-    $('sum-counts').textContent = `${a} of ${ex.questions.length} answered · ${ex.questions.length - a} not answered · ${m} marked for review`;
+    $('sum-counts').innerHTML = `<b>${a}</b> of <b>${ex.questions.length}</b> answered · <b>${ex.questions.length - a}</b> not answered · <b>${m}</b> marked for review`;
     show('summary');
   }
 
@@ -415,8 +452,9 @@
     const v = $('r-verdict');
     v.textContent = rec.passed ? 'PASS' : 'FAIL';
     v.className = 'verdict ' + (rec.passed ? 'pass' : 'fail');
-    $('r-score').textContent = `${rec.score} / ${rec.total} points (pass mark ${rec.passScore})`;
+    $('r-score').innerHTML = `<b>${rec.score}/${rec.total}</b> points · pass mark <span class="num">${rec.passScore}</span>`;
     $('r-meter').style.width = `${(100 * rec.score) / rec.total}%`;
+    $('r-meter').className = 'meter-fill ' + (rec.passed ? 'pass' : 'fail');
     $('r-pass').style.left = `${(100 * rec.passScore) / rec.total}%`;
     const f = $('r-facts');
     f.textContent = '';

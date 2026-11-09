@@ -311,7 +311,7 @@ window.CSWA_DATA = {
      "n": 11,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Build this assembly in SOLIDWORKS. It contains one Base, one Arm, two Pins and one Hanger.</p>\n<ul class=\"notes\"><li>Unit system: MMGS, decimal places: 2</li><li>Base: AISI 1020 (0.0079 g/mm³)</li><li>Arm: 6061 Alloy (0.0027 g/mm³)</li><li>Pin (2X): Alloy Steel (0.0077 g/mm³)</li><li>Hanger: Cast Alloy Steel (0.0073 g/mm³)</li><li>The Base is fixed; the assembly origin is shown.</li><li>The Arm sits centred between the ears and is concentric with the ear holes.</li><li>Each Pin is concentric with its holes and symmetric about the middle plane of the Base.</li><li>The Hanger hangs from the free-end Pin against the front face of the Arm; its long edges stay perpendicular to the top face of the Base.</li><li>Angle <b>A</b> is between the top face of the Base and the Arm.</li></ul>\n<p><b>A = 30°</b>. What is the centre of mass of the assembly (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "prompt": "<p>Build this assembly in SOLIDWORKS. It contains one Base, one Arm, two Pins and one Hanger. Download the attached parts and open them in SOLIDWORKS.</p>\n<ul class=\"notes\"><li>Unit system: MMGS, decimal places: 2</li><li>Base: AISI 1020 (0.0079 g/mm³)</li><li>Arm: 6061 Alloy (0.0027 g/mm³)</li><li>Pin (2X): Alloy Steel (0.0077 g/mm³)</li><li>Hanger: Cast Alloy Steel (0.0073 g/mm³)</li><li>The Base is fixed; the assembly origin is shown.</li><li>The Arm sits centred between the ears and is concentric with the ear holes.</li><li>Each Pin is concentric with its holes and symmetric about the middle plane of the Base.</li><li>The Hanger hangs from the free-end Pin against the front face of the Arm; its long edges stay perpendicular to the top face of the Base.</li><li>Angle <b>A</b> is between the top face of the Base and the Arm.</li></ul>\n<p><b>A = 30°</b>. What is the centre of mass of the assembly (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
      "explain": "Mates: Base fixed; Arm concentric + width (or coincident to an ear face); angle mate A between Arm face and Base top; Pins concentric + symmetric (or distance); Hanger concentric to Pin 2, coincident to the Arm front face, and parallel (Hanger side edge ⊥ Base top). Evaluate → Mass Properties.<p class=\"calc\">Centre of mass: X = 67.49 mm, Y = 34.47 mm, Z = -28.23 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>717.31</td></tr><tr><td>Arm</td><td>6061 Alloy</td><td>268.91</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td>Hanger</td><td>Cast Alloy Steel</td><td>121.31</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1168.00</b></td></tr></table>",
      "heading": "Assembly (Hinged Arm) – Step 1",
      "images": [
@@ -348,6 +348,7 @@ window.CSWA_DATA = {
        "title": "Hanger – front"
       }
      ],
+     "parts": "parts/exam1-hinged-arm-parts.zip",
      "type": "mc",
      "options": [
       "X = 67.49 mm, Y = 34.47 mm, Z = -28.23 mm",
@@ -399,6 +400,7 @@ window.CSWA_DATA = {
        "title": "Hanger – front"
       }
      ],
+     "parts": "parts/exam1-hinged-arm-parts.zip",
      "type": "mc",
      "options": [
       "X = 64.55 mm, Y = 38.67 mm, Z = -28.23 mm",
@@ -450,6 +452,7 @@ window.CSWA_DATA = {
        "title": "Hanger – front"
       }
      ],
+     "parts": "parts/exam1-hinged-arm-parts.zip",
      "type": "mc",
      "options": [
       "X = -55.45 mm, Y = 38.67 mm, Z = -28.23 mm",
@@ -501,6 +504,7 @@ window.CSWA_DATA = {
        "title": "Hanger – front"
       }
      ],
+     "parts": "parts/exam1-hinged-arm-parts.zip",
      "type": "num",
      "unit": "g",
      "answer": {
@@ -818,7 +822,7 @@ window.CSWA_DATA = {
      "n": 11,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Build this assembly in SOLIDWORKS. It contains one Rail, two End Caps, one Slider, one Post and one Handle.</p>\n<ul class=\"notes\"><li>Unit system: MMGS, decimal places: 2</li><li>Rail: AISI 1020 (0.0079 g/mm³)</li><li>End Cap (2X): ABS (0.0010 g/mm³)</li><li>Slider: 6061 Alloy (0.0027 g/mm³)</li><li>Post: Alloy Steel (0.0077 g/mm³)</li><li>Handle: AISI 1020 (0.0079 g/mm³)</li><li>The Rail is fixed; the assembly origin is shown.</li><li>The End Caps are flush with the ends, bottom, back and front of the Rail.</li><li>The Slider sits on the channel floor between the walls. The Post is concentric with the Slider hole, its bottom flush with the Slider bottom.</li><li>The Handle sits on top of the Post collar, concentric with the Post.</li><li>Distance <b>A</b>: Rail left end to Slider left face. Angle <b>B</b>: Rail long edge to the Handle centre line, Handle swinging toward the front.</li></ul>\n<p><b>A = 40, B = 0°</b>. What is the centre of mass of the assembly (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "prompt": "<p>Build this assembly in SOLIDWORKS. It contains one Rail, two End Caps, one Slider, one Post and one Handle. Download the attached parts and open them in SOLIDWORKS.</p>\n<ul class=\"notes\"><li>Unit system: MMGS, decimal places: 2</li><li>Rail: AISI 1020 (0.0079 g/mm³)</li><li>End Cap (2X): ABS (0.0010 g/mm³)</li><li>Slider: 6061 Alloy (0.0027 g/mm³)</li><li>Post: Alloy Steel (0.0077 g/mm³)</li><li>Handle: AISI 1020 (0.0079 g/mm³)</li><li>The Rail is fixed; the assembly origin is shown.</li><li>The End Caps are flush with the ends, bottom, back and front of the Rail.</li><li>The Slider sits on the channel floor between the walls. The Post is concentric with the Slider hole, its bottom flush with the Slider bottom.</li><li>The Handle sits on top of the Post collar, concentric with the Post.</li><li>Distance <b>A</b>: Rail left end to Slider left face. Angle <b>B</b>: Rail long edge to the Handle centre line, Handle swinging toward the front.</li></ul>\n<p><b>A = 40, B = 0°</b>. What is the centre of mass of the assembly (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
      "explain": "Use a distance mate for A and an angle mate for B (between a Handle side face and the Rail front face, or between planes).<p class=\"calc\">Centre of mass: X = 95.25 mm, Y = 19.29 mm, Z = -25.00 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Rail</td><td>AISI 1020</td><td>1169.20</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>Slider</td><td>6061 Alloy</td><td>64.56</td></tr><tr><td>Post</td><td>Alloy Steel</td><td>114.52</td></tr><tr><td>Handle</td><td>AISI 1020</td><td>110.65</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1474.23</b></td></tr></table>",
      "heading": "Assembly (Slide) – Step 1",
      "images": [
@@ -851,6 +855,7 @@ window.CSWA_DATA = {
        "title": "Handle – top"
       }
      ],
+     "parts": "parts/exam2-slide-parts.zip",
      "type": "mc",
      "options": [
       "X = 103.11 mm, Y = 19.29 mm, Z = -25.00 mm",
@@ -898,6 +903,7 @@ window.CSWA_DATA = {
        "title": "Handle – top"
       }
      ],
+     "parts": "parts/exam2-slide-parts.zip",
      "type": "mc",
      "options": [
       "X = 109.42 mm, Y = 19.29 mm, Z = -22.31 mm",
@@ -945,6 +951,7 @@ window.CSWA_DATA = {
        "title": "Handle – top"
       }
      ],
+     "parts": "parts/exam2-slide-parts.zip",
      "type": "mc",
      "options": [
       "X = 100.00 mm, Y = 19.29 mm, Z = -21.89 mm",
@@ -992,6 +999,7 @@ window.CSWA_DATA = {
        "title": "Handle – top"
       }
      ],
+     "parts": "parts/exam2-slide-parts.zip",
      "type": "num",
      "unit": "g",
      "answer": {
@@ -1004,7 +1012,7 @@ window.CSWA_DATA = {
   {
    "id": "exam3",
    "title": "CSWA Practice Exam 3",
-   "blurb": "A little harder than the real exam. Angle support, revolved spindle, tool block with an angled hole, two-link arm.",
+   "blurb": "A little harder than the real exam. Angle support, revolved spindle, tool block with an angled hole, three-link chain.",
    "timeMinutes": 180,
    "total": 240,
    "passScore": 165,
@@ -1282,7 +1290,7 @@ window.CSWA_DATA = {
      "n": 11,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Build this assembly in SOLIDWORKS. It contains one Base, Link 1 and Link 2 (100 centres), Link 3 (140 centres) and three Pins.</p>\n<ul class=\"notes\"><li>Unit system: MMGS, decimal places: 2</li><li>Base: AISI 1020 (0.0079 g/mm³)</li><li>Link 1, Link 2, Link 3: 6061 Alloy (0.0027 g/mm³)</li><li>Pin (3X): Alloy Steel (0.0077 g/mm³)</li><li>The Base is fixed; the assembly origin is shown.</li><li>Link 1 is against the front face of the tongue; each following Link is against the front face of the one before it.</li><li>Pins are concentric with the holes they join (no clearance), head against the front part.</li><li>A: angle between the top face of the Base and Link 1. B: angle between Link 1 and Link 2. C: angle between Link 2 and Link 3. B and C are the angles at the pins, as shown.</li></ul>\n<p><b>A = 45°, B = 135°, C = 135°</b>. What is the centre of mass of the assembly (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "prompt": "<p>Build this assembly in SOLIDWORKS. It contains one Base, Link 1 and Link 2 (100 centres), Link 3 (140 centres) and three Pins. Download the attached parts and open them in SOLIDWORKS.</p>\n<ul class=\"notes\"><li>Unit system: MMGS, decimal places: 2</li><li>Base: AISI 1020 (0.0079 g/mm³)</li><li>Link 1, Link 2, Link 3: 6061 Alloy (0.0027 g/mm³)</li><li>Pin (3X): Alloy Steel (0.0077 g/mm³)</li><li>The Base is fixed; the assembly origin is shown.</li><li>Link 1 is against the front face of the tongue; each following Link is against the front face of the one before it.</li><li>Pins are concentric with the holes they join (no clearance), head against the front part.</li><li>A: angle between the top face of the Base and Link 1. B: angle between Link 1 and Link 2. C: angle between Link 2 and Link 3. B and C are the angles at the pins, as shown.</li></ul>\n<p><b>A = 45°, B = 135°, C = 135°</b>. What is the centre of mass of the assembly (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
      "explain": "B and C are measured between neighbouring links, not from horizontal: use angle mates between the side faces of neighbouring Links (Link 2 ends up horizontal here, Link 3 back at 45°). Check the bend direction against the image; flipping a mate gives one of the wrong answers.<p class=\"calc\">Centre of mass: X = 67.81 mm, Y = 43.82 mm, Z = -20.46 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>1040.82</td></tr><tr><td>Link 1</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Link 2</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Link 3</td><td>6061 Alloy</td><td>98.69</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1335.28</b></td></tr></table>",
      "heading": "Assembly (Link Chain) – Step 1",
      "images": [
@@ -1315,6 +1323,7 @@ window.CSWA_DATA = {
        "title": "Pin"
       }
      ],
+     "parts": "parts/exam3-link-chain-parts.zip",
      "type": "mc",
      "options": [
       "X = 67.81 mm, Y = 43.82 mm, Z = -20.46 mm",
@@ -1362,6 +1371,7 @@ window.CSWA_DATA = {
        "title": "Pin"
       }
      ],
+     "parts": "parts/exam3-link-chain-parts.zip",
      "type": "mc",
      "options": [
       "X = 58.88 mm, Y = 53.90 mm, Z = -20.46 mm",
@@ -1409,6 +1419,7 @@ window.CSWA_DATA = {
        "title": "Pin"
       }
      ],
+     "parts": "parts/exam3-link-chain-parts.zip",
      "type": "mc",
      "options": [
       "X = -10.39 mm, Y = 40.90 mm, Z = -20.46 mm",
@@ -1456,6 +1467,7 @@ window.CSWA_DATA = {
        "title": "Pin"
       }
      ],
+     "parts": "parts/exam3-link-chain-parts.zip",
      "type": "mc",
      "options": [
       "X = 55.56 mm, Y = 49.49 mm, Z = -18.06 mm",
