@@ -152,3 +152,45 @@ export function place(R, pivot, to) {
   const rp = apply({ R, t: [0, 0, 0] }, pivot);
   return { R, t: [to[0] - rp[0], to[1] - rp[1], to[2] - rp[2]] };
 }
+
+// ---- profile helpers for harder parts -------------------------------------------------
+// Polygon with optional corner radii: verts are [u, v] or [u, v, r]. Works for convex and
+// concave corners; each rounded corner becomes a tangent arc.
+export function filletPoly(verts) {
+  const out = [];
+  const n = verts.length;
+  for (let i = 0; i < n; i++) {
+    const P = verts[i];
+    const r = P[2] || 0;
+    if (!r) { out.push([P[0], P[1]]); continue; }
+    const A = verts[(i - 1 + n) % n], B = verts[(i + 1) % n];
+    const ux = A[0] - P[0], uy = A[1] - P[1], lu = Math.hypot(ux, uy);
+    const vx = B[0] - P[0], vy = B[1] - P[1], lv = Math.hypot(vx, vy);
+    const u = [ux / lu, uy / lu], w = [vx / lv, vy / lv];
+    const ang = Math.acos(Math.max(-1, Math.min(1, u[0] * w[0] + u[1] * w[1])));
+    const d = r / Math.tan(ang / 2), h = r / Math.sin(ang / 2);
+    if (d > lu + 1e-9 || d > lv + 1e-9) throw new Error('filletPoly: radius too large at vertex ' + i);
+    const bl = Math.hypot(u[0] + w[0], u[1] + w[1]);
+    const C = [P[0] + ((u[0] + w[0]) / bl) * h, P[1] + ((u[1] + w[1]) / bl) * h];
+    const T1 = [P[0] + u[0] * d, P[1] + u[1] * d], T2 = [P[0] + w[0] * d, P[1] + w[1] * d];
+    const a1 = (Math.atan2(T1[1] - C[1], T1[0] - C[0]) * 180) / Math.PI;
+    let a2 = (Math.atan2(T2[1] - C[1], T2[0] - C[0]) * 180) / Math.PI;
+    let delta = a2 - a1;
+    while (delta > 180) delta -= 360;
+    while (delta <= -180) delta += 360;
+    out.push(...arc(C[0], C[1], r, a1, a1 + delta));
+  }
+  return out;
+}
+export const roundRect = (u0, v0, u1, v1, r) => filletPoly([[u0, v0, r], [u1, v0, r], [u1, v1, r], [u0, v1, r]]);
+// Straight slot (obround) between two centres along u.
+export const slotU = (u1, u2, v, r) => [...arc(u1, v, r, 90, 270), ...arc(u2, v, r, -90, 90)];
+export const intersect = (a, b) => a.intersect(b);
+
+// A cylinder along an arbitrary in-plane direction of the XY plane: starts at point p
+// (x, y, z), runs along unit direction (dx, dy) from t0 to t1. Used for holes normal to
+// sloped faces.
+export function cylXYDir(p, dir, r, t0, t1) {
+  const phi = (Math.atan2(dir[0], dir[1]) * 180) / Math.PI; // angle from +Y toward +X
+  return cyl('XZ', 0, 0, r, t0, t1).rotate([0, 0, -phi]).translate(p);
+}

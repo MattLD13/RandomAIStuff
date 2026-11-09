@@ -138,7 +138,8 @@
     pendingExamId = examId;
     const ex = examById(examId), mode = selectedMode();
     $('intro-title').textContent = ex.title;
-    $('intro-head').textContent = `Welcome${store.name ? ', ' + store.name : ''}`;
+    $('intro-welcome').textContent = `Welcome${store.name ? ', ' + store.name : ''}, to ${ex.title}.`;
+    $('rule-count').textContent = `Your exam has ${ex.questions.length} questions. You can answer them in any order.`;
     const f = $('intro-facts');
     f.textContent = '';
     const fact = (k, v) => f.append(el('div', null, el('dt', null, k), el('dd', null, v)));
@@ -171,7 +172,7 @@
     $('x-cand').textContent = store.name ? `Candidate: ${store.name}` : '';
     $('btn-check').hidden = c.mode !== 'practice';
     $('btn-summary').hidden = false;
-    $('btn-end').textContent = 'End Examination';
+    $('btn-end').textContent = 'End Test';
     $('chk-mark').parentElement.hidden = false;
     show('exam');
     renderList();
@@ -244,7 +245,7 @@
     $('q-num').textContent = `Question ${q.n}`;
     $('q-sec').textContent = SECTIONS[q.section];
     $('q-pts').textContent = `${q.points} points`;
-    $('q-prompt').innerHTML = q.prompt;
+    $('q-prompt').innerHTML = (q.heading ? `<p class="q-heading">${q.heading}</p>` : '') + q.prompt;
 
     const th = $('q-thumbs');
     th.textContent = '';
@@ -385,10 +386,10 @@
     const c = cur(), ex = examById(c.examId);
     const un = ex.questions.filter((q) => !isAnswered(q, c.answers[q.id])).length;
     const mk = ex.questions.filter((q) => c.flags[q.id]).length;
-    let t = 'You cannot change your answers after you end the examination.';
+    let t = 'You cannot go back to your questions after you end the test.';
     if (un) t = `You have ${un} unanswered question${un > 1 ? 's' : ''}. ` + t;
     if (mk) t = `${mk} question${mk > 1 ? 's are' : ' is'} marked for review. ` + t;
-    confirmBox('End examination', t, 'End Examination', () => finish(false));
+    confirmBox('End test', t, 'End Test', () => finish(false));
   }
 
   function finish(timeUp) {

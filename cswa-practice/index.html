@@ -76,7 +76,7 @@
             <tr><td>Assembly</td><td>4</td><td>4 × 30</td></tr>
           </tbody>
         </table>
-        <p class="small muted">Some sources give 168 (70 %) as the commercial pass mark. Check the current SOLIDWORKS certification page for your exam. Keep SOLIDWORKS open next to this window and build each part as you would on test day.</p>
+        <p class="small muted">Pass mark and section weights are from the official SOLIDWORKS CSWA exam guide. Keep SOLIDWORKS open next to this window and build each part as you would on test day. Exams 1 and 2 aim at real-exam difficulty; Exam 3 is a little harder.</p>
 
         <h2 class="h-sec">Your attempts</h2>
         <div id="history"><p class="small muted">No attempts yet. Finished exams appear here.</p></div>
@@ -89,11 +89,14 @@
     <div class="window">
       <div class="titlebar"><span id="intro-title">Exam</span></div>
       <div class="intro-body">
-        <h2 id="intro-head">Welcome</h2>
+        <h2 id="intro-head">Examination Information</h2>
+        <p id="intro-welcome" class="muted"></p>
         <dl class="facts" id="intro-facts"></dl>
         <ul class="rules">
-          <li>Move between questions with <b>Previous</b> and <b>Next</b>, or click a question in the list. You can change any answer until you end the exam.</li>
-          <li>Tick <b>Mark for review</b> to flag a question. <b>Summary</b> lists answered, unanswered and marked questions.</li>
+          <li id="rule-count">Your exam has 14 questions. You can answer them in any order.</li>
+          <li>Move with <b>Previous</b> and <b>Next</b>, or click a question in the list. Tick <b>Mark for review</b> to flag one. The <b>Summary</b> screen lists the questions you have and have not answered.</li>
+          <li>Once you click <b>End Test</b> you cannot go back to your questions.</li>
+          <li>Save your part under a new file name after each question, so you can go back to an earlier step if a later answer looks wrong.</li>
           <li>Click a drawing to open it in the image viewer. Zoom with the mouse wheel or the + and − buttons, and drag to pan.</li>
           <li>Fill-in answers are numbers only, with a period as the decimal separator and no units. An answer within 1 % of the correct value scores full points.</li>
           <li>Unless a question says otherwise, use MMGS units, 2 decimal places, and the material and density given in the question.</li>
@@ -141,13 +144,13 @@
     <div class="exam-bottom">
       <div class="row">
         <button class="btn" id="btn-prev" type="button">◀ Previous<span class="long"> Question</span></button>
-        <label class="mark"><input type="checkbox" id="chk-mark"> Mark<span class="long"> for review</span></label>
+        <label class="mark"><input type="checkbox" id="chk-mark"> <span>Mark<span class="long"> for review</span></span></label>
         <button class="btn" id="btn-next" type="button">Next<span class="long"> Question</span> ▶</button>
       </div>
       <div class="row">
         <button class="btn" id="btn-check" type="button" hidden>Check answer</button>
         <button class="btn" id="btn-summary" type="button">Summary</button>
-        <button class="btn danger" id="btn-end" type="button">End Examination</button>
+        <button class="btn danger" id="btn-end" type="button">End Test</button>
       </div>
     </div>
   </section>
@@ -166,7 +169,7 @@
         </div>
         <div class="row end">
           <button class="btn" id="btn-sum-back" type="button">Return to exam</button>
-          <button class="btn danger" id="btn-sum-end" type="button">End Examination</button>
+          <button class="btn danger" id="btn-sum-end" type="button">End Test</button>
         </div>
       </div>
     </div>
@@ -195,12 +198,12 @@
   <!-- ===== Confirm dialog ===== -->
   <div class="modal" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="confirm-title">
     <div class="dialog">
-      <div class="titlebar"><span id="confirm-title">End examination</span></div>
+      <div class="titlebar"><span id="confirm-title">End test</span></div>
       <div class="dialog-body">
         <p id="confirm-text"></p>
         <div class="row end">
           <button class="btn" id="confirm-no" type="button">Cancel</button>
-          <button class="btn danger" id="confirm-yes" type="button">End Examination</button>
+          <button class="btn danger" id="confirm-yes" type="button">End Test</button>
         </div>
       </div>
     </div>

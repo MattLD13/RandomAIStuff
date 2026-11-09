@@ -15,7 +15,7 @@ Open `index.html` in a browser; no install or server is needed. Keep SOLIDWORKS 
 
 | | |
 |---|---|
-| **Practice Exams 1–3** | 14 questions, 240 points, 180 minutes, pass mark 165: 3 drafting (5 pts), 2 basic part (15), 2 intermediate part (15), 3 advanced part (15), 4 assembly (30). |
+| **Practice Exams 1–3** | 14 questions, 240 points, 180 minutes, pass mark 165: 3 drafting (5 pts), 2 basic part (15), 2 intermediate part (15), 3 advanced part (15), 4 assembly (30). Exams 1–2 aim at real-exam difficulty; Exam 3 is a little harder (angled hole, revolve with groove, three-link chain with relative angles). |
 | **Concepts Drill** | 16 quick multiple-choice questions on sketch relations, features, mates and drawing views. |
 | **Exam mode** | Timed. Answers are scored only when you end the exam (or time runs out). |
 | **Practice mode** | Untimed. **Check answer** shows right/wrong, the correct value and the working (volume × density, or a mass table for assemblies). |
@@ -52,12 +52,25 @@ node build.mjs --no-images  # answers only, keeps the existing images
 To add a question, add a model function (or reuse one with new parameters), add an entry in
 `exams.mjs`, and run the build.
 
+## Difficulty
+
+The exams were calibrated against the official SOLIDWORKS CSWA exam guide and sample test.
+That calibration set the format (14 questions, 240 points, 180 minutes, 165 to pass, 1 % answer
+tolerance), the terse question style ("Part (Name) – Step n", variables A/B/C, everything else
+read from the drawing) and the feature mix. Basic and intermediate parts have about 6–9 features
+each, including fillets, chamfers, counterbores, slots and revolves. Advanced parts build on
+earlier steps. Assemblies have 5–7 components, with angles or distances you change between
+questions. Exam 3's assembly uses angles measured between neighbouring links, the hardest mate
+setup on the exam.
+
+Multiple-choice distractors here are deliberately closer to the right answer than on the
+official sample, so a careless model is less likely to match a wrong option by luck.
+
+A good readiness check: finish an exam in Exam mode within the time and score 165 or more.
+
 ## Notes
 
 - All questions and drawings are original practice material written in the CSWA format.
-  They are not real exam questions.
-- The exam format (14 questions / 240 points / 180 minutes, 165 pass mark) comes from SOLIDWORKS'
-  academic CSWA page and third-party prep sites. Some sources give 168 (70 %) for the commercial
-  exam. Check the current SOLIDWORKS certification page before you book.
+  They are not real exam questions, and no official or textbook material is copied into this app.
 - This is an independent study tool. It is not affiliated with Dassault Systèmes or the company
   that makes the official exam client.

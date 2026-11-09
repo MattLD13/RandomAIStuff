@@ -194,6 +194,8 @@ body:has(#exam:not([hidden])) #app { height: 100%; }
 .q-pts { font: 600 13px var(--f-mono); background: var(--panel-2); border: 1px solid var(--line); padding: 4px 9px; border-radius: 3px; white-space: nowrap; }
 .q-prompt { max-width: 75ch; }
 .q-prompt p { margin: 0 0 10px; }
+.q-prompt .q-heading { font-weight: 700; font-size: 16px; }
+.q-prompt .hint-line { font-size: 14px; color: var(--muted); }
 .q-prompt ul.notes { margin: 6px 0 12px; padding: 10px 12px 10px 30px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r); font-size: 14px; display: grid; gap: 2px; }
 
 .thumbs { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0 18px; }

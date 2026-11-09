@@ -12,7 +12,7 @@ window.CSWA_DATA = {
   {
    "id": "exam1",
    "title": "CSWA Practice Exam 1",
-   "blurb": "L-block, arched bracket, flanged hub and a hinged arm assembly.",
+   "blurb": "Real-exam level. L-bracket, arched bracket, flanged hub and a hinged arm assembly.",
    "timeMinutes": 180,
    "total": 240,
    "passScore": 165,
@@ -22,7 +22,7 @@ window.CSWA_DATA = {
      "n": 1,
      "section": "draft",
      "points": 5,
-     "prompt": "<p>View B was created from View A using one of the SOLIDWORKS drawing view tools. Which tool was used?</p>",
+     "prompt": "<p>To create View B from View A, which SOLIDWORKS view type was inserted?</p>",
      "explain": "A straight cutting line (A–A) drawn across the parent view, with the hatched result placed as a new view, is a <b>Section View</b>. An aligned section needs a bent cutting line; a broken-out section stays inside the original view; a detail view enlarges a circled region.",
      "images": [
       {
@@ -44,8 +44,8 @@ window.CSWA_DATA = {
      "n": 2,
      "section": "draft",
      "points": 5,
-     "prompt": "<p>View B was created from View A. Which drawing view tool was used?</p>",
-     "explain": "A circle drawn on the parent view, labelled with a letter, and shown again at a larger scale as \"DETAIL C\" is a <b>Detail View</b>. A crop view hides everything outside a closed profile but keeps the same scale and replaces the original view.",
+     "prompt": "<p>To create View B from View A, which SOLIDWORKS view type was inserted?</p>",
+     "explain": "A circle on the parent view, labelled with a letter, shown again at a larger scale as \"DETAIL C\" is a <b>Detail View</b>. A crop view hides everything outside a closed profile but keeps the scale and replaces the original view.",
      "images": [
       {
        "src": "img/draft-detail-view.svg",
@@ -66,8 +66,8 @@ window.CSWA_DATA = {
      "n": 3,
      "section": "draft",
      "points": 5,
-     "prompt": "<p>View B shows the true shape of the inclined face of the part in View A. Which drawing view tool was used to create View B?</p>",
-     "explain": "An <b>Auxiliary View</b> is projected perpendicular to a selected reference edge (here the inclined edge), so an inclined face appears at its true size. A projected view can only go in the standard orthographic directions.",
+     "prompt": "<p>To create View B from View A, which SOLIDWORKS view type was inserted?</p>",
+     "explain": "An <b>Auxiliary View</b> is projected perpendicular to a selected reference edge (here the inclined edge), so the inclined face appears at its true size. A projected view only goes in the standard orthographic directions.",
      "images": [
       {
        "src": "img/draft-auxiliary-view.svg",
@@ -88,8 +88,9 @@ window.CSWA_DATA = {
      "n": 4,
      "section": "basic",
      "points": 15,
-     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>AISI 1020</b> — density = <b>0.0079 g/mm³</b></li>\n</ul><p><b>A = 90 mm, B = 60 mm</b></p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "Extrude the L-shaped profile (base 20 thick, upright 20 thick) 50 mm deep, then cut the Ø16 hole through the upright and the two Ø12 holes through the base.<p class=\"calc\">Volume 121454.87 mm³ × 0.00790 g/mm³ = <b>959.49 g</b>.</p>",
+     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: AISI 1020 — density = 0.0079 g/mm³</li>\n</ul><p><b>A = 90, B = 60</b></p><p>What is the overall mass of the part (grams)?</p>",
+     "explain": "Sketch the L profile on the Front plane with the 8 × 8 chamfer and the R8 inside fillet, extrude 50. Round the two outer corners of the foot R10, cut the 30 × 12 slot through the foot, then the Ø16 hole with its Ø26 × 5 counterbore from the inside face of the upright (Hole Wizard or two cuts).<p class=\"calc\">Volume 115975.80 mm³ × 0.00790 g/mm³ = <b>916.21 g</b>.</p>",
+     "heading": "Part (L-Bracket) – Step 1",
      "images": [
       {
        "src": "img/e1q4-1.png",
@@ -111,7 +112,7 @@ window.CSWA_DATA = {
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 959.49,
+      "value": 916.21,
       "tol": 0.01
      }
     },
@@ -120,8 +121,9 @@ window.CSWA_DATA = {
      "n": 5,
      "section": "basic",
      "points": 15,
-     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>AISI 1020</b> — density = <b>0.0079 g/mm³</b></li>\n</ul><p>Change the dimensions to <b>A = 110 mm, B = 72 mm</b>. All other dimensions stay the same (the Ø16 hole stays 18 mm below the top face).</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "Only A and B change. Because the hole is dimensioned from the top face, it moves up with B.<p class=\"calc\">Volume 153454.87 mm³ × 0.00790 g/mm³ = <b>1212.29 g</b>.</p>",
+     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: AISI 1020 — density = 0.0079 g/mm³</li>\n</ul><p><b>A = 110, B = 72</b></p><p>Note: all other dimensions are the same as in the previous question.</p><p>What is the overall mass of the part (grams)?</p>",
+     "explain": "The slot is dimensioned from the right end and the hole from the top face, so both follow the new A and B.<p class=\"calc\">Volume 147975.80 mm³ × 0.00790 g/mm³ = <b>1169.01 g</b>.</p>",
+     "heading": "Part (L-Bracket) – Step 2",
      "images": [
       {
        "src": "img/e1q4-1.png",
@@ -143,7 +145,7 @@ window.CSWA_DATA = {
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 1212.29,
+      "value": 1169.01,
       "tol": 0.01
      }
     },
@@ -152,8 +154,9 @@ window.CSWA_DATA = {
      "n": 6,
      "section": "inter",
      "points": 15,
-     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>6061 Alloy</b> — density = <b>0.0027 g/mm³</b></li>\n</ul><p><b>A = 100 mm, B = 24 mm, C = 60 mm</b></p><p>The arched wall and the rib are centred on the length of the base. The ØB hole is concentric with the R30 arc.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "Base plate A × 12 × C; wall 60 wide and 14 thick at the back edge with an R30 top; triangular rib 12 wide (30 × 25) on the front of the wall; two Ø10 holes 15 from the side and front edges; a 30 × 15 notch centred on the front edge.<p class=\"calc\">Volume 116273.62 mm³ × 0.00270 g/mm³ = <b>313.94 g</b>.</p>",
+     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: 6061 Alloy — density = 0.0027 g/mm³</li>\n</ul><p><b>A = 100, B = 24, C = 60</b></p><p>What is the overall mass of the part (grams)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "Plate A × C × 12 with R8 corners; arched wall 60 wide × 14 thick at the back edge with R30 top; Ø40 × 6 boss on the front of the wall; ØB through both; triangular rib 12 wide (30 × 25); two Ø10 holes counterbored Ø16 × 4, 15 from the side and front edges; 30 × 15 notch in the middle of the front edge.<p class=\"calc\">Volume 119300.37 mm³ × 0.00270 g/mm³ = <b>322.11 g</b>.</p>",
+     "heading": "Part (Arch Bracket) – Step 1",
      "images": [
       {
        "src": "img/e1q6-1.png",
@@ -174,10 +177,10 @@ window.CSWA_DATA = {
      ],
      "type": "mc",
      "options": [
-      "313.94 g",
-      "351.93 g",
-      "294.47 g",
-      "334.03 g"
+      "322.11 g",
+      "348.20 g",
+      "308.26 g",
+      "333.71 g"
      ],
      "answer": 0
     },
@@ -186,8 +189,9 @@ window.CSWA_DATA = {
      "n": 7,
      "section": "inter",
      "points": 15,
-     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>6061 Alloy</b> — density = <b>0.0027 g/mm³</b></li>\n</ul><p>Change the dimensions to <b>A = 120 mm, B = 30 mm, C = 70 mm</b>. The wall, rib and notch stay centred on the length of the base.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "The holes and notch are dimensioned from the front edge, so they move with C.<p class=\"calc\">Volume 141511.06 mm³ × 0.00270 g/mm³ = <b>382.08 g</b>.</p>",
+     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: 6061 Alloy — density = 0.0027 g/mm³</li>\n</ul><p><b>A = 120, B = 30, C = 70</b></p><p>The wall, boss, rib and notch stay centred on the length of the plate.</p><p>Note: all other dimensions are the same as in the previous question.</p><p>What is the overall mass of the part (grams)?</p>",
+     "explain": "The holes and notch are dimensioned from the front edge, so they move with C.<p class=\"calc\">Volume 143010.99 mm³ × 0.00270 g/mm³ = <b>386.13 g</b>.</p>",
+     "heading": "Part (Arch Bracket) – Step 2",
      "images": [
       {
        "src": "img/e1q6-1.png",
@@ -209,7 +213,7 @@ window.CSWA_DATA = {
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 382.08,
+      "value": 386.13,
       "tol": 0.01
      }
     },
@@ -218,8 +222,9 @@ window.CSWA_DATA = {
      "n": 8,
      "section": "adv",
      "points": 15,
-     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: centre of the bottom face of the flange</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>Alloy Steel</b> — density = <b>0.0077 g/mm³</b></li>\n</ul><p><b>A = 120 mm, B = 45 mm</b></p><p>The flange is 15 mm thick. The hub is Ø70. The keyway (12 wide, bottom 26 mm from the axis) runs the full height. The six Ø10 holes are equally spaced on a Ø95 bolt circle, the first one 30° from the keyway direction.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "Revolve or extrude the flange and hub, cut the Ø40 bore and the keyway through all, add the Ø50 × 8 counterbore at the top, then make one Ø10 hole and a 6× circular pattern.<p class=\"calc\">Volume 250651.57 mm³ × 0.00770 g/mm³ = <b>1930.02 g</b>.</p>",
+     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: centre of the bottom face (see image)</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: Alloy Steel — density = 0.0077 g/mm³</li>\n</ul><p><b>A = 120, B = 45</b></p><p>What is the overall mass of the part (grams)?</p>",
+     "explain": "Revolve the half section (flange 15 thick, Ø70 hub, R4 fillet at the root, 3 × 45° chamfer at the top, Ø40 bore, Ø50 × 8 counterbore). Add the Ø24 side boss (axis 35 above the bottom, 50 from the axis) and its Ø12 hole, the 12-wide keyway (26 from the axis) and the 6 × Ø10 holes on Ø95, the first at 30° to the keyway.<p class=\"calc\">Volume 254068.00 mm³ × 0.00770 g/mm³ = <b>1956.32 g</b>.</p>",
+     "heading": "Part (Flanged Hub) – Step 1",
      "images": [
       {
        "src": "img/e1q8-1.png",
@@ -228,12 +233,16 @@ window.CSWA_DATA = {
       {
        "src": "img/e1q8-2.png",
        "title": "Top"
+      },
+      {
+       "src": "img/e1q8-3.png",
+       "title": "Front"
       }
      ],
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 1930.02,
+      "value": 1956.32,
       "tol": 0.01
      }
     },
@@ -242,8 +251,9 @@ window.CSWA_DATA = {
      "n": 9,
      "section": "adv",
      "points": 15,
-     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: centre of the bottom face of the flange</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>Alloy Steel</b> — density = <b>0.0077 g/mm³</b></li>\n</ul><p>Change the dimensions to <b>A = 130 mm, B = 55 mm</b>. The bolt circle stays Ø95 and the counterbore stays 8 mm deep from the top of the hub.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "Only the flange diameter and the hub height change.<p class=\"calc\">Volume 305265.63 mm³ × 0.00770 g/mm³ = <b>2350.55 g</b>.</p>",
+     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: centre of the bottom face</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: Alloy Steel — density = 0.0077 g/mm³</li>\n</ul><p><b>A = 130, B = 55</b></p><p>Note: all other dimensions are the same as in the previous question.</p><p>What is the overall mass of the part (grams)?</p>",
+     "explain": "Only the flange diameter and the hub height change; the side boss stays 35 above the bottom.<p class=\"calc\">Volume 308682.07 mm³ × 0.00770 g/mm³ = <b>2376.85 g</b>.</p>",
+     "heading": "Part (Flanged Hub) – Step 2",
      "images": [
       {
        "src": "img/e1q8-1.png",
@@ -252,12 +262,16 @@ window.CSWA_DATA = {
       {
        "src": "img/e1q8-2.png",
        "title": "Top"
+      },
+      {
+       "src": "img/e1q8-3.png",
+       "title": "Front"
       }
      ],
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 2350.55,
+      "value": 2376.85,
       "tol": 0.01
      }
     },
@@ -266,8 +280,9 @@ window.CSWA_DATA = {
      "n": 10,
      "section": "adv",
      "points": 15,
-     "prompt": "<p>Modify the part from the previous question (A = 130 mm, B = 55 mm).</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: centre of the bottom face of the flange</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>Alloy Steel</b> — density = <b>0.0077 g/mm³</b></li>\n</ul><p>Cut a flat on the flange on the side opposite the keyway. The flat is parallel to the keyway sides at a distance <b>D = 50 mm</b> from the axis, through the full flange thickness.</p><p>What is the centre of mass of the part, relative to the part origin shown?</p>",
-     "explain": "The flat removes material on the −X side, so the centre of mass moves toward +X. The keyway removes material on the +X side, which pulls it the other way a little.<p class=\"calc\">Centre of mass: X = 2.07 mm, Y = 23.03 mm, Z = 0.00 mm (part mass 2252.15 g).</p>",
+     "prompt": "<p>Modify the part from the previous question (A = 130, B = 55): cut a flat on the flange on the side opposite the keyway, at distance <b>D = 50</b> from the axis, through the flange thickness (see Top view).</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: centre of the bottom face (see image)</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: Alloy Steel — density = 0.0077 g/mm³</li>\n</ul><p>What is the centre of mass of the part (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "The flat removes material on −X, so the centre of mass moves toward +X; the side boss pulls it toward +Z.<p class=\"calc\">Centre of mass: X = 2.05 mm, Y = 23.00 mm, Z = 0.60 mm (part mass 2278.45 g).</p>",
+     "heading": "Part (Flanged Hub) – Step 3",
      "images": [
       {
        "src": "img/e1q10-1.png",
@@ -276,14 +291,18 @@ window.CSWA_DATA = {
       {
        "src": "img/e1q10-2.png",
        "title": "Top"
+      },
+      {
+       "src": "img/e1q10-3.png",
+       "title": "Front"
       }
      ],
      "type": "mc",
      "options": [
-      "X = -0.36 mm, Y = 22.38 mm, Z = 0.00 mm",
-      "X = -2.07 mm, Y = 23.03 mm, Z = 0.00 mm",
-      "X = 2.07 mm, Y = 27.63 mm, Z = 0.00 mm",
-      "X = 2.07 mm, Y = 23.03 mm, Z = 0.00 mm"
+      "X = -0.36 mm, Y = 22.36 mm, Z = 0.57 mm",
+      "X = -2.05 mm, Y = 23.00 mm, Z = 0.60 mm",
+      "X = 2.05 mm, Y = 26.10 mm, Z = -1.60 mm",
+      "X = 2.05 mm, Y = 23.00 mm, Z = 0.60 mm"
      ],
      "answer": 3
     },
@@ -292,8 +311,9 @@ window.CSWA_DATA = {
      "n": 11,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Build this assembly in SOLIDWORKS. It has one Base, one Arm and two Pins. Build the parts from the drawings shown.</p>\n<ul class=\"notes\"><li>Unit system: MMGS, decimal places: 2</li>\n<li>Base: AISI 1020 (0.0079 g/mm³). Arm: 6061 Alloy (0.0027 g/mm³). Pin: Alloy Steel (0.0077 g/mm³).</li>\n<li>The Base is fixed. The assembly origin is the bottom front-left corner of the Base, as shown.</li>\n<li>The Arm sits between the two ears (its faces coincident with the inner ear faces). One hole of the Arm is concentric with the ear holes.</li>\n<li>One Pin goes through the ears and the Arm; the other through the free end of the Arm. Both Pins are centred on the middle plane of the Base (Pin length 50 mm).</li>\n<li>Angle <b>A</b> is between the top face of the Base and the centre line of the Arm.</li></ul>\n<p><b>A = 30°</b>. What is the centre of mass of the assembly, relative to the assembly origin?</p>",
-     "explain": "Fix the Base, add a concentric and a coincident (or width) mate for the Arm, an angle mate between the Arm and the Base top face, and concentric + symmetric mates for each Pin. Then Evaluate → Mass Properties.<p class=\"calc\">Centre of mass: X = 60.37 mm, Y = 29.06 mm, Z = -30.00 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>717.31</td></tr><tr><td>Arm</td><td>6061 Alloy</td><td>268.91</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1046.69</b></td></tr></table>",
+     "prompt": "<p>Build this assembly in SOLIDWORKS. It contains one Base, one Arm, two Pins and one Hanger.</p>\n<ul class=\"notes\"><li>Unit system: MMGS, decimal places: 2</li><li>Base: AISI 1020 (0.0079 g/mm³)</li><li>Arm: 6061 Alloy (0.0027 g/mm³)</li><li>Pin (2X): Alloy Steel (0.0077 g/mm³)</li><li>Hanger: Cast Alloy Steel (0.0073 g/mm³)</li><li>The Base is fixed; the assembly origin is shown.</li><li>The Arm sits centred between the ears and is concentric with the ear holes.</li><li>Each Pin is concentric with its holes and symmetric about the middle plane of the Base.</li><li>The Hanger hangs from the free-end Pin against the front face of the Arm; its long edges stay perpendicular to the top face of the Base.</li><li>Angle <b>A</b> is between the top face of the Base and the Arm.</li></ul>\n<p><b>A = 30°</b>. What is the centre of mass of the assembly (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "Mates: Base fixed; Arm concentric + width (or coincident to an ear face); angle mate A between Arm face and Base top; Pins concentric + symmetric (or distance); Hanger concentric to Pin 2, coincident to the Arm front face, and parallel (Hanger side edge ⊥ Base top). Evaluate → Mass Properties.<p class=\"calc\">Centre of mass: X = 67.49 mm, Y = 34.47 mm, Z = -28.23 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>717.31</td></tr><tr><td>Arm</td><td>6061 Alloy</td><td>268.91</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td>Hanger</td><td>Cast Alloy Steel</td><td>121.31</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1168.00</b></td></tr></table>",
+     "heading": "Assembly (Hinged Arm) – Step 1",
      "images": [
       {
        "src": "img/e1q11-asm-1.png",
@@ -322,14 +342,18 @@ window.CSWA_DATA = {
       {
        "src": "img/exam1-plainPin-1.png",
        "title": "Pin"
+      },
+      {
+       "src": "img/exam1-hanger-1.png",
+       "title": "Hanger – front"
       }
      ],
      "type": "mc",
      "options": [
-      "X = 60.37 mm, Y = 29.06 mm, Z = -30.00 mm",
-      "X = 60.37 mm, Y = 29.06 mm, Z = -24.00 mm",
-      "X = 65.67 mm, Y = 25.16 mm, Z = -30.00 mm",
-      "X = 53.46 mm, Y = 35.97 mm, Z = -30.00 mm"
+      "X = 67.49 mm, Y = 34.47 mm, Z = -28.23 mm",
+      "X = 67.49 mm, Y = 34.47 mm, Z = -22.23 mm",
+      "X = 71.79 mm, Y = 31.37 mm, Z = -28.23 mm",
+      "X = 56.74 mm, Y = 45.23 mm, Z = -28.23 mm"
      ],
      "answer": 0
     },
@@ -338,8 +362,9 @@ window.CSWA_DATA = {
      "n": 12,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Use the assembly from the previous question.</p><p>Change angle <b>A to 50°</b>. Everything else stays the same.</p><p>What is the centre of mass of the assembly, relative to the assembly origin?</p>",
-     "explain": "Edit the angle mate value and rebuild before you open Mass Properties.<p class=\"calc\">Centre of mass: X = 56.16 mm, Y = 34.09 mm, Z = -30.00 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>717.31</td></tr><tr><td>Arm</td><td>6061 Alloy</td><td>268.91</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1046.69</b></td></tr></table>",
+     "prompt": "<p>Modify the assembly from the previous question: <b>A = 50°</b>.</p><p>What is the centre of mass of the assembly (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "Edit the angle mate and rebuild before opening Mass Properties. The Hanger stays vertical, so it moves only with the free-end pin.<p class=\"calc\">Centre of mass: X = 60.93 mm, Y = 42.29 mm, Z = -28.23 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>717.31</td></tr><tr><td>Arm</td><td>6061 Alloy</td><td>268.91</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td>Hanger</td><td>Cast Alloy Steel</td><td>121.31</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1168.00</b></td></tr></table>",
+     "heading": "Assembly (Hinged Arm) – Step 2",
      "images": [
       {
        "src": "img/e1q11-asm-1.png",
@@ -368,14 +393,18 @@ window.CSWA_DATA = {
       {
        "src": "img/exam1-plainPin-1.png",
        "title": "Pin"
+      },
+      {
+       "src": "img/exam1-hanger-1.png",
+       "title": "Hanger – front"
       }
      ],
      "type": "mc",
      "options": [
-      "X = 58.48 mm, Y = 31.76 mm, Z = -30.00 mm",
-      "X = 56.16 mm, Y = 34.09 mm, Z = -30.00 mm",
-      "X = 51.76 mm, Y = 36.89 mm, Z = -30.00 mm",
-      "X = 60.37 mm, Y = 29.06 mm, Z = -30.00 mm"
+      "X = 64.55 mm, Y = 38.67 mm, Z = -28.23 mm",
+      "X = 60.93 mm, Y = 42.29 mm, Z = -28.23 mm",
+      "X = 57.13 mm, Y = 44.89 mm, Z = -28.23 mm",
+      "X = 67.49 mm, Y = 34.47 mm, Z = -28.23 mm"
      ],
      "answer": 1
     },
@@ -384,8 +413,9 @@ window.CSWA_DATA = {
      "n": 13,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Use the same assembly with angle <b>A = 40°</b>.</p>\n<p>Create a coordinate system, <i>Coordinate System1</i>, at the bottom front-right corner of the Base as shown. Its axes are parallel to the assembly axes and point the same way.</p>\n<p>What is the centre of mass of the assembly, relative to <i>Coordinate System1</i>?</p>",
-     "explain": "Insert → Reference Geometry → Coordinate System, then in Mass Properties choose \"Report coordinate values relative to: Coordinate System1\". The values are the origin-based centre of mass minus (120, 0, 60).<p class=\"calc\">Centre of mass relative to Coordinate System1: X = -61.52 mm, Y = 31.76 mm, Z = -30.00 mm<br>(relative to the assembly origin: X = 58.48 mm, Y = 31.76 mm, Z = -30.00 mm)</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>717.31</td></tr><tr><td>Arm</td><td>6061 Alloy</td><td>268.91</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1046.69</b></td></tr></table>",
+     "prompt": "<p>Modify the assembly: <b>A = 40°</b>. Create <i>Coordinate System1</i> at the corner of the Base shown, with axes parallel to the assembly axes.</p><p>What is the centre of mass of the assembly relative to <i>Coordinate System1</i> (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "Insert → Reference Geometry → Coordinate System, then in Mass Properties choose \"Report coordinate values relative to: Coordinate System1\".<p class=\"calc\">Centre of mass relative to Coordinate System1: X = -55.45 mm, Y = 38.67 mm, Z = -28.23 mm<br>(relative to the assembly origin: X = 64.55 mm, Y = 38.67 mm, Z = -28.23 mm)</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>717.31</td></tr><tr><td>Arm</td><td>6061 Alloy</td><td>268.91</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td>Hanger</td><td>Cast Alloy Steel</td><td>121.31</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1168.00</b></td></tr></table>",
+     "heading": "Assembly (Hinged Arm) – Step 3",
      "images": [
       {
        "src": "img/e1q13-asm-1.png",
@@ -414,14 +444,18 @@ window.CSWA_DATA = {
       {
        "src": "img/exam1-plainPin-1.png",
        "title": "Pin"
+      },
+      {
+       "src": "img/exam1-hanger-1.png",
+       "title": "Hanger – front"
       }
      ],
      "type": "mc",
      "options": [
-      "X = -61.52 mm, Y = 31.76 mm, Z = -30.00 mm",
-      "X = 58.48 mm, Y = 31.76 mm, Z = -30.00 mm",
-      "X = 61.52 mm, Y = -31.76 mm, Z = 30.00 mm",
-      "X = -57.92 mm, Y = 31.76 mm, Z = -34.10 mm"
+      "X = -55.45 mm, Y = 38.67 mm, Z = -28.23 mm",
+      "X = 64.55 mm, Y = 38.67 mm, Z = -28.23 mm",
+      "X = 55.45 mm, Y = -38.67 mm, Z = 28.23 mm",
+      "X = -51.85 mm, Y = 38.67 mm, Z = -32.33 mm"
      ],
      "answer": 0
     },
@@ -430,8 +464,9 @@ window.CSWA_DATA = {
      "n": 14,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Use the same assembly with angle <b>A = 40°</b>.</p><p>Change the material of the Arm to <b>Brass</b> (density 0.0085 g/mm³). The other parts keep their materials.</p><p>What is the total mass of the assembly (grams)?</p>",
-     "explain": "Edit the Arm part, apply Brass, then read the assembly mass. The angle does not change the mass.<table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>717.31</td></tr><tr><td>Arm</td><td>Brass</td><td>846.55</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1624.34</b></td></tr></table>",
+     "prompt": "<p>Modify the assembly (A = 40°): change the material of the Arm to <b>Brass</b> (density = 0.0085 g/mm³). All other parts keep their materials.</p><p>What is the total mass of the assembly (grams)?</p>",
+     "explain": "Edit the Arm part and apply Brass, then read the assembly mass. The angle does not change the mass.<table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>717.31</td></tr><tr><td>Arm</td><td>Brass</td><td>846.55</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>30.24</td></tr><tr><td>Hanger</td><td>Cast Alloy Steel</td><td>121.31</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1745.65</b></td></tr></table>",
+     "heading": "Assembly (Hinged Arm) – Step 4",
      "images": [
       {
        "src": "img/e1q11-asm-1.png",
@@ -460,12 +495,16 @@ window.CSWA_DATA = {
       {
        "src": "img/exam1-plainPin-1.png",
        "title": "Pin"
+      },
+      {
+       "src": "img/exam1-hanger-1.png",
+       "title": "Hanger – front"
       }
      ],
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 1624.34,
+      "value": 1745.65,
       "tol": 0.01
      }
     }
@@ -474,7 +513,7 @@ window.CSWA_DATA = {
   {
    "id": "exam2",
    "title": "CSWA Practice Exam 2",
-   "blurb": "Guide block, shaft support, shelled housing and a linear slide assembly.",
+   "blurb": "Real-exam level. Guide block, shaft support, shelled housing and a slide assembly with a swinging handle.",
    "timeMinutes": 180,
    "total": 240,
    "passScore": 165,
@@ -484,8 +523,8 @@ window.CSWA_DATA = {
      "n": 1,
      "section": "draft",
      "points": 5,
-     "prompt": "<p>View B was created from View A. Which drawing view tool was used?</p>",
-     "explain": "A <b>Broken-out Section</b> removes material to a given depth inside a closed spline drawn on an existing view, so the inside of that local region is shown hatched while the rest of the view is unchanged.",
+     "prompt": "<p>To create View B from View A, which SOLIDWORKS view type was inserted?</p>",
+     "explain": "A <b>Broken-out Section</b> removes material to a given depth inside a closed spline drawn on an existing view, so only that local region is shown cut and hatched.",
      "images": [
       {
        "src": "img/draft-broken-out-section.svg",
@@ -506,8 +545,8 @@ window.CSWA_DATA = {
      "n": 2,
      "section": "draft",
      "points": 5,
-     "prompt": "<p>The drawing uses third-angle projection. View B was created from View A and placed directly above it. Which drawing view tool was used?</p>",
-     "explain": "A <b>Projected View</b> is folded from an existing view in one of the eight standard directions. In third-angle projection the top view goes above the front view.",
+     "prompt": "<p>The drawing uses third-angle projection. To create View B from View A, which SOLIDWORKS view type was inserted?</p>",
+     "explain": "A <b>Projected View</b> is folded from an existing view in one of the standard directions. In third-angle projection the top view goes above the front view.",
      "images": [
       {
        "src": "img/draft-projected-view.svg",
@@ -528,8 +567,8 @@ window.CSWA_DATA = {
      "n": 3,
      "section": "draft",
      "points": 5,
-     "prompt": "<p>View B was created from View A. The overall dimension still reads the full length. Which drawing view tool was used?</p>",
-     "explain": "A <b>Break</b> (broken) view removes a portion of a long part between two break lines so it fits on the sheet. Dimensions across the break still show the real length.",
+     "prompt": "<p>To create View B from View A, which SOLIDWORKS view type was inserted?</p>",
+     "explain": "A <b>Break</b> view removes a portion of a long part between two break lines. Dimensions across the break still show the real length.",
      "images": [
       {
        "src": "img/draft-break-view.svg",
@@ -550,8 +589,9 @@ window.CSWA_DATA = {
      "n": 4,
      "section": "basic",
      "points": 15,
-     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>6061 Alloy</b> — density = <b>0.0027 g/mm³</b></li>\n</ul><p><b>A = 100 mm, B = 30 mm</b></p><p>The channel (24 wide, 12 deep) runs the full length and is centred on the 60 mm width. Both top edges have 10 × 10 chamfers.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "Sketch the end profile (chamfers and channel included) on the Right plane and extrude it A long, then cut the two Ø10 holes.<p class=\"calc\">Volume 138372.57 mm³ × 0.00270 g/mm³ = <b>373.61 g</b>.</p>",
+     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: 6061 Alloy — density = 0.0027 g/mm³</li>\n</ul><p><b>A = 100, B = 30</b></p><p>What is the overall mass of the part (grams)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "Sketch the end profile on the Right plane (10 × 10 chamfers, 24 × 12 channel with R3 root fillets), extrude A, round the four vertical corners R10, then add two Ø10 holes with Ø16 × 5 counterbores from the channel floor.<p class=\"calc\">Volume 135625.07 mm³ × 0.00270 g/mm³ = <b>366.19 g</b>.</p>",
+     "heading": "Part (Guide Block) – Step 1",
      "images": [
       {
        "src": "img/e2q4-1.png",
@@ -568,10 +608,10 @@ window.CSWA_DATA = {
      ],
      "type": "mc",
      "options": [
-      "395.28 g",
-      "416.20 g",
-      "353.80 g",
-      "373.61 g"
+      "381.20 g",
+      "400.24 g",
+      "352.27 g",
+      "366.19 g"
      ],
      "answer": 3
     },
@@ -580,8 +620,9 @@ window.CSWA_DATA = {
      "n": 5,
      "section": "basic",
      "points": 15,
-     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>6061 Alloy</b> — density = <b>0.0027 g/mm³</b></li>\n</ul><p>Change the dimensions to <b>A = 140 mm, B = 36 mm</b>. The channel depth (12) and the chamfers (10 × 10) do not change.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "Only the length and height change.<p class=\"calc\">Volume 244310.09 mm³ × 0.00270 g/mm³ = <b>659.64 g</b>.</p>",
+     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: 6061 Alloy — density = 0.0027 g/mm³</li>\n</ul><p><b>A = 140, B = 36</b></p><p>Note: all other dimensions are the same as in the previous question.</p><p>What is the overall mass of the part (grams)?</p>",
+     "explain": "Only the length and height change; the channel depth (12) and the counterbore depth (5 from the channel floor) stay.<p class=\"calc\">Volume 241202.07 mm³ × 0.00270 g/mm³ = <b>651.25 g</b>.</p>",
+     "heading": "Part (Guide Block) – Step 2",
      "images": [
       {
        "src": "img/e2q4-1.png",
@@ -599,7 +640,7 @@ window.CSWA_DATA = {
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 659.64,
+      "value": 651.25,
       "tol": 0.01
      }
     },
@@ -608,8 +649,9 @@ window.CSWA_DATA = {
      "n": 6,
      "section": "inter",
      "points": 15,
-     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>Cast Alloy Steel</b> — density = <b>0.0073 g/mm³</b></li>\n</ul><p><b>A = 110 mm, B = 60 mm, C = 20 mm</b></p><p>The boss (Ø40, 30 long) and the web (10 thick) are centred on the base in both directions. The web is 50 wide at the base and 24 wide at height B − 10. The slots are 10 wide with full rounded ends, 20 long overall, 10 from the ends of the base and centred on its width.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "Base plate, tapered web (extruded mid-plane 10), boss (mid-plane 30), then the ØC hole and the two straight slots.<p class=\"calc\">Volume 101858.82 mm³ × 0.00730 g/mm³ = <b>743.57 g</b>.</p>",
+     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: Cast Alloy Steel — density = 0.0073 g/mm³</li>\n</ul><p><b>A = 110, B = 60, C = 20</b></p><p>What is the overall mass of the part (grams)?</p>",
+     "explain": "Base A × 50 × 12 with R10 corners; tapered web 10 thick (50 wide at the base, 24 wide 10 below the boss axis); two triangular gussets 8 wide (15 × 20) on either side of the web; Ø40 × 30 boss; ØC bore; Ø6 oil hole from the top into the bore; two R5-ended slots 20 long, 10 from each end.<p class=\"calc\">Volume 102944.37 mm³ × 0.00730 g/mm³ = <b>751.49 g</b>.</p>",
+     "heading": "Part (Shaft Support) – Step 1",
      "images": [
       {
        "src": "img/e2q6-1.png",
@@ -622,12 +664,16 @@ window.CSWA_DATA = {
       {
        "src": "img/e2q6-3.png",
        "title": "Top"
+      },
+      {
+       "src": "img/e2q6-4.png",
+       "title": "Right (gussets)"
       }
      ],
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 743.57,
+      "value": 751.49,
       "tol": 0.01
      }
     },
@@ -636,8 +682,9 @@ window.CSWA_DATA = {
      "n": 7,
      "section": "inter",
      "points": 15,
-     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>Cast Alloy Steel</b> — density = <b>0.0073 g/mm³</b></li>\n</ul><p>Change the dimensions to <b>A = 130 mm, B = 70 mm, C = 24 mm</b>. The web top stays 24 wide at height B − 10.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "A taller B makes the web taller; the boss and slots keep their size.<p class=\"calc\">Volume 113428.26 mm³ × 0.00730 g/mm³ = <b>828.03 g</b>.</p>",
+     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: Cast Alloy Steel — density = 0.0073 g/mm³</li>\n</ul><p><b>A = 130, B = 70, C = 24</b></p><p>Note: all other dimensions are the same as in the previous question.</p><p>What is the overall mass of the part (grams)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "A taller B makes the web taller; the boss, gussets and slots keep their size.<p class=\"calc\">Volume 114570.90 mm³ × 0.00730 g/mm³ = <b>836.37 g</b>.</p>",
+     "heading": "Part (Shaft Support) – Step 2",
      "images": [
       {
        "src": "img/e2q6-1.png",
@@ -650,14 +697,18 @@ window.CSWA_DATA = {
       {
        "src": "img/e2q6-3.png",
        "title": "Top"
+      },
+      {
+       "src": "img/e2q6-4.png",
+       "title": "Right (gussets)"
       }
      ],
      "type": "mc",
      "options": [
-      "828.03 g",
-      "886.82 g",
-      "800.90 g",
-      "755.16 g"
+      "836.37 g",
+      "875.68 g",
+      "809.24 g",
+      "784.51 g"
      ],
      "answer": 0
     },
@@ -666,8 +717,9 @@ window.CSWA_DATA = {
      "n": 8,
      "section": "adv",
      "points": 15,
-     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: bottom front-left corner of the box, as shown</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>1060 Alloy</b> — density = <b>0.0027 g/mm³</b></li>\n</ul><p><b>A = 120 mm, B = 50 mm</b></p><p>The box is shelled from the bottom: walls and top are 6 mm thick and the bottom is open. The two end tabs are 20 × 80 × 8. The Ø40 boss is 15 high on the top face; its Ø20 hole goes through into the cavity.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "Extrude the A × B × 80 box, shell it 6 mm removing the bottom face, add the tabs and the boss, then cut the Ø20 hole and the four Ø8 holes.<p class=\"calc\">Volume 193107.72 mm³ × 0.00270 g/mm³ = <b>521.39 g</b>.</p>",
+     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: as shown</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: 1060 Alloy — density = 0.0027 g/mm³</li>\n</ul><p><b>A = 120, B = 50</b></p><p>What is the overall mass of the part (grams)?</p>",
+     "explain": "Extrude the A × 80 footprint (R10 corners) to height B and shell it 6 removing the bottom face (inside corners become R4). Add the 20 × 80 × 8 tabs, the 6-thick triangular gussets (15 × 20), the Ø40 × 15 boss 40 from the left and rear faces, the Ø20 hole into the cavity and the 4 × Ø8 tab holes.<p class=\"calc\">Volume 191902.43 mm³ × 0.00270 g/mm³ = <b>518.14 g</b>.</p>",
+     "heading": "Part (Housing) – Step 1",
      "images": [
       {
        "src": "img/e2q8-1.png",
@@ -680,12 +732,16 @@ window.CSWA_DATA = {
       {
        "src": "img/e2q8-3.png",
        "title": "Top"
+      },
+      {
+       "src": "img/e2q8-4.png",
+       "title": "Front (gussets)"
       }
      ],
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 521.39,
+      "value": 518.14,
       "tol": 0.01
      }
     },
@@ -694,8 +750,9 @@ window.CSWA_DATA = {
      "n": 9,
      "section": "adv",
      "points": 15,
-     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: bottom front-left corner of the box</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>1060 Alloy</b> — density = <b>0.0027 g/mm³</b></li>\n</ul><p>Change the dimensions to <b>A = 150 mm, B = 60 mm</b>. The boss stays 40 mm from the left and rear faces.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "The tab holes are dimensioned from the tab edges, so they move with A.<p class=\"calc\">Volume 249507.72 mm³ × 0.00270 g/mm³ = <b>673.67 g</b>.</p>",
+     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: as shown</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: 1060 Alloy — density = 0.0027 g/mm³</li>\n</ul><p><b>A = 150, B = 60</b></p><p>Note: all other dimensions are the same as in the previous question.</p><p>What is the overall mass of the part (grams)?</p>",
+     "explain": "The tab holes are dimensioned from the tab edges, so they move with A.<p class=\"calc\">Volume 247581.37 mm³ × 0.00270 g/mm³ = <b>668.47 g</b>.</p>",
+     "heading": "Part (Housing) – Step 2",
      "images": [
       {
        "src": "img/e2q8-1.png",
@@ -708,12 +765,16 @@ window.CSWA_DATA = {
       {
        "src": "img/e2q8-3.png",
        "title": "Top"
+      },
+      {
+       "src": "img/e2q8-4.png",
+       "title": "Front (gussets)"
       }
      ],
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 673.67,
+      "value": 668.47,
       "tol": 0.01
      }
     },
@@ -722,8 +783,9 @@ window.CSWA_DATA = {
      "n": 10,
      "section": "adv",
      "points": 15,
-     "prompt": "<p>Modify the part from the previous question (A = 150 mm, B = 60 mm).</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: bottom front-left corner of the box, as shown</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>1060 Alloy</b> — density = <b>0.0027 g/mm³</b></li>\n</ul><p>Cut a 40 × 20 rectangular window through the front wall. Its right edge is 20 mm from the right face of the box and its bottom edge is 15 mm above the bottom.</p><p>What is the centre of mass of the part, relative to the origin shown?</p>",
-     "explain": "Removing material from the front wall moves the centre of mass toward the rear (−Z) and slightly to the left.<p class=\"calc\">Centre of mass: X = 72.56 mm, Y = 35.72 mm, Z = -40.73 mm (part mass 660.71 g).</p>",
+     "prompt": "<p>Modify the part from the previous question (A = 150, B = 60): cut the 40 × 20 window through the front wall as shown.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: as shown</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: 1060 Alloy — density = 0.0027 g/mm³</li>\n</ul><p>What is the centre of mass of the part (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "Removing material from the front wall moves the centre of mass toward the rear (−Z) and slightly to the left.<p class=\"calc\">Centre of mass: X = 72.54 mm, Y = 35.57 mm, Z = -40.73 mm (part mass 655.51 g).</p>",
+     "heading": "Part (Housing) – Step 3",
      "images": [
       {
        "src": "img/e2q10-1.png",
@@ -736,14 +798,18 @@ window.CSWA_DATA = {
       {
        "src": "img/e2q10-3.png",
        "title": "Top"
+      },
+      {
+       "src": "img/e2q10-4.png",
+       "title": "Front (gussets)"
       }
      ],
      "type": "mc",
      "options": [
-      "X = 72.56 mm, Y = 35.72 mm, Z = -40.73 mm",
-      "X = 72.56 mm, Y = -40.73 mm, Z = 35.72 mm",
-      "X = 66.36 mm, Y = 35.72 mm, Z = -40.73 mm",
-      "X = 71.38 mm, Y = 38.21 mm, Z = -41.90 mm"
+      "X = 72.54 mm, Y = 35.57 mm, Z = -40.73 mm",
+      "X = 72.54 mm, Y = -40.73 mm, Z = 35.57 mm",
+      "X = 67.14 mm, Y = 35.57 mm, Z = -40.73 mm",
+      "X = 71.37 mm, Y = 38.06 mm, Z = -41.90 mm"
      ],
      "answer": 0
     },
@@ -752,8 +818,9 @@ window.CSWA_DATA = {
      "n": 11,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Build this assembly in SOLIDWORKS. It has one Rail, two End Caps, one Slider and one Post. Build the parts from the drawings shown.</p>\n<ul class=\"notes\"><li>Unit system: MMGS, decimal places: 2</li>\n<li>Rail: AISI 1020 (0.0079 g/mm³). End Cap: ABS (0.00102 g/mm³). Slider: 6061 Alloy (0.0027 g/mm³). Post: Alloy Steel (0.0077 g/mm³).</li>\n<li>The Rail is fixed. The assembly origin is the bottom front-left corner of the Rail, as shown.</li>\n<li>The End Caps cover both ends of the Rail, flush with its bottom, back and front faces.</li>\n<li>The Slider sits on the floor of the channel between the walls.</li>\n<li>The Post is concentric with the Slider hole and its bottom is flush with the bottom of the Slider.</li>\n<li>Distance <b>A</b> is from the left end face of the Rail to the left face of the Slider.</li></ul>\n<p><b>A = 40 mm</b>. What is the centre of mass of the assembly, relative to the assembly origin?</p>",
-     "explain": "Use a distance mate for A. Mass Properties of the whole assembly gives the answer.<p class=\"calc\">Centre of mass: X = 95.06 mm, Y = 14.15 mm, Z = -25.00 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Rail</td><td>AISI 1020</td><td>1169.20</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>Slider</td><td>6061 Alloy</td><td>64.56</td></tr><tr><td>Post</td><td>Alloy Steel</td><td>102.32</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1351.39</b></td></tr></table>",
+     "prompt": "<p>Build this assembly in SOLIDWORKS. It contains one Rail, two End Caps, one Slider, one Post and one Handle.</p>\n<ul class=\"notes\"><li>Unit system: MMGS, decimal places: 2</li><li>Rail: AISI 1020 (0.0079 g/mm³)</li><li>End Cap (2X): ABS (0.0010 g/mm³)</li><li>Slider: 6061 Alloy (0.0027 g/mm³)</li><li>Post: Alloy Steel (0.0077 g/mm³)</li><li>Handle: AISI 1020 (0.0079 g/mm³)</li><li>The Rail is fixed; the assembly origin is shown.</li><li>The End Caps are flush with the ends, bottom, back and front of the Rail.</li><li>The Slider sits on the channel floor between the walls. The Post is concentric with the Slider hole, its bottom flush with the Slider bottom.</li><li>The Handle sits on top of the Post collar, concentric with the Post.</li><li>Distance <b>A</b>: Rail left end to Slider left face. Angle <b>B</b>: Rail long edge to the Handle centre line, Handle swinging toward the front.</li></ul>\n<p><b>A = 40, B = 0°</b>. What is the centre of mass of the assembly (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "Use a distance mate for A and an angle mate for B (between a Handle side face and the Rail front face, or between planes).<p class=\"calc\">Centre of mass: X = 95.25 mm, Y = 19.29 mm, Z = -25.00 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Rail</td><td>AISI 1020</td><td>1169.20</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>Slider</td><td>6061 Alloy</td><td>64.56</td></tr><tr><td>Post</td><td>Alloy Steel</td><td>114.52</td></tr><tr><td>Handle</td><td>AISI 1020</td><td>110.65</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1474.23</b></td></tr></table>",
+     "heading": "Assembly (Slide) – Step 1",
      "images": [
       {
        "src": "img/e2q11-asm-1.png",
@@ -778,14 +845,18 @@ window.CSWA_DATA = {
       {
        "src": "img/exam2-post-1.png",
        "title": "Post"
+      },
+      {
+       "src": "img/exam2-handle-1.png",
+       "title": "Handle – top"
       }
      ],
      "type": "mc",
      "options": [
-      "X = 100.00 mm, Y = 14.15 mm, Z = -25.00 mm",
-      "X = 89.26 mm, Y = 14.15 mm, Z = -21.80 mm",
-      "X = 95.06 mm, Y = 21.65 mm, Z = -25.00 mm",
-      "X = 95.06 mm, Y = 14.15 mm, Z = -25.00 mm"
+      "X = 103.11 mm, Y = 19.29 mm, Z = -25.00 mm",
+      "X = 92.14 mm, Y = 19.29 mm, Z = -21.89 mm",
+      "X = 95.25 mm, Y = 26.79 mm, Z = -25.00 mm",
+      "X = 95.25 mm, Y = 19.29 mm, Z = -25.00 mm"
      ],
      "answer": 3
     },
@@ -794,8 +865,9 @@ window.CSWA_DATA = {
      "n": 12,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Use the assembly from the previous question.</p><p>Change distance <b>A to 120 mm</b>.</p><p>What is the centre of mass of the assembly, relative to the assembly origin?</p>",
-     "explain": "Only the X coordinate changes, because the Slider and Post move along X.<p class=\"calc\">Centre of mass: X = 104.94 mm, Y = 14.15 mm, Z = -25.00 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Rail</td><td>AISI 1020</td><td>1169.20</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>Slider</td><td>6061 Alloy</td><td>64.56</td></tr><tr><td>Post</td><td>Alloy Steel</td><td>102.32</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1351.39</b></td></tr></table>",
+     "prompt": "<p>Modify the assembly: <b>A = 120, B = 60°</b>.</p><p>What is the centre of mass of the assembly (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "The Handle swing changes X and Z; the Slider position changes X only.<p class=\"calc\">Centre of mass: X = 109.42 mm, Y = 19.29 mm, Z = -22.31 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Rail</td><td>AISI 1020</td><td>1169.20</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>Slider</td><td>6061 Alloy</td><td>64.56</td></tr><tr><td>Post</td><td>Alloy Steel</td><td>114.52</td></tr><tr><td>Handle</td><td>AISI 1020</td><td>110.65</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1474.23</b></td></tr></table>",
+     "heading": "Assembly (Slide) – Step 2",
      "images": [
       {
        "src": "img/e2q11-asm-1.png",
@@ -820,14 +892,18 @@ window.CSWA_DATA = {
       {
        "src": "img/exam2-post-1.png",
        "title": "Post"
+      },
+      {
+       "src": "img/exam2-handle-1.png",
+       "title": "Handle – top"
       }
      ],
      "type": "mc",
      "options": [
-      "X = 104.94 mm, Y = 14.15 mm, Z = -25.00 mm",
-      "X = 102.47 mm, Y = 14.15 mm, Z = -25.00 mm",
-      "X = 107.41 mm, Y = 14.15 mm, Z = -25.00 mm",
-      "X = 104.94 mm, Y = 7.75 mm, Z = -22.50 mm"
+      "X = 109.42 mm, Y = 19.29 mm, Z = -22.31 mm",
+      "X = 105.49 mm, Y = 19.29 mm, Z = -22.31 mm",
+      "X = 110.55 mm, Y = 19.29 mm, Z = -23.45 mm",
+      "X = 109.42 mm, Y = 12.89 mm, Z = -19.81 mm"
      ],
      "answer": 0
     },
@@ -836,8 +912,9 @@ window.CSWA_DATA = {
      "n": 13,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Use the same assembly with <b>A = 80 mm</b>.</p><p>Create <i>Coordinate System1</i> at the top front-right corner of the right End Cap, as shown. Its axes are parallel to the assembly axes and point the same way.</p><p>What is the centre of mass of the assembly, relative to <i>Coordinate System1</i>?</p>",
-     "explain": "The values are the origin-based centre of mass minus (206, 25, 50).<p class=\"calc\">Centre of mass relative to Coordinate System1: X = -106.00 mm, Y = -10.85 mm, Z = -25.00 mm<br>(relative to the assembly origin: X = 100.00 mm, Y = 14.15 mm, Z = -25.00 mm)</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Rail</td><td>AISI 1020</td><td>1169.20</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>Slider</td><td>6061 Alloy</td><td>64.56</td></tr><tr><td>Post</td><td>Alloy Steel</td><td>102.32</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1351.39</b></td></tr></table>",
+     "prompt": "<p>Modify the assembly: <b>A = 80, B = 90°</b>. Create <i>Coordinate System1</i> at the corner of the right End Cap shown, with axes parallel to the assembly axes.</p><p>What is the centre of mass of the assembly relative to <i>Coordinate System1</i> (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "The values are the origin-based centre of mass minus the position of Coordinate System1.<p class=\"calc\">Centre of mass relative to Coordinate System1: X = -106.00 mm, Y = -5.71 mm, Z = -21.89 mm<br>(relative to the assembly origin: X = 100.00 mm, Y = 19.29 mm, Z = -21.89 mm)</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Rail</td><td>AISI 1020</td><td>1169.20</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>Slider</td><td>6061 Alloy</td><td>64.56</td></tr><tr><td>Post</td><td>Alloy Steel</td><td>114.52</td></tr><tr><td>Handle</td><td>AISI 1020</td><td>110.65</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1474.23</b></td></tr></table>",
+     "heading": "Assembly (Slide) – Step 3",
      "images": [
       {
        "src": "img/e2q13-asm-1.png",
@@ -862,14 +939,18 @@ window.CSWA_DATA = {
       {
        "src": "img/exam2-post-1.png",
        "title": "Post"
+      },
+      {
+       "src": "img/exam2-handle-1.png",
+       "title": "Handle – top"
       }
      ],
      "type": "mc",
      "options": [
-      "X = 100.00 mm, Y = 14.15 mm, Z = -25.00 mm",
-      "X = -100.00 mm, Y = -10.85 mm, Z = -25.00 mm",
-      "X = -106.00 mm, Y = -10.85 mm, Z = -25.00 mm",
-      "X = 106.00 mm, Y = 10.85 mm, Z = 25.00 mm"
+      "X = 100.00 mm, Y = 19.29 mm, Z = -21.89 mm",
+      "X = -102.89 mm, Y = -5.71 mm, Z = -25.00 mm",
+      "X = -106.00 mm, Y = -5.71 mm, Z = -21.89 mm",
+      "X = 106.00 mm, Y = 5.71 mm, Z = 21.89 mm"
      ],
      "answer": 2
     },
@@ -878,8 +959,9 @@ window.CSWA_DATA = {
      "n": 14,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Use the same assembly with <b>A = 80 mm</b>.</p><p>Change the Slider material to <b>Brass</b> (0.0085 g/mm³).</p><p>What is the total mass of the assembly (grams)?</p>",
-     "explain": "Only the Slider mass changes.<table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Rail</td><td>AISI 1020</td><td>1169.20</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>Slider</td><td>Brass</td><td>203.25</td></tr><tr><td>Post</td><td>Alloy Steel</td><td>102.32</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1490.08</b></td></tr></table>",
+     "prompt": "<p>Modify the assembly (A = 80, B = 90°): change the Slider material to <b>Brass</b> (density = 0.0085 g/mm³).</p><p>What is the total mass of the assembly (grams)?</p>",
+     "explain": "Only the Slider mass changes.<table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Rail</td><td>AISI 1020</td><td>1169.20</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>End Cap</td><td>ABS</td><td>7.65</td></tr><tr><td>Slider</td><td>Brass</td><td>203.25</td></tr><tr><td>Post</td><td>Alloy Steel</td><td>114.52</td></tr><tr><td>Handle</td><td>AISI 1020</td><td>110.65</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1612.92</b></td></tr></table>",
+     "heading": "Assembly (Slide) – Step 4",
      "images": [
       {
        "src": "img/e2q11-asm-1.png",
@@ -904,12 +986,16 @@ window.CSWA_DATA = {
       {
        "src": "img/exam2-post-1.png",
        "title": "Post"
+      },
+      {
+       "src": "img/exam2-handle-1.png",
+       "title": "Handle – top"
       }
      ],
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 1490.08,
+      "value": 1612.92,
       "tol": 0.01
      }
     }
@@ -918,7 +1004,7 @@ window.CSWA_DATA = {
   {
    "id": "exam3",
    "title": "CSWA Practice Exam 3",
-   "blurb": "Angle support, revolved spindle, tool block and a two-link arm assembly.",
+   "blurb": "A little harder than the real exam. Angle support, revolved spindle, tool block with an angled hole, two-link arm.",
    "timeMinutes": 180,
    "total": 240,
    "passScore": 165,
@@ -928,8 +1014,8 @@ window.CSWA_DATA = {
      "n": 1,
      "section": "draft",
      "points": 5,
-     "prompt": "<p>View B was created from View A. The cutting line A–A bends at the centre of the part. Which drawing view tool was used?</p>",
-     "explain": "An <b>Aligned Section</b> uses a cutting line made of two segments at an angle. The angled portion is rotated into the plane of the other so that features such as the hole at 330° show at their true distance from the centre.",
+     "prompt": "<p>To create View B from View A, which SOLIDWORKS view type was inserted?</p>",
+     "explain": "An <b>Aligned Section</b> uses a cutting line of two segments at an angle; the angled portion is rotated into the plane of the other, so the hole at 330° shows at its true distance from the centre.",
      "images": [
       {
        "src": "img/draft-aligned-section.svg",
@@ -950,8 +1036,8 @@ window.CSWA_DATA = {
      "n": 2,
      "section": "draft",
      "points": 5,
-     "prompt": "<p>View B was created from View A. Only the geometry inside a closed spline is kept, at the same scale. Which drawing view tool was used?</p>",
-     "explain": "A <b>Crop View</b> hides everything outside a closed profile sketched on a view. Unlike a detail view it does not create a new, larger view.",
+     "prompt": "<p>To create View B from View A, which SOLIDWORKS view type was inserted?</p>",
+     "explain": "A <b>Crop View</b> hides everything outside a closed profile sketched on a view; unlike a detail view it does not create a new, larger view.",
      "images": [
       {
        "src": "img/draft-crop-view.svg",
@@ -972,25 +1058,26 @@ window.CSWA_DATA = {
      "n": 3,
      "section": "draft",
      "points": 5,
-     "prompt": "<p>A drawing uses <b>third-angle</b> projection. Where is the Right view placed relative to the Front view?</p>",
-     "explain": "In third-angle projection (ANSI default) each view goes on the side it is seen from: the right view to the right, the top view above. In first-angle projection (ISO) they swap.",
+     "prompt": "<p>A drawing uses <b>first-angle</b> projection (ISO). Where is the Top view placed relative to the Front view?</p>",
+     "explain": "In first-angle projection each view is placed on the opposite side from where it is seen: the top view goes <b>below</b> the front view and the right view to the left. Third-angle (ANSI) does the opposite.",
      "images": [],
      "type": "mc",
      "options": [
-      "Above the Front view",
-      "Below the Front view",
+      "To the right of the Front view",
       "To the left of the Front view",
-      "To the right of the Front view"
+      "Below the Front view",
+      "Above the Front view"
      ],
-     "answer": 3
+     "answer": 2
     },
     {
      "id": "e3q4",
      "n": 4,
      "section": "basic",
      "points": 15,
-     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>Plain Carbon Steel</b> — density = <b>0.0078 g/mm³</b></li>\n</ul><p><b>A = 80 mm, B = 70 mm</b></p><p>The part is 40 mm deep. Both Ø10 holes are centred on the 40 mm depth.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "Sketch the side profile on the Front plane: foot 15 thick, upright 30 wide at the foot tapering to 18 at the top. Extrude 40, then cut the two holes.<p class=\"calc\">Volume 97951.15 mm³ × 0.00780 g/mm³ = <b>764.02 g</b>.</p>",
+     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: Plain Carbon Steel — density = 0.0078 g/mm³</li>\n</ul><p><b>A = 80, B = 70</b></p><p>What is the overall mass of the part (grams)?</p>",
+     "explain": "Front-plane profile: foot 15 thick, upright 30 wide at the foot tapering to 18 at the top, R6 root fillet; extrude 40. Full-round R20 end on the foot with a concentric Ø10 hole; Ø10 cross hole 25 below the top; 6-wide × 15-deep slot through the top, centred.<p class=\"calc\">Volume 93620.68 mm³ × 0.00780 g/mm³ = <b>730.24 g</b>.</p>",
+     "heading": "Part (Angle Support) – Step 1",
      "images": [
       {
        "src": "img/e3q4-1.png",
@@ -1008,7 +1095,7 @@ window.CSWA_DATA = {
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 764.02,
+      "value": 730.24,
       "tol": 0.01
      }
     },
@@ -1017,8 +1104,9 @@ window.CSWA_DATA = {
      "n": 5,
      "section": "basic",
      "points": 15,
-     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>Plain Carbon Steel</b> — density = <b>0.0078 g/mm³</b></li>\n</ul><p>Change the dimensions to <b>A = 100 mm, B = 60 mm</b>. The horizontal hole stays 15 mm below the top face.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "The taper of the upright changes because its top width (18) and bottom width (30) stay the same while the height changes.<p class=\"calc\">Volume 100294.03 mm³ × 0.00780 g/mm³ = <b>782.29 g</b>.</p>",
+     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: Plain Carbon Steel — density = 0.0078 g/mm³</li>\n</ul><p><b>A = 100, B = 60</b></p><p>Note: all other dimensions are the same as in the previous question.</p><p>What is the overall mass of the part (grams)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "The taper of the upright changes because its top width (18) and bottom width (30) stay while the height changes.<p class=\"calc\">Volume 95872.34 mm³ × 0.00780 g/mm³ = <b>747.80 g</b>.</p>",
+     "heading": "Part (Angle Support) – Step 2",
      "images": [
       {
        "src": "img/e3q4-1.png",
@@ -1035,10 +1123,10 @@ window.CSWA_DATA = {
      ],
      "type": "mc",
      "options": [
-      "880.86 g",
-      "749.44 g",
-      "857.62 g",
-      "782.29 g"
+      "786.69 g",
+      "722.38 g",
+      "823.84 g",
+      "747.80 g"
      ],
      "answer": 3
     },
@@ -1047,8 +1135,9 @@ window.CSWA_DATA = {
      "n": 6,
      "section": "inter",
      "points": 15,
-     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>Brass</b> — density = <b>0.0085 g/mm³</b></li>\n</ul><p><b>A = 40 mm, B = 60 mm</b></p><p>The Ø8 cross hole goes through the Ø40 section, 15 mm above the shoulder of the ØB flange. The flat on the Ø30 end is 20 long and 10 mm from the axis.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "Revolve the half profile (with the Ø16 bore) about the axis, then cut the cross hole and the flat.<p class=\"calc\">Volume 101655.54 mm³ × 0.00850 g/mm³ = <b>864.07 g</b>.</p>",
+     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: Brass — density = 0.0085 g/mm³</li>\n</ul><p><b>A = 40, B = 60</b></p><p>What is the overall mass of the part (grams)?</p>",
+     "explain": "Revolve the half profile with the Ø16 bore, R2 root fillet and 1 × 45° end chamfer. Cut the 2 × 1.5 ring groove 10 from the end, the Ø8 cross hole 15 above the shoulder, the flat (20 long, 10 from the axis), and the 4 × Ø8 holes on Ø50 at 45°.<p class=\"calc\">Volume 97508.89 mm³ × 0.00850 g/mm³ = <b>828.83 g</b>.</p>",
+     "heading": "Part (Spindle) – Step 1",
      "images": [
       {
        "src": "img/e3q6-1.png",
@@ -1060,13 +1149,13 @@ window.CSWA_DATA = {
       },
       {
        "src": "img/e3q6-3.png",
-       "title": "Top (flat)"
+       "title": "Top"
       }
      ],
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 864.07,
+      "value": 828.83,
       "tol": 0.01
      }
     },
@@ -1075,8 +1164,9 @@ window.CSWA_DATA = {
      "n": 7,
      "section": "inter",
      "points": 15,
-     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>Brass</b> — density = <b>0.0085 g/mm³</b></li>\n</ul><p>Change the dimensions to <b>A = 55 mm, B = 70 mm</b>. The flat stays 20 long, measured from the top end.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "A is the length of the Ø30 section; B is the flange diameter.<p class=\"calc\">Volume 129662.84 mm³ × 0.00850 g/mm³ = <b>1102.13 g</b>.</p>",
+     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: arbitrary</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: Brass — density = 0.0085 g/mm³</li>\n</ul><p><b>A = 55, B = 70</b></p><p>Note: all other dimensions are the same as in the previous question.</p><p>What is the overall mass of the part (grams)?</p>",
+     "explain": "A is the length of the Ø30 section; the groove and the flat stay referenced to the top end.<p class=\"calc\">Volume 125516.19 mm³ × 0.00850 g/mm³ = <b>1066.89 g</b>.</p>",
+     "heading": "Part (Spindle) – Step 2",
      "images": [
       {
        "src": "img/e3q6-1.png",
@@ -1088,13 +1178,13 @@ window.CSWA_DATA = {
       },
       {
        "src": "img/e3q6-3.png",
-       "title": "Top (flat)"
+       "title": "Top"
       }
      ],
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 1102.13,
+      "value": 1066.89,
       "tol": 0.01
      }
     },
@@ -1103,8 +1193,9 @@ window.CSWA_DATA = {
      "n": 8,
      "section": "adv",
      "points": 15,
-     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: bottom front-left corner, as shown</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>6061 Alloy</b> — density = <b>0.0027 g/mm³</b></li>\n</ul><p><b>A = 120 mm, B = 15 mm, C = 25 mm</b></p><p>The block is 40 high and 60 deep. The pocket is 40 × 30 and B deep. The groove on the front face is 10 wide (10 to 20 mm above the bottom) and 8 deep. The Ø16 hole goes front to back, 30 from the left end and 10 above the bottom.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "Extrude the side profile with the sloped end, then cut the pocket, the two Ø12 holes, the groove and the Ø16 hole.<p class=\"calc\">Volume 221442.75 mm³ × 0.00270 g/mm³ = <b>597.90 g</b>.</p>",
+     "prompt": "<p>Build this part in SOLIDWORKS.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: as shown</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: 6061 Alloy — density = 0.0027 g/mm³</li>\n</ul><p><b>A = 120, B = 15, C = 25</b></p><p>What is the overall mass of the part (grams)?</p>",
+     "explain": "Extrude the side profile with the sloped end (15 high at the end, C back along the top), round the two left vertical edges R10, cut the 40 × 30 pocket (R5 corners, B deep), the 2 × Ø12 holes, the 10 × 8 groove, the Ø16 hole, and a Ø10 hole 20 deep normal to the sloped face at its midpoint (make a plane on the face, or a sketch point at the midpoint and Hole Wizard).<p class=\"calc\">Volume 218690.30 mm³ × 0.00270 g/mm³ = <b>590.46 g</b>.</p>",
+     "heading": "Part (Tool Block) – Step 1",
      "images": [
       {
        "src": "img/e3q8-1.png",
@@ -1122,7 +1213,7 @@ window.CSWA_DATA = {
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 597.9,
+      "value": 590.46,
       "tol": 0.01
      }
     },
@@ -1131,8 +1222,9 @@ window.CSWA_DATA = {
      "n": 9,
      "section": "adv",
      "points": 15,
-     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: bottom front-left corner</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: <b>6061 Alloy</b> — density = <b>0.0027 g/mm³</b></li>\n</ul><p>Change the dimensions to <b>A = 140 mm, B = 20 mm, C = 30 mm</b>.</p><p>What is the overall mass of the part (grams)?</p>",
-     "explain": "The holes stay 75 mm from the left end.<p class=\"calc\">Volume 258112.75 mm³ × 0.00270 g/mm³ = <b>696.90 g</b>.</p>",
+     "prompt": "<p>Modify the part from the previous question.</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: as shown</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: 6061 Alloy — density = 0.0027 g/mm³</li>\n</ul><p><b>A = 140, B = 20, C = 30</b></p><p>The angled hole stays at the midpoint of the sloped face.</p><p>Note: all other dimensions are the same as in the previous question.</p><p>What is the overall mass of the part (grams)?</p>",
+     "explain": "Changing C changes the slope angle, so the angled hole changes direction too.<p class=\"calc\">Volume 255467.60 mm³ × 0.00270 g/mm³ = <b>689.76 g</b>.</p>",
+     "heading": "Part (Tool Block) – Step 2",
      "images": [
       {
        "src": "img/e3q8-1.png",
@@ -1150,7 +1242,7 @@ window.CSWA_DATA = {
      "type": "num",
      "unit": "g",
      "answer": {
-      "value": 696.9,
+      "value": 689.76,
       "tol": 0.01
      }
     },
@@ -1159,8 +1251,9 @@ window.CSWA_DATA = {
      "n": 10,
      "section": "adv",
      "points": 15,
-     "prompt": "<p>Use the part from the previous question (A = 140 mm, B = 20 mm, C = 30 mm).</p><p>What is the centre of mass of the part, relative to the origin shown (bottom front-left corner)?</p>",
-     "explain": "Evaluate → Mass Properties. The origin is at the bottom front-left corner and the part extends toward −Z, so the Z value is negative.<p class=\"calc\">Centre of mass: X = 69.63 mm, Y = 18.72 mm, Z = -31.04 mm (part mass 696.90 g).</p>",
+     "prompt": "<p>Use the part from the previous question (A = 140, B = 20, C = 30).</p>\n<ul class=\"notes\">\n  <li>Unit system: MMGS (millimeter, gram, second)</li>\n  <li>Decimal places: 2</li>\n  <li>Part origin: as shown</li>\n  <li>All holes through all unless shown otherwise</li>\n  <li>Material: 6061 Alloy — density = 0.0027 g/mm³</li>\n</ul><p>What is the centre of mass of the part (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "Evaluate → Mass Properties. The origin is at the bottom front-left corner and the part extends toward −Z, so Z is negative.<p class=\"calc\">Centre of mass: X = 69.66 mm, Y = 18.72 mm, Z = -31.02 mm (part mass 689.76 g).</p>",
+     "heading": "Part (Tool Block) – Step 3",
      "images": [
       {
        "src": "img/e3q8-1.png",
@@ -1177,10 +1270,10 @@ window.CSWA_DATA = {
      ],
      "type": "mc",
      "options": [
-      "X = 69.63 mm, Y = 15.32 mm, Z = -28.34 mm",
-      "X = 69.63 mm, Y = 18.72 mm, Z = -31.04 mm",
-      "X = 58.60 mm, Y = 18.73 mm, Z = -31.02 mm",
-      "X = -31.04 mm, Y = 18.72 mm, Z = 69.63 mm"
+      "X = 69.66 mm, Y = 16.32 mm, Z = -29.32 mm",
+      "X = 69.66 mm, Y = 18.72 mm, Z = -31.02 mm",
+      "X = 58.65 mm, Y = 18.73 mm, Z = -31.01 mm",
+      "X = -31.02 mm, Y = 18.72 mm, Z = 69.66 mm"
      ],
      "answer": 1
     },
@@ -1189,8 +1282,9 @@ window.CSWA_DATA = {
      "n": 11,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Build this assembly in SOLIDWORKS. It has one Base, two identical Links and two identical Pins. Build the parts from the drawings shown.</p>\n<ul class=\"notes\"><li>Unit system: MMGS, decimal places: 2</li>\n<li>Base: AISI 1020 (0.0079 g/mm³). Link: 6061 Alloy (0.0027 g/mm³). Pin: Alloy Steel (0.0077 g/mm³).</li>\n<li>The Base is fixed. The assembly origin is the bottom front-left corner of the Base, as shown.</li>\n<li>Link 1 is against the front face of the tongue and concentric with its hole. Link 2 is against the front face of Link 1, concentric with its free hole.</li>\n<li>Each Pin goes through the two holes it joins, with its head against the front face of the front part.</li>\n<li>Angle <b>A</b> is between the Base top face and Link 1. Angle <b>B</b> is between the Base top face and Link 2 (both measured from horizontal).</li></ul>\n<p><b>A = 45°, B = 0°</b>. What is the centre of mass of the assembly, relative to the assembly origin?</p>",
-     "explain": "Use angle mates between each Link and the top face of the Base (or a horizontal plane) so that B is measured from horizontal, not from Link 1.<p class=\"calc\">Centre of mass: X = 50.28 mm, Y = 31.60 mm, Z = -22.85 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>1040.82</td></tr><tr><td>Link</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Link</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1219.84</b></td></tr></table>",
+     "prompt": "<p>Build this assembly in SOLIDWORKS. It contains one Base, Link 1 and Link 2 (100 centres), Link 3 (140 centres) and three Pins.</p>\n<ul class=\"notes\"><li>Unit system: MMGS, decimal places: 2</li><li>Base: AISI 1020 (0.0079 g/mm³)</li><li>Link 1, Link 2, Link 3: 6061 Alloy (0.0027 g/mm³)</li><li>Pin (3X): Alloy Steel (0.0077 g/mm³)</li><li>The Base is fixed; the assembly origin is shown.</li><li>Link 1 is against the front face of the tongue; each following Link is against the front face of the one before it.</li><li>Pins are concentric with the holes they join (no clearance), head against the front part.</li><li>A: angle between the top face of the Base and Link 1. B: angle between Link 1 and Link 2. C: angle between Link 2 and Link 3. B and C are the angles at the pins, as shown.</li></ul>\n<p><b>A = 45°, B = 135°, C = 135°</b>. What is the centre of mass of the assembly (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "B and C are measured between neighbouring links, not from horizontal: use angle mates between the side faces of neighbouring Links (Link 2 ends up horizontal here, Link 3 back at 45°). Check the bend direction against the image; flipping a mate gives one of the wrong answers.<p class=\"calc\">Centre of mass: X = 67.81 mm, Y = 43.82 mm, Z = -20.46 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>1040.82</td></tr><tr><td>Link 1</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Link 2</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Link 3</td><td>6061 Alloy</td><td>98.69</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1335.28</b></td></tr></table>",
+     "heading": "Assembly (Link Chain) – Step 1",
      "images": [
       {
        "src": "img/e3q11-asm-1.png",
@@ -1210,7 +1304,11 @@ window.CSWA_DATA = {
       },
       {
        "src": "img/exam3-link100-1.png",
-       "title": "Link – front"
+       "title": "Link 1 and Link 2 – front"
+      },
+      {
+       "src": "img/exam3-link140-1.png",
+       "title": "Link 3 – front"
       },
       {
        "src": "img/exam3-headedPin-1.png",
@@ -1219,10 +1317,10 @@ window.CSWA_DATA = {
      ],
      "type": "mc",
      "options": [
-      "X = 50.28 mm, Y = 31.60 mm, Z = -22.85 mm",
-      "X = 52.43 mm, Y = 26.41 mm, Z = -22.85 mm",
-      "X = 50.28 mm, Y = 31.60 mm, Z = -27.85 mm",
-      "X = 49.41 mm, Y = 33.71 mm, Z = -22.85 mm"
+      "X = 67.81 mm, Y = 43.82 mm, Z = -20.46 mm",
+      "X = 67.81 mm, Y = 36.51 mm, Z = -20.46 mm",
+      "X = 49.12 mm, Y = 55.19 mm, Z = -20.46 mm",
+      "X = 67.81 mm, Y = 43.82 mm, Z = -26.46 mm"
      ],
      "answer": 0
     },
@@ -1231,8 +1329,9 @@ window.CSWA_DATA = {
      "n": 12,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Use the assembly from the previous question.</p><p>Change the angles to <b>A = 60°</b> and <b>B = −30°</b> (Link 2 points down and to the right, 30° below horizontal).</p><p>What is the centre of mass of the assembly, relative to the assembly origin?</p>",
-     "explain": "A negative angle flips the mate (use Flip dimension) so Link 2 points below horizontal.<p class=\"calc\">Centre of mass: X = 47.74 mm, Y = 31.75 mm, Z = -22.85 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>1040.82</td></tr><tr><td>Link</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Link</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1219.84</b></td></tr></table>",
+     "prompt": "<p>Modify the assembly: <b>A = 60°, B = 120°, C = 150°</b>.</p><p>What is the centre of mass of the assembly (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "Absolute directions: Link 1 at 60°, Link 2 at 60 − (180 − 120) = 0°, Link 3 at 0 + (180 − 150) = 30°.<p class=\"calc\">Centre of mass: X = 64.89 mm, Y = 45.63 mm, Z = -20.46 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>1040.82</td></tr><tr><td>Link 1</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Link 2</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Link 3</td><td>6061 Alloy</td><td>98.69</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1335.28</b></td></tr></table>",
+     "heading": "Assembly (Link Chain) – Step 2",
      "images": [
       {
        "src": "img/e3q11-asm-1.png",
@@ -1252,7 +1351,11 @@ window.CSWA_DATA = {
       },
       {
        "src": "img/exam3-link100-1.png",
-       "title": "Link – front"
+       "title": "Link 1 and Link 2 – front"
+      },
+      {
+       "src": "img/exam3-link140-1.png",
+       "title": "Link 3 – front"
       },
       {
        "src": "img/exam3-headedPin-1.png",
@@ -1261,10 +1364,10 @@ window.CSWA_DATA = {
      ],
      "type": "mc",
      "options": [
-      "X = 47.74 mm, Y = 34.73 mm, Z = -22.85 mm",
-      "X = 51.52 mm, Y = 27.97 mm, Z = -22.85 mm",
-      "X = 52.64 mm, Y = 29.55 mm, Z = -22.85 mm",
-      "X = 47.74 mm, Y = 31.75 mm, Z = -22.85 mm"
+      "X = 58.88 mm, Y = 53.90 mm, Z = -20.46 mm",
+      "X = 64.89 mm, Y = 40.45 mm, Z = -20.46 mm",
+      "X = 69.79 mm, Y = 43.43 mm, Z = -20.46 mm",
+      "X = 64.89 mm, Y = 45.63 mm, Z = -20.46 mm"
      ],
      "answer": 3
     },
@@ -1273,8 +1376,9 @@ window.CSWA_DATA = {
      "n": 13,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Use the same assembly with <b>A = 30°</b> and <b>B = 30°</b>.</p><p>Create <i>Coordinate System1</i> at the bottom front-right corner of the Base, as shown. Its axes are parallel to the assembly axes and point the same way.</p><p>What is the centre of mass of the assembly, relative to <i>Coordinate System1</i>?</p>",
-     "explain": "The values are the origin-based centre of mass minus (80, 0, 50).<p class=\"calc\">Centre of mass relative to Coordinate System1: X = -28.48 mm, Y = 30.95 mm, Z = -22.85 mm<br>(relative to the assembly origin: X = 51.52 mm, Y = 30.95 mm, Z = -22.85 mm)</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>1040.82</td></tr><tr><td>Link</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Link</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1219.84</b></td></tr></table>",
+     "prompt": "<p>Modify the assembly: <b>A = 30°, B = 150°, C = 120°</b>. Create <i>Coordinate System1</i> at the corner of the Base shown, with axes parallel to the assembly axes.</p><p>What is the centre of mass of the assembly relative to <i>Coordinate System1</i> (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "Coordinate System1 sits 80 mm along X from the assembly origin, so the values are the origin-based centre of mass minus (80, 0, 0).<p class=\"calc\">Centre of mass relative to Coordinate System1: X = -10.39 mm, Y = 40.90 mm, Z = -20.46 mm<br>(relative to the assembly origin: X = 69.61 mm, Y = 40.90 mm, Z = -20.46 mm)</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>1040.82</td></tr><tr><td>Link 1</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Link 2</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Link 3</td><td>6061 Alloy</td><td>98.69</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1335.28</b></td></tr></table>",
+     "heading": "Assembly (Link Chain) – Step 3",
      "images": [
       {
        "src": "img/e3q13-asm-1.png",
@@ -1294,7 +1398,11 @@ window.CSWA_DATA = {
       },
       {
        "src": "img/exam3-link100-1.png",
-       "title": "Link – front"
+       "title": "Link 1 and Link 2 – front"
+      },
+      {
+       "src": "img/exam3-link140-1.png",
+       "title": "Link 3 – front"
       },
       {
        "src": "img/exam3-headedPin-1.png",
@@ -1303,10 +1411,10 @@ window.CSWA_DATA = {
      ],
      "type": "mc",
      "options": [
-      "X = -28.48 mm, Y = 30.95 mm, Z = -22.85 mm",
-      "X = 28.48 mm, Y = -30.95 mm, Z = 22.85 mm",
-      "X = -28.48 mm, Y = 36.45 mm, Z = -25.85 mm",
-      "X = 51.52 mm, Y = 30.95 mm, Z = -22.85 mm"
+      "X = -10.39 mm, Y = 40.90 mm, Z = -20.46 mm",
+      "X = 10.39 mm, Y = -40.90 mm, Z = 20.46 mm",
+      "X = -10.39 mm, Y = 46.40 mm, Z = -23.46 mm",
+      "X = 69.61 mm, Y = 40.90 mm, Z = -20.46 mm"
      ],
      "answer": 0
     },
@@ -1315,11 +1423,12 @@ window.CSWA_DATA = {
      "n": 14,
      "section": "asm",
      "points": 30,
-     "prompt": "<p>Use the same assembly. Change the angles to <b>A = 120°</b> and <b>B = 45°</b> (Link 1 leans back over the Base; Link 2 points up and to the right).</p><p>What is the centre of mass of the assembly, relative to the assembly origin?</p>",
-     "explain": "Angles above 90° are measured from the +X direction of the Base top face, counter-clockwise when viewed from the front.<p class=\"calc\">Centre of mass: X = 36.95 mm, Y = 35.35 mm, Z = -22.85 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>1040.82</td></tr><tr><td>Link</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Link</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1219.84</b></td></tr></table>",
+     "prompt": "<p>Modify the assembly: <b>A = 75°, B = 110°, C = 140°</b>.</p><p>What is the centre of mass of the assembly (millimeters)?</p><p class=\"hint-line\">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>",
+     "explain": "Absolute directions: Link 1 at 75°, Link 2 at 5°, Link 3 at 45°.<p class=\"calc\">Centre of mass: X = 59.66 mm, Y = 49.49 mm, Z = -20.46 mm</p><table class=\"calc\"><tr><th>Component</th><th>Material</th><th>Mass (g)</th></tr><tr><td>Base</td><td>AISI 1020</td><td>1040.82</td></tr><tr><td>Link 1</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Link 2</td><td>6061 Alloy</td><td>72.77</td></tr><tr><td>Link 3</td><td>6061 Alloy</td><td>98.69</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td>Pin</td><td>Alloy Steel</td><td>16.74</td></tr><tr><td colspan=\"2\"><b>Total</b></td><td><b>1335.28</b></td></tr></table>",
+     "heading": "Assembly (Link Chain) – Step 4",
      "images": [
       {
-       "src": "img/e3q14-asm-1.png",
+       "src": "img/e3q11-asm-1.png",
        "title": "Assembly"
       },
       {
@@ -1336,7 +1445,11 @@ window.CSWA_DATA = {
       },
       {
        "src": "img/exam3-link100-1.png",
-       "title": "Link – front"
+       "title": "Link 1 and Link 2 – front"
+      },
+      {
+       "src": "img/exam3-link140-1.png",
+       "title": "Link 3 – front"
       },
       {
        "src": "img/exam3-headedPin-1.png",
@@ -1345,10 +1458,10 @@ window.CSWA_DATA = {
      ],
      "type": "mc",
      "options": [
-      "X = 32.85 mm, Y = 35.35 mm, Z = -20.45 mm",
-      "X = 36.95 mm, Y = 35.35 mm, Z = -22.85 mm",
-      "X = 47.27 mm, Y = 35.35 mm, Z = -22.85 mm",
-      "X = 36.95 mm, Y = 31.13 mm, Z = -22.85 mm"
+      "X = 55.56 mm, Y = 49.49 mm, Z = -18.06 mm",
+      "X = 59.66 mm, Y = 49.49 mm, Z = -20.46 mm",
+      "X = 52.65 mm, Y = 56.36 mm, Z = -20.46 mm",
+      "X = 45.97 mm, Y = 56.36 mm, Z = -20.46 mm"
      ],
      "answer": 1
     }

@@ -125,6 +125,11 @@ function shuffle(arr, seed) {
   }
   return a;
 }
+const NAMES = {
+  lBracket: 'L-Bracket', archBracket: 'Arch Bracket', flangedHub: 'Flanged Hub', hingeAssembly: 'Hinged Arm',
+  guideBlock: 'Guide Block', shaftSupport: 'Shaft Support', housing: 'Housing', slideAssembly: 'Slide',
+  angleSupport: 'Angle Support', steppedSpindle: 'Spindle', toolBlock: 'Tool Block', chainAssembly: 'Link Chain',
+};
 const f2 = (x) => (Math.abs(x) < 0.005 ? 0 : x).toFixed(2);
 const fmtCom = (c) => `X = ${f2(c[0])} mm, Y = ${f2(c[1])} mm, Z = ${f2(c[2])} mm`;
 
@@ -148,9 +153,17 @@ async function main() {
   const out = { generated: new Date().toISOString().slice(0, 10), sections: SECTIONS, exams: [] };
   for (const exam of EXAMS) {
     const byId = {};
+    const steps = {};
     const qs = [];
     for (const [qi, q] of exam.questions.entries()) {
       const o = { id: q.id, n: qi + 1, section: q.section, points: q.points, prompt: q.prompt, explain: q.explain || '' };
+      // Real-exam style heading: "Part (Name) – Step n" / "Assembly (Name) – Step n"
+      const fn = q.model?.fn || q.assembly?.fn;
+      if (fn) {
+        steps[fn] = (steps[fn] || 0) + 1;
+        o.heading = `${q.assembly ? 'Assembly' : 'Part'} (${NAMES[fn] || fn}) – Step ${steps[fn]}`;
+      }
+      if (q.kind === 'mc-mass' || q.kind === 'mc-com') o.prompt += '<p class="hint-line">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>';
       let images = [];
       if (q.svg) images = [{ src: `img/draft-${q.svg}.svg`, title: 'Drawing' }];
       if (q.reuseImagesOf) images = byId[q.reuseImagesOf].images;
