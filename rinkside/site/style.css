@@ -612,8 +612,8 @@ body:not(.stack) .tallcol .ch .chf { flex-wrap: wrap; justify-content: flex-star
 .wnavs { margin-left: auto; display: flex; gap: 4px; }
 .wnav { width: 28px; height: 28px; border-radius: 3px; border: 1px solid #333; background: var(--card); color: var(--fg); font-size: 19px; line-height: 1; cursor: pointer; }
 .wnav:disabled { opacity: 0.25; cursor: default; }
-.glist { display: grid; gap: 0 28px; margin-top: 4px; --rh: 24px; }
-.glist.fit { margin-top: 0; }
+.garlist { display: grid; gap: 0 28px; margin-top: 4px; --rh: 24px; }
+.garlist.fit { margin-top: 0; }
 .gsub { display: flex; align-items: end; height: var(--rh); padding-bottom: 2px; font: 600 min(10.5px, calc(var(--rh) * 0.62)) / 1 var(--cond); letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; border-bottom: 1px solid var(--rule); }
 .gr { display: grid; grid-template-columns: 112px 1fr 48px; align-items: center; gap: 10px; height: var(--rh); }
 .gr .grn { font: 700 min(14.5px, calc(var(--rh) * 0.86)) / 1 var(--head); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

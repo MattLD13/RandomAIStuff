@@ -1355,7 +1355,7 @@
     const lines = Math.max(...colOf.map((c) => c.reduce((a, [, l]) => a + l.length + 1, 0)));
     const rh = height ? Math.min(26, (height - 2) / lines) : 24;
     const html = colOf.map((c) => `<div>${c.map(([label, l]) => `<div class="gsub">${label}</div>${l.map((r) => garRow(r, lo, hi, attrs(r.id))).join('')}`).join('')}</div>`).join('');
-    return `<div class="glist${height ? ' fit' : ''}" style="--rh:${rh.toFixed(2)}px;grid-template-columns:repeat(${cols},1fr)">${html}</div>`;
+    return `<div class="garlist${height ? ' fit' : ''}" style="--rh:${rh.toFixed(2)}px;grid-template-columns:repeat(${cols},1fr)">${html}</div>`;
   }
   // a block over both chart slots
   function spanBreakdown(d, x, top, w, h, svgTop) {
