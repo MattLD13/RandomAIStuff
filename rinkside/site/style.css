@@ -819,3 +819,5 @@ a.lglr:hover b { text-decoration: underline; text-decoration-color: var(--gold);
   .lgsec .colhead { flex-wrap: wrap; height: auto; gap: 6px; padding-bottom: 6px; }
 }
 @media (max-width: 760px) { .lgdays { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; } .lgdays button { flex: none; } }
+.gfoot.wlive { margin-top: 6px; color: #ff8f9b; }
+.pcard .ps .res.live { width: auto; padding: 0 6px; background: var(--loss); color: #fff; font-size: 12px; letter-spacing: 0.08em; }

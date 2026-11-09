@@ -1081,6 +1081,7 @@
   let current = null;
   function render(d) {
     current = d;
+    injectLiveWar(d);
     MODE = modeFor();
     const G = GEOM[MODE];
     document.body.classList.toggle('stack', MODE === 'stack');
@@ -1161,7 +1162,52 @@
   }
 
   // ---------- live games ----------
-  let pieces = {}, lastPieces = {}, liveTimer = null, liveFor = null, core = null;
+  let pieces = {}, lastPieces = {}, liveTimer = null, liveFor = null, core = null, warCore = null;
+  let liveShifts = { id: null, at: 0, list: [] };   // the game's shifts, refreshed every minute
+
+  // Live Box WAR: the same model as the build (site/war-core.mjs) on the play-by-play plus the
+  // shift chart. The NHL posts shifts as the game goes (or only the HTML time-on-ice reports);
+  // until it has, the on-ice pieces stay at zero and only the individual ones move.
+  async function liveShiftList(pbp) {
+    const id = pbp.id, now = Date.now();
+    if (liveShifts.id === id && now - liveShifts.at < 60000) return liveShifts.list;
+    let list = [];
+    try {
+      const r = await fetch(`${index.liveProxy}/shifts/${id}`, { cache: 'no-store' });
+      if (r.ok) list = warCore.apiShifts((await r.json()).data || []);
+    } catch {}
+    if (list.length < 40) try {   // the stats API has nothing yet: the HTML reports often do
+      const [h, v] = await Promise.all(['H', 'V'].map((x) => fetch(`${index.liveProxy}/toi/${id}/${x}`, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : ''))));
+      const html = [...warCore.parseToiReport(h, pbp.homeTeam.id, pbp.rosterSpots || []), ...warCore.parseToiReport(v, pbp.awayTeam.id, pbp.rosterSpots || [])];
+      if (html.length > list.length) list = html;
+    } catch {}
+    liveShifts = { id, at: now, list };
+    return list;
+  }
+  async function liveWar(pbp, d) {
+    const model = d.war?.model;
+    if (!model?.R || !d.xgModel) return null;
+    warCore ??= await import('./war-core.mjs').catch(() => null);
+    if (!warCore) return null;
+    const shifts = await liveShiftList(pbp);
+    const dg = warCore.digest(pbp, shifts), raw = warCore.rawGame(dg, d.xgModel);
+    const v = warCore.gameRows(dg, raw, model.R, { anyTime: shifts.length < 40 });
+    for (const r of v.rows) r.pct = warCore.pctFromQ(model.q?.sk, r.gar);
+    for (const r of v.goalies) r.pct = warCore.pctFromQ(model.q?.gk, r.gar);
+    const me = pbp.homeTeam.abbrev === d.team.abbrev ? pbp.homeTeam.id : pbp.awayTeam.id;
+    const through = shifts.reduce((a, x) => Math.max(a, (x.p - 1) * 1200 + x.e), 0);
+    return { ...warCore.compactGame(v, me), live: true, partial: shifts.length < 40, through };
+  }
+  // put the live game's Box WAR where the panels look for games
+  function injectLiveWar(d) {
+    if (live?.war && d?.war?.games && d.season.games.some((g) => g.id === live.id && !g.result)) d.war.games[live.id] = live.war;
+  }
+  const liveWarGame = (g) => (live && g && g.id === live.id && live.war && !g.result ? live : null);
+  // game seconds as the scoreboard shows them: period and time left
+  const clockOf = (t) => {
+    const p = Math.min(4, Math.floor(t / 1200) + 1), left = Math.max(0, (p > 3 ? 300 : 1200) - (t - (p - 1) * 1200));
+    return `${ordinalPeriod(p, p > 3 ? 'OT' : 'REG')} ${String(Math.floor(left / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')}`;
+  };
   const ordinalPeriod = (n, type) => (type === 'OT' ? (n > 4 ? `${n - 3}OT` : 'OT') : type === 'SO' ? 'SO' : ['1st', '2nd', '3rd'][n - 1] || `${n}th`);
   const liveShort = () => `<b class="lv">${live.us}–${live.them}</b> <small>${esc(live.period)}</small>`;
   const isOver = (L) => L.state === 'FINAL' || L.state === 'OFF';
@@ -1231,6 +1277,8 @@
   // redraw only the pieces that changed, keeping any open popup
   function renderLive() {
     if (!current) return;
+    injectLiveWar(current);
+    if (warEl && liveWarGame(current.season.games[warAt])) warEl.firstElementChild.innerHTML = warModal(current, warAt);
     for (const [k, f] of Object.entries(pieces)) {
       const html = f();
       if (html === lastPieces[k]) continue;
@@ -1254,8 +1302,10 @@
       const [res, rail] = await Promise.all([fetch(`${base}/play-by-play`, { cache: 'no-store' }),
         fetch(`${base}/right-rail`, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null)]);
       if (!res.ok) throw new Error(res.status);
-      const L = parseLive(await res.json(), current, rail);
+      const pbp = await res.json();
+      const L = parseLive(pbp, current, rail);
       if (L.state === 'FUT') return;   // not started yet; keep the normal header
+      L.war = await liveWar(pbp, current).catch(() => null);
       const justEnded = isOver(L) && live && !isOver(live);
       live = L;
       renderLive();
@@ -1340,7 +1390,9 @@
     const nav = (j, label, ch) => `<button class="wnav" ${j == null ? 'disabled' : `data-warnav="${j}"`} aria-label="${label}">${ch}</button>`;
     return `<button class="px" aria-label="Close">×</button><div class="pk">Box WAR · game ${i + 1}</div>` +
       `<div class="pt">${logo(d.teams[g.opp]?.logo, g.opp)}<span>${g.home ? 'vs' : '@'} ${esc(d.teams[g.opp]?.name || g.opp)}</span><span class="wnavs">${nav(prev, 'Previous game', '‹')}${nav(next, 'Next game', '›')}</span></div>` +
-      `<div class="ps">${resChip(g.result, last)}<span class="psc">${g.info.us}–${g.info.them}</span><span class="pst">${esc(g.info.date)} · GAR <b class="m">${gsign(w.us, 1)}</b> to <b class="m">${gsign(w.them, 1)}</b></span></div>` +
+      (liveWarGame(g) ? `<div class="ps"><span class="res live">LIVE</span><span class="psc">${live.us}–${live.them}</span><span class="pst">${esc(live.intermission ? `${live.period} int.` : `${live.period} ${live.clock}`)} · GAR <b class="m">${gsign(w.us, 1)}</b> to <b class="m">${gsign(w.them, 1)}</b></span></div>` +
+        `<div class="gfoot wlive">${w.partial ? 'Live: the NHL hasn\u2019t posted shifts yet, so only the individual pieces move for now' : `Live: on-ice pieces through ${esc(clockOf(w.through))} (when the NHL last posted shifts)`}</div>`
+        : `<div class="ps">${resChip(g.result, last)}<span class="psc">${g.info.us}–${g.info.them}</span><span class="pst">${esc(g.info.date)} · GAR <b class="m">${gsign(w.us, 1)}</b> to <b class="m">${gsign(w.them, 1)}</b></span></div>`) +
       (warPlayer != null ? warPlayerView(d, i, warPlayer)
         : `<div class="wtog"><button data-warview="table"${warView === 'table' ? ' class="on"' : ''}>Table</button><button data-warview="bars"${warView === 'bars' ? ' class="on"' : ''}>Bars</button></div>` +
         (warView === 'table' ? warTable(d, i, (id) => ` data-pg="${id}"`) + `<div class="gfoot">Goals above replacement · percentile among every NHL game this season · tap a player</div>`
@@ -1384,7 +1436,7 @@
     if (i == null) return `<div class="colhead big"><span class="t">Box WAR</span></div>`;
     const g = d.season.games[i], rows = d.war.games[g.id].rows.map(warRow);
     const pickRows = rows.length > n ? [...rows.slice(0, n - 1), rows[rows.length - 1]] : rows;
-    return `<div class="colhead big"><span class="t">Box WAR</span><span class="r small">${g.home ? 'VS' : '@'} ${esc(g.opp)}</span></div><div class="rlist wgl"${pop(`war:${i}`)}>` +
+    return `<div class="colhead big"><span class="t">Box WAR</span><span class="r small">${liveWarGame(g) ? '<b class="lv">LIVE</b> ' : ''}${g.home ? 'VS' : '@'} ${esc(g.opp)}</span></div><div class="rlist wgl"${pop(`war:${i}`)}>` +
       pickRows.map((r, k) => `${k === n - 1 && rows.length > n ? '<div class="cutline wgap"></div>' : ''}<div class="rrow"><span class="rname"><b>${esc(r.n)}</b><small>${esc(r.pos)}</small></span><span class="rv m" style="color:${garTone(r.gar)}">${gsign(r.gar)}</span></div>`).join('') + '</div>';
   }
   LIST_PANELS.war = (d, compact) => warGamePanel(d, compact ? 6 : 9);
@@ -1457,10 +1509,11 @@
   function spanBreakdown(d, x, top, w, h, svgTop) {
     const i = lastWar(d);
     if (i == null) return slotBox('chart1', x, top, w, h, '');
-    const g = d.season.games[i], last = g.info.status.split('/')[1];
-    const res = g.result === 'W' ? 'W' : g.result === 'O' ? (last || 'OT') : 'L';
+    const g = d.season.games[i], last = g.info.status.split('/')[1], L = liveWarGame(g);
+    const res = L ? 'LIVE' : g.result === 'W' ? 'W' : g.result === 'O' ? (last || 'OT') : 'L';
+    const sc = L ? `${L.us}\u2013${L.them}` : `${g.info.us}\u2013${g.info.them}`;
     return slotBox('chart1', x, top, w, h,
-      `<div class="abs title" style="left:0;top:0"><span${pop(`war:${i}`)}>Game score<span class="big">${res} ${g.info.us}–${g.info.them} ${g.home ? 'vs' : '@'} ${esc(g.opp)}</span></span></div>` +
+      `<div class="abs title" style="left:0;top:0"><span${pop(`war:${i}`)}>Game score<span class="big">${L ? '<b class="lv">LIVE</b>' : res} ${sc} ${g.home ? 'vs' : '@'} ${esc(g.opp)}</span></span></div>` +
       `<div class="abs note" style="${MODE === 'stack' ? 'left:0;top:28px' : 'right:0;top:6px'}">${garLegend()}</div>` +
       `<div class="abs bdblock" style="left:0;top:${svgTop}px;width:${w}px"${pop(`war:${i}`)}>${garList(d, i, { cols: w >= 700 ? 2 : 1, height: h - svgTop - 4 })}</div>`, 'span');
   }

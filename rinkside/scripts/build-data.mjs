@@ -628,23 +628,15 @@ async function buildTeam(TEAM) {
   }
   // ---------- Box WAR: every game's table for this team, season totals on the cards ----------
   const R2 = war.round2;
-  const warOut = { gpw: WAR.gpw, games: {}, season: {} };
+  // model: what the browser needs to value a live game the same way (replacement rates, percentile tables)
+  const warOut = { gpw: WAR.gpw, games: {}, season: {}, model: { R: WAR.R, q: WAR.q } };
   const warIds = new Set();
   for (const g of games) {
     const v = g.id && WAR.games.get(g.id);
     if (!v) continue;
-    const mine = v.rows.filter((r) => r.t === myId).sort((a, b) => b.gar - a.gar), theirs = v.rows.filter((r) => r.t !== myId);
-    const gl = v.goalies.filter((r) => r.t === myId), gt = v.goalies.filter((r) => r.t !== myId);
-    const sum = (a) => a.reduce((x, r) => x + r.gar, 0);
-    warOut.games[g.id] = {
-      us: R2(sum(mine) + sum(gl)), them: R2(sum(theirs) + sum(gt)),
-      // the 13th entry is the player's own game line:
-      // [G, A, SOG, ixG, hits, blocks, FO won, FO lost, takeaways, giveaways, minors taken, minors drawn, EV / PP / SH seconds, on-ice GF, GA, xGF, xGA]
-      rows: mine.map((r) => [r.id, r.n, r.pos, r.toi, R2(r.gc), R2(r.oio), R2(r.oid), R2(r.pp), R2(r.pen), R2(r.oth), R2(r.gar), r.pct,
-        ((l) => [l.g, l.a, l.sog, R2(l.ixg), l.ht, l.bk, l.fw, l.fl, l.tk, l.gv, l.pt, l.pd, l.ev, l.pp, l.sh, l.gf, l.ga, R2(l.xgf), R2(l.xga)])(r.line)]),
-      g: gl.map((r) => [r.id, r.n, r.shots, R2(r.gsax), R2(r.gar), r.pct, r.ga, R2(r.xga)]),
-    };
-    for (const r of [...mine, ...gl]) warIds.add(r.id);
+    warOut.games[g.id] = war.compactGame(v, myId);
+    for (const r of [...v.rows, ...v.goalies]) if (r.t === myId) warIds.add(r.id);
+
   }
   for (const id of warIds) {
     const r = WAR.season[id];

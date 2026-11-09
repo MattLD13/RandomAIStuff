@@ -342,6 +342,13 @@ When the team's game is on, the page polls the NHL every 15 seconds and shows it
 - **Next 5:** the game's card shows the score.
 - **Game stats panel and block:** shots, attempts, xG, faceoffs, power play, hits, blocks, takeaways,
   giveaways and PIM for the game in progress (the last game otherwise). The live popup shows them too.
+- **Box WAR and Game score:** the live game becomes the "last game" in the Box WAR panels,
+  table and bars, and the Game score block. The browser runs the build's own WAR code
+  (`site/war-core.mjs`) on the play-by-play plus the game's shift chart, refreshed every minute.
+  The on-ice pieces (play driving, defence) need to know who was on the ice, so they run up to
+  the last shift the NHL has posted. A note says how far that is. If the stats API has no shifts
+  yet, the NHL's HTML time-on-ice reports are tried. With neither, only the individual pieces
+  move (scoring, power play, penalties, other).
 - **Scoring-chances panel:** switches to the game in progress. The browser runs the same xG
   model as the build (`site/chances-core.mjs`), so live xG matches the final numbers.
 
@@ -349,7 +356,8 @@ When the game ends, polling stops and the regular 30-minute refresh brings in th
 
 The NHL API doesn't send CORS headers, so browsers can't read it directly. A small
 **Cloudflare Worker** (`cloudflare/live-proxy.js`) relays only the live-game endpoints
-(play-by-play, the NHL's official team stats feed `right-rail`, and the league scoreboard), with
+(play-by-play, the NHL's official team stats feed `right-rail`, the league scoreboard, and for
+live Box WAR the shift chart `/shifts/<game>` and time-on-ice reports `/toi/<game>/H|V`), with
 CORS headers and an 8-second shared cache. The free plan is plenty.
 
 **One-time setup:**

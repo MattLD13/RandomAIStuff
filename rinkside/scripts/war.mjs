@@ -18,92 +18,8 @@
 // outside each team's top two by shots faced, shrunk toward −0.006 a shot). Wins = goals ÷ (2 × league goals per team-game).
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { reduce, xg } from '../site/chances-core.mjs';
-
-const secs = (t) => { const [m, s] = String(t || '0:0').split(':').map(Number); return m * 60 + s; };
-const ST = ['ev', 'pp', 'sh'];
-const VALUE = { shooter: 0.35, a1: 0.15, a2: 0.05, minor: 0.17, faceoff: 0.008, takeaway: 0.015, giveaway: -0.01, block: 0.012 };
-
-// ---------- shift charts ----------
-function apiShifts(rows) {
-  return rows.filter((r) => r.typeCode === 517 && r.startTime && r.endTime)
-    .map((r) => ({ id: r.playerId, p: r.period, s: secs(r.startTime), e: secs(r.endTime) }));
-}
-// NHL HTML time-on-ice report (TH = home, TV = visitor): one table of shifts per player
-export function parseToiReport(html, teamId, roster) {
-  const byNumber = Object.fromEntries(roster.filter((r) => r.teamId === teamId).map((r) => [r.sweaterNumber, r.playerId]));
-  const out = [];
-  for (const part of html.split('class="playerHeading').slice(1)) {
-    const head = part.slice(part.indexOf('>') + 1, part.indexOf('</td>')).trim();
-    const id = byNumber[parseInt(head, 10)];
-    if (!id) continue;
-    for (const m of part.matchAll(/<tr class="\s*(?:oddColor|evenColor)">([\s\S]*?)<\/tr>/g)) {
-      const cells = [...m[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((c) => c[1].replace(/&nbsp;/g, ' ').trim());
-      if (cells.length < 5 || !cells[2].includes('/') || !cells[3].includes('/')) continue;   // skip the per-period summary rows
-      const p = cells[1] === 'OT' ? 4 : parseInt(cells[1], 10);
-      if (!p) continue;
-      out.push({ id, p, s: secs(cells[2].split('/')[0].trim()), e: secs(cells[3].split('/')[0].trim()) });
-    }
-  }
-  return out;
-}
-
-// ---------- one game: who was on the ice for what ----------
-export function digest(pbp, shifts) {
-  const home = pbp.homeTeam.id, away = pbp.awayTeam.id;
-  const players = {};
-  for (const r of pbp.rosterSpots || []) {
-    players[r.playerId] = { t: r.teamId, pos: r.positionCode, n: `${r.firstName.default[0]}. ${r.lastName.default}` };
-  }
-  // on-ice players for every second of the game
-  const T = Math.max(3600, ...shifts.map((x) => (x.p - 1) * 1200 + x.e));
-  const on = Array.from({ length: T }, () => []);
-  for (const x of shifts) {
-    if (!players[x.id] || x.e <= x.s) continue;
-    const a = (x.p - 1) * 1200 + x.s, b = Math.min(T, (x.p - 1) * 1200 + x.e);
-    for (let t = a; t < b; t++) if (!on[t].includes(x.id)) on[t].push(x.id);
-  }
-  const strength = (t) => {
-    const c = { [home]: { s: 0, g: 0 }, [away]: { s: 0, g: 0 } };
-    for (const id of on[t]) { const p = players[id]; if (c[p.t]) c[p.t][p.pos === 'G' ? 'g' : 's']++; }
-    const st = (me, op) => (!c[me].g || !c[op].g ? 'x' : c[me].s > c[op].s ? 'pp' : c[me].s < c[op].s ? 'sh' : 'ev');
-    return { [home]: st(home, away), [away]: st(away, home) };
-  };
-  const toi = {};
-  for (let t = 0; t < T; t++) {
-    if (!on[t].length) continue;
-    const s = strength(t);
-    for (const id of on[t]) {
-      const p = players[id];
-      toi[id] ??= { ev: 0, pp: 0, sh: 0, x: 0 };
-      toi[id][p.pos === 'G' ? 'x' : s[p.t]]++;
-    }
-  }
-  const box = {};
-  const bump = (id, k, v = 1) => { if (!id || !players[id]) return; box[id] ??= {}; box[id][k] = (box[id][k] || 0) + v; };
-  // shots on goal in the same order as reduce() lists them
-  const red = reduce(pbp), plays = [...pbp.plays].sort((a, b) => a.sortOrder - b.sortOrder);
-  const shots = [];
-  let k = 0;
-  for (const p of plays) {
-    const pd = p.periodDescriptor || {};
-    if (pd.periodType === 'SO') continue;
-    const d = p.details || {}, type = p.typeDescKey, t = (pd.number - 1) * 1200 + secs(p.timeInPeriod);
-    if (type === 'shot-on-goal' || type === 'goal') {
-      const s = red.shots[k++], at = on[Math.min(T - 1, Math.max(0, t - 1))] || [];
-      const skaters = (team) => at.filter((id) => players[id]?.t === team && players[id].pos !== 'G');
-      shots.push({ ...s, a1: d.assist1PlayerId || 0, a2: d.assist2PlayerId || 0, of: skaters(s.team), df: skaters(s.team === home ? away : home) });
-    } else if (type === 'penalty') {
-      const minors = d.typeCode === 'MIN' || d.typeCode === 'BEN' ? (d.duration || 2) / 2 : d.typeCode === 'MAJ' || d.typeCode === 'MAT' ? 2.5 : 0;
-      if (minors) { bump(d.committedByPlayerId, 'pt', minors); bump(d.drawnByPlayerId, 'pd', minors); }
-    } else if (type === 'faceoff') { bump(d.winningPlayerId, 'fw'); bump(d.losingPlayerId, 'fl'); }
-    else if (type === 'takeaway') bump(d.playerId, 'tk');
-    else if (type === 'giveaway') bump(d.playerId, 'gv');
-    else if (type === 'blocked-shot' && d.reason !== 'teammate-blocked') bump(d.blockingPlayerId, 'bk');
-    else if (type === 'hit') bump(d.hittingPlayerId, 'ht');
-  }
-  return { id: pbp.id, home, away, players, toi, box, shots };
-}
+import { digest, apiShifts, parseToiReport, rawGame, r2, pctOf, ST, parts as partsR, goalieGar, gameRows } from '../site/war-core.mjs';
+export { parseToiReport, digest, compactGame, pctFromQ } from '../site/war-core.mjs';
 
 // Fetch (or read from cache) every game's digest.
 export async function loadDigests(gameIds, get, getText, cacheDir, { concurrency = 6 } = {}) {
@@ -136,59 +52,6 @@ export async function loadDigests(gameIds, get, getText, cacheDir, { concurrency
   await Promise.all(Array.from({ length: concurrency }, worker));
   return { digests: out, fetched, fromReport, missing };
 }
-
-// ---------- raw (not yet replacement-adjusted) value of one game ----------
-function rawGame(g, w) {
-  const P = {};
-  const get = (id) => {
-    if (!P[id]) {
-      const p = g.players[id] || {};
-      P[id] = { id: +id, t: p.t, pos: p.pos, n: p.n, toi: g.toi[id] || { ev: 0, pp: 0, sh: 0, x: 0 },
-        gc: { ev: 0, pp: 0, sh: 0 }, oio: { ev: 0, pp: 0, sh: 0 }, oid: { ev: 0, pp: 0, sh: 0 }, pen: 0, oth: 0, shots: 0, gsax: 0,
-        // the player's own game line: goals, assists, shots, individual xG, on-ice goals and xG for / against
-        x: { g: 0, a: 0, sog: 0, ixg: 0, gf: 0, ga: 0, xgf: 0, xga: 0, gaG: 0, xgaG: 0 } };
-    }
-    return P[id];
-  };
-  const has = (id) => id && g.players[id];
-  for (const id of Object.keys(g.toi)) get(id);
-  for (const s of g.shots) {
-    if (has(s.shooter)) { const p = get(s.shooter).x; p.sog++; p.g += s.goal; }
-    if (s.goal) {
-      for (const a of [s.a1, s.a2]) if (has(a)) get(a).x.a++;
-      for (const id of s.of) get(id).x.gf++;
-      for (const id of s.df) get(id).x.ga++;
-    }
-    if (s.en) continue;
-    const x = xg(w, s), v = 0.5 * x + 0.5 * s.goal;
-    if (has(s.shooter)) get(s.shooter).x.ixg += x;
-    for (const id of s.of) get(id).x.xgf += x;
-    for (const id of s.df) get(id).x.xga += x;
-    if (has(s.goalie)) { const k = get(s.goalie).x; k.gaG += s.goal; k.xgaG += x; }
-    const st = s.pp ? 'pp' : s.sh ? 'sh' : 'ev', dst = s.pp ? 'sh' : s.sh ? 'pp' : 'ev';
-    let pool = v;
-    const give = (id, share) => { if (id && g.players[id]) { get(id).gc[st] += share * v; pool -= share * v; } };
-    give(s.shooter, VALUE.shooter);
-    if (s.goal) { give(s.a1, VALUE.a1); give(s.a2, VALUE.a2); }
-    if (s.of.length) for (const id of s.of) get(id).oio[st] += pool / s.of.length;
-    if (s.df.length) for (const id of s.df) get(id).oid[dst] -= x / s.df.length;
-    if (s.goalie && g.players[s.goalie]) { const gk = get(s.goalie); gk.shots++; gk.gsax += x - s.goal; }
-  }
-  for (const [id, b] of Object.entries(g.box)) {
-    const p = get(id);
-    p.pen += VALUE.minor * ((b.pd || 0) - (b.pt || 0));
-    p.oth += VALUE.faceoff * ((b.fw || 0) - (b.fl || 0)) + VALUE.takeaway * (b.tk || 0) + VALUE.giveaway * (b.gv || 0) + VALUE.block * (b.bk || 0);
-  }
-  return Object.values(P);
-}
-
-const r2 = (v) => Math.round(v * 100) / 100;
-const pctOf = (sorted, v) => {   // share of values below v (ties count half)
-  let lo = 0, hi = sorted.length;
-  while (lo < hi) { const m = (lo + hi) >> 1; if (sorted[m] < v) lo = m + 1; else hi = m; }
-  let eq = lo; while (eq < sorted.length && sorted[eq] === v) eq++;
-  return Math.round((100 * (lo + (eq - lo) / 2)) / Math.max(sorted.length, 1));
-};
 
 export function computeWar(digests, w) {
   const games = [...digests.values()].sort((a, b) => a.id - b.id);
@@ -234,33 +97,21 @@ export function computeWar(digests, w) {
   // few shots reach third-string goalies, so shrink their rate toward a typical -0.006 goals a shot
   R.G = Math.max(-0.012, Math.min(0, (pool.G.reduce((a, s) => a + s.gsax, 0) - 0.006 * 3000) / (gShots + 3000)));
 
-  // replacement-adjusted pieces for one game (or a season total)
-  const parts = (p) => {
-    const r = R[p.pos === 'D' ? 'D' : 'F'];
-    const ev = (c) => p[c].ev - r[c].ev * p.toi.ev + p[c].sh - r[c].sh * p.toi.sh;
-    const gc = ev('gc'), oio = ev('oio'), oid = ev('oid');
-    const pp = ['gc', 'oio', 'oid'].reduce((a, c) => a + p[c].pp - r[c].pp * p.toi.pp, 0);
-    const pen = p.pen - r.pen * all(p.toi), oth = p.oth - r.oth * all(p.toi);
-    return { gc, oio, oid, pp, pen, oth, gar: gc + oio + oid + pp + pen + oth };
-  };
-  const gGar = (p) => p.gsax - R.G * p.shots;
+  // replacement-adjusted pieces for one game (or a season total): site/war-core.mjs
+  const parts = (p) => partsR(p, R), gGar = (p) => goalieGar(p, R);
 
   const out = { gpw, games: new Map(), season: {}, R };
   const sk = [], gk = [];
   for (const g of games) {
-    const rows = [], gl = [];
-    for (const p of raw.get(g.id)) {
-      if (p.pos === 'G') { if (p.shots) gl.push({ id: p.id, t: p.t, n: p.n, toi: all(p.toi), shots: p.shots, gsax: p.gsax, gar: gGar(p), ga: p.x.gaG, xga: p.x.xgaG }); continue; }
-      if (!all(p.toi)) continue;
-      const b = g.box[p.id] || {};
-      rows.push({ id: p.id, t: p.t, n: p.n, pos: p.pos, toi: all(p.toi), ...parts(p),
-        line: { ...p.x, ht: b.ht || 0, bk: b.bk || 0, fw: b.fw || 0, fl: b.fl || 0, tk: b.tk || 0, gv: b.gv || 0, pt: b.pt || 0, pd: b.pd || 0, ev: p.toi.ev, pp: p.toi.pp, sh: p.toi.sh } });
-    }
+    const { rows, goalies: gl } = gameRows(g, raw.get(g.id), R);
     for (const r of rows) if (r.toi >= 300) sk.push(r.gar);
     for (const r of gl) gk.push(r.gar);
     out.games.set(g.id, { home: g.home, away: g.away, rows, goalies: gl });
   }
   sk.sort((a, b) => a - b); gk.sort((a, b) => a - b);
+  // 101-point quantile tables, so the browser can place a live game's GAR on the same scale
+  const quant = (a) => (a.length ? Array.from({ length: 101 }, (_, k) => r2(a[Math.min(a.length - 1, Math.round((k / 100) * (a.length - 1)))]) * 1) : []);
+  out.q = { sk: quant(sk), gk: quant(gk) };
   for (const v of out.games.values()) {
     for (const r of v.rows) r.pct = pctOf(sk, r.gar);
     for (const r of v.goalies) r.pct = pctOf(gk, r.gar);
