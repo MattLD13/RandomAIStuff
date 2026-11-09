@@ -204,11 +204,13 @@ New options in Customize:
 
 ## Player cards and models
 
-Tap any player (leader rows, Top scorers, Goalies, Player ratings) for a card built from the
-board's own parts:
-- stat boxes for Overall, WAR and Points (Save % for goalies);
-- a percentile bar for each rating, green when strong (67+) and red when weak (33 or under);
-- the season stat line.
+Tap any player (leader rows, Top scorers, Goalies, Player ratings) for a card:
+- **Headline boxes:** Rinkside overall (big, with a percentile bar), WAR and Points (Save % for goalies).
+- **Percentile tiles:** shaded by the team colour, with elite ones (90+) underlined in gold.
+- **Extras strip:** individual xG, goals − xG and shot quality.
+- **Season so far:** a game-to-game line graph of running GAR, split into offence and defence.
+- **Game by game:** a bar chart of GAR in each game.
+- **Season stat line**
 
 **Skater percentiles.** Each skater is compared with every NHL forward or every defenceman who
 has played 25%+ of games. Data comes from the NHL stats API's league-wide skater reports plus
@@ -311,7 +313,7 @@ from the goalies outside each team's top two, shrunk toward −0.006 a shot. Win
 Season WAR percentiles compare against skaters with 25%+ of games played (goalies with 3+ games).
 
 Where WAR shows up:
-- **Box WAR:** opens from the Box WAR panels, or from "Box WAR ›" in any game popup. It shows one bar per player. The ‹ › buttons step through the games, and tapping a player opens their card.
+- **Box WAR:** a table of every piece per skater (tinted team colour or red, with a percentile per game), or the same as bars. It opens from the Box WAR panels, or from "Box WAR ›" in any game popup. It shows one bar per player. The ‹ › buttons step through the games, and tapping a player opens their card.
 - **Player cards:** a WAR box with the season percentile.
 - **Panels:** Box WAR (last game) and Wins above replacement (season) for the list, picture and tall-column slots.
 - **Other:** a Team WAR stat box (ranked of 32), and a WAR leader option for the leader rows.

@@ -573,6 +573,12 @@ body:not(.stack) .tallcol .ch .chf { flex-wrap: wrap; justify-content: flex-star
 .pcard .st, .wcard .st { margin-top: 10px; }
 .pcard .st .box, .wcard .st .box { height: auto; min-height: 50px; padding-bottom: 6px; }
 .pcard .st .v { font-size: 22px; margin-top: 4px; }
+.pcard .st.hero .box { position: relative; }
+.pcard .st.hero .ovr { flex: 1.25; }
+.pcard .st.hero .ovr .v { font-size: 34px; }
+.pcard .st .box.elite { box-shadow: inset 0 0 0 1px var(--gold-hi); }
+.sbar { height: 3px; margin-top: 6px; background: repeating-linear-gradient(to right, #3a3a3a 0 3px, transparent 3px 5px); }
+.sbar i { display: block; height: 100%; background: var(--team-hi); }
 .pc-id { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
 .pc-id .face, .wc-id .face { width: 58px; height: 58px; border-radius: 50%; overflow: hidden; background: #1d1d1b; border: 1.5px solid color-mix(in srgb, var(--primary) 80%, #fff); flex: none; }
 .pc-id .face img, .wc-id .face img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
@@ -673,3 +679,48 @@ body:not(.stack) .tallcol .ch .chf { flex-wrap: wrap; justify-content: flex-star
 .cmpv .rbt.mini { margin-left: 0; flex: 1; max-width: 120px; }
 .cmpv b { font-size: 15px; min-width: 40px; }
 body:not(.stack) .tallcol .rbt.mini { display: none; }
+
+/* percentile tiles: shaded by the team colour, elite ones edged in gold */
+.ptiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
+.ptiles.g { grid-template-columns: repeat(4, 1fr); }
+.ptile { text-align: center; }
+.ptile small { display: flex; align-items: flex-end; justify-content: center; min-height: 24px; color: #cfcfcf; font: 600 10px/1.15 var(--cond); letter-spacing: 0.02em; }
+.ptile b { display: block; margin-top: 3px; padding: 7px 0 6px; border-radius: 3px; font-size: 18px; border-bottom: 2px solid transparent; }
+.ptile.elite b { border-bottom-color: var(--gold-hi); }
+.ptiles.wide { gap: 4px 8px; margin-top: 0; }
+.ptiles.wide .ptile small { min-height: 20px; font-size: 9.5px; }
+.ptiles.wide .ptile b { padding: 4px 0 3px; font-size: 15px; }
+.pstrip { display: flex; flex-wrap: wrap; gap: 4px 0; margin-top: 10px; padding: 6px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); font-size: 13px; color: var(--muted); }
+.pstrip span { flex: 1; text-align: center; white-space: nowrap; }
+.pstrip span + span { border-left: 1.5px dashed #3a3a3a; }
+.pstrip b { color: var(--fg); margin-left: 4px; font-size: 14.5px; }
+.pleg { display: inline-flex; align-items: center; gap: 2px 10px; font-size: 11.5px; }
+.pleg i { display: inline-block; width: 10px; height: 2.5px; margin-right: -6px; }
+/* Box WAR table */
+.wtog { display: flex; gap: 4px; margin-top: 10px; }
+.wtog button { padding: 4px 12px; border-radius: 3px; border: 1px solid #333; background: transparent; color: var(--muted); font: 700 11px var(--cond); letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
+.wtog button.on { color: var(--fg); border-color: var(--gold); }
+.btab { display: grid; gap: 2px; margin-top: 8px; }
+.btr { display: grid; grid-template-columns: minmax(80px, 1fr) 40px repeat(6, 44px) 50px 30px; gap: 2px; align-items: center; min-height: 23px; }
+.btab.bgk .btr { grid-template-columns: minmax(80px, 1fr) 46px 76px 50px 30px; }
+.btr.bth { color: var(--otl); font: 700 9.5px/1.1 var(--cond); letter-spacing: 0.08em; text-transform: uppercase; text-align: center; align-items: end; min-height: 22px; border-bottom: 1px solid var(--rule); padding-bottom: 3px; }
+.btr.bth .bn { text-align: left; }
+.btr .bn { display: flex; align-items: baseline; gap: 5px; min-width: 0; white-space: nowrap; overflow: hidden; }
+.btr .bn b { font: 700 14px var(--head); overflow: hidden; text-overflow: ellipsis; }
+.btr .bn small { color: var(--muted); font-size: 10.5px; }
+.btr .bt { text-align: center; color: #cfcfcf; font-size: 12px; }
+.btr .bc { text-align: center; padding: 3px 0; font-size: 12px; }
+.btr .bc.bg { font-size: 13px; border-left: 2px solid var(--gold); }
+.btr .bp { text-align: right; font-size: 13px; }
+.btr[data-card] { cursor: pointer; }
+.btr[data-card]:hover .bn b { text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 3px; }
+@media (max-width: 560px) {
+  .btr { grid-template-columns: minmax(62px, 1fr) repeat(6, 1fr) 40px 24px; }
+  .btr > :nth-child(2) { display: none; }
+  .btab.bgk .btr { grid-template-columns: minmax(62px, 1fr) 40px 64px 44px 24px; }
+  .btab.bgk .btr > :nth-child(2) { display: block; }
+  .btr .bn small { display: none; }
+  .btr .bc { font-size: 10.5px; }
+  .ptile small { font-size: 9px; }
+  .ptile b { font-size: 15px; }
+}

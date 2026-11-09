@@ -650,6 +650,8 @@
   const tone = (p) => (p == null ? 'var(--dim)' : p >= 80 ? 'var(--gold-hi)' : p <= 20 ? 'var(--loss)' : 'var(--fg)');
   const garTone = (v, s = 0.1) => (v >= s ? 'var(--gold-hi)' : v <= -s ? 'var(--loss)' : 'var(--fg)');
   const rbar = (label, p) => `<div class="rb"><span class="rbl">${esc(label)}</span><span class="rbt"><i style="width:${p ?? 0}%"></i></span><b class="m" style="color:${tone(p)}">${p ?? '\u2013'}</b></div>`;
+  const tileBg = (p) => (p == null ? '#232323' : `color-mix(in srgb, var(--team-hi) ${Math.round(6 + p * 0.82)}%, #1b1b1b)`);
+  const ptile = ([label, p]) => `<div class="ptile${p != null && p >= 90 ? ' elite' : ''}"><small>${esc(label)}</small><b class="m" style="background:${tileBg(p)}${p != null && p <= 20 ? ';color:#ff8f9b' : ''}">${p ?? '\u2013'}</b></div>`;
   const miniBar = (pct) => `<span class="rbt mini"><i style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></i></span>`;
   const rgbOf = (hex) => { const n = parseInt(String(hex).replace('#', ''), 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
   const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
@@ -664,6 +666,36 @@
   const cardKey = (d, id) => (id && d.cards && d.cards[id] ? `card:${id}` : null);
 
 
+  // running totals game to game: total GAR (white), offence (team colour), defence (gold); goalies: GAR and saved above xG
+  function playerLineChart(d, id, isG) {
+    if (!d.war) return '';
+    let tot = 0, off = 0, def = 0, n = 0;
+    const pts = warGames(d).map(([g]) => {
+      const w = d.war.games[g.id], r = isG ? w.g.find((x) => x[0] === id) : w.rows.find((x) => x[0] === id);
+      if (r) {
+        n++;
+        if (isG) { tot += r[4]; off += r[3]; } else { const o = warRow(r); tot += o.gar; off += o.gc + o.oio + o.pp; def += o.oid; }
+      }
+      return { tot, off, def, g, played: !!r };
+    });
+    if (n < 2) return '';
+    const series = isG ? [['tot', 'GAR', '#f4f4f4'], ['off', 'Saved above xG', 'var(--team-hi)']]
+      : [['tot', 'GAR', '#f4f4f4'], ['off', 'Offence', 'var(--team-hi)'], ['def', 'Defence', 'var(--df1)']];
+    const W = 400, H = 112, PW = W - 40, vals = pts.flatMap((p) => series.map(([k]) => p[k]));
+    let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
+    if (hi - lo < 0.5) { hi += 0.25; lo -= 0.25; }
+    const X = (i) => (pts.length === 1 ? PW / 2 : (i * PW) / (pts.length - 1)), Y = (v) => 6 + ((hi - v) / (hi - lo)) * (H - 12);
+    let s = `<line x1="0" x2="${PW}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="#6f6f6f" stroke-dasharray="3 3"/>`;
+    for (const [k, , col] of series) {
+      const path = pts.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(p[k]).toFixed(1)}`).join('');
+      const last = pts[pts.length - 1][k];
+      s += `<path d="${path}" fill="none" stroke="${col}" stroke-width="${k === 'tot' ? 2.4 : 1.6}" stroke-linejoin="round"/>` +
+        `<circle cx="${X(pts.length - 1).toFixed(1)}" cy="${Y(last).toFixed(1)}" r="3" fill="${col}"/>` +
+        `<text x="${W}" y="${(Y(last) + 3.5).toFixed(1)}" text-anchor="end" class="pcv" style="fill:${col}">${gsign(last, 1)}</text>`;
+    }
+    return `<div class="pc-chart"><div class="pc-ch"><span class="k">Season so far</span><span class="pleg">${series.map(([, l, col]) => `<i style="background:${col}"></i>${l}`).join('')}</span></div>` +
+      `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="height:${H}px">${s}</svg></div>`;
+  }
   // the player's goals above replacement in every game, like the season chart: team colour up, red down
   function playerGameChart(d, id, isG) {
     if (!d.war) return '';
@@ -691,20 +723,22 @@
   function cardHtml(d, id) {
     const c = d.cards[id];
     if (!c) return '';
-    const isG = c.kind === 'G', w = c.war, stat = (k) => (c.stats || []).find(([x]) => x === k)?.[1];
+    const isG = c.kind === 'G', w = c.war, ex = c.extra, stat = (k) => (c.stats || []).find(([x]) => x === k)?.[1];
     const pos = { C: 'Centre', L: 'Left wing', R: 'Right wing', D: 'Defence', G: 'Goalie' }[c.pos] || c.pos;
-    const last = c.trend?.length > 1 ? c.trend[0].overall : null;
-    const sub = [c.age ? `Age ${c.age}` : '', c.usage, isG ? `${c.gp} GP` : `${c.toi} a game`].filter(Boolean);
-    let h = `<div class="pk">${esc(d.team.abbrev)}${c.number != null ? ` · #${c.number}` : ''} · ${esc(pos)}</div>`;
-    h += `<div class="pc-id"><span class="face"><img src="${esc(c.headshot)}" alt=""></span><div><div class="pc-n">${esc(c.full)}</div><div class="pc-s">${sub.map(esc).join(' · ')}</div></div></div>`;
-    const boxes = [
-      ['Overall', c.overall ?? '–', !c.qualified ? 'too few games' : last != null ? `${last} last season` : 'percentile'],
-      w ? ['WAR', gsign(w.war, 1), w.pct != null ? `${w.pct}${suffix(w.pct)} pctl` : `${w.gp} GP`] : null,
-      isG ? ['Save %', stat('SV%') ?? '–', `${stat('GAA') ?? '–'} GAA`] : ['Points', stat('P') ?? '–', `${stat('G') ?? 0} G · ${stat('A') ?? 0} A`],
-    ].filter(Boolean);
-    h += `<div class="st">${boxes.map(([k, v, rk]) => `<div class="box"><div class="k">${k}</div><div class="rk">${esc(rk)}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>`;
-    if (c.qualified) h += `<div class="rbs${isG ? ' one' : ''}">${c.tiles.map(([label, p]) => rbar(label, p)).join('')}</div>`;
-    h += playerGameChart(d, id, isG);
+    const group = isG ? 'goalies' : c.group === 'D' ? 'defencemen' : 'forwards';
+    let h = `<div class="pk">${esc(d.team.abbrev)}${c.number != null ? ` \u00b7 #${c.number}` : ''} \u00b7 ${esc(pos)}</div>`;
+    h += `<div class="pc-id"><span class="face"><img src="${esc(c.headshot)}" alt=""></span><div><div class="pc-n">${esc(c.full)}</div>` +
+      `<div class="pc-s">${[c.age ? `Age ${c.age}` : '', c.usage, isG ? `${c.gp} GP` : `${c.toi} a game`].filter(Boolean).map(esc).join(' \u00b7 ')}</div></div></div>`;
+    // the headline numbers: overall percentile (as a big tile with its bar), WAR, and points or save %
+    const bar = (p) => (p == null ? '' : `<div class="sbar"><i style="width:${p}%"></i></div>`);
+    h += `<div class="st hero"><div class="box ovr${c.overall != null && c.overall >= 90 ? ' elite' : ''}"><div class="k">Rinkside overall</div><div class="rk">${c.qualified ? `vs NHL ${group}` : 'too few games'}</div><div class="v">${c.overall ?? '\u2013'}</div>${bar(c.overall)}</div>` +
+      (w ? `<div class="box"><div class="k">WAR</div><div class="rk">${w.pct != null ? `${w.pct}${suffix(w.pct)} pctl` : `${w.gp} GP`}</div><div class="v">${gsign(w.war, 1)}</div>${bar(w.pct)}</div>` : '') +
+      (isG ? `<div class="box"><div class="k">Save %</div><div class="rk">${esc(stat('GAA') ?? '\u2013')} GAA</div><div class="v">${esc(stat('SV%') ?? '\u2013')}</div></div>`
+        : `<div class="box"><div class="k">Points</div><div class="rk">${stat('G') ?? 0} G \u00b7 ${stat('A') ?? 0} A</div><div class="v">${esc(stat('P') ?? '\u2013')}</div></div>`) + '</div>';
+    if (c.qualified) h += `<div class="ptiles${isG ? ' g' : ''}">${c.tiles.map(ptile).join('')}</div>`;
+    if (ex && !isG) h += `<div class="pstrip"><span>Individual xG <b class="m">${ex.ixg ?? '\u2013'}</b></span><span>Goals \u2212 xG <b class="m">${ex.finishing == null ? '\u2013' : gsign(ex.finishing, 1)}</b></span><span>Shot quality <b class="m">${ex.quality ?? '\u2013'}</b></span></div>`;
+    if (ex && isG) h += `<div class="pstrip"><span>Saved above xG <b class="m">${gsign(ex.gsax, 1)}</b></span><span>xG faced <b class="m">${ex.xga}</b></span><span>HD save % <b class="m">${ex.hdSv == null ? '\u2013' : pct3(ex.hdSv)}</b></span></div>`;
+    h += playerLineChart(d, id, isG) + playerGameChart(d, id, isG);
     h += `<div class="pgrid">${(c.stats || []).map(([k, v]) => `<div><b class="m">${esc(v)}</b><span>${esc(k)}</span></div>`).join('')}</div>`;
     return h;
   }
@@ -756,7 +790,7 @@
     const html = `<div class="wcard${cols === 2 ? '' : ' narrow'}"${pop(`card:${id}`)}>` +
       `<div class="wc-id"><span class="face"><img src="${esc(c.headshot)}" alt=""></span><div><b class="wc-n">${esc(c.full)}</b><small>${esc(c.pos)}${c.number != null ? ` · #${c.number}` : ''}${c.usage ? ` · ${esc(c.usage)}` : ''}</small>` +
       `<div class="st">${[['Overall', c.overall ?? '–'], ...(c.war ? [['WAR', gsign(c.war.war, 1)]] : [])].map(([k, v]) => `<div class="box"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div></div></div>` +
-      `<div class="rbs" style="grid-template-columns:repeat(${cols},1fr)">${tiles.map(([label, p]) => rbar(label, p)).join('')}</div></div>`;
+      `<div class="ptiles wide" style="grid-template-columns:repeat(${cols === 2 ? 5 : 3},1fr)">${tiles.map(ptile).join('')}</div></div>`;
     return { title: `<span${pop(`card:${id}`)}>Player card</span>`, note: c.full, html };
   }
 
@@ -1191,7 +1225,22 @@
   const warRow = (r) => { const [id, n, pos, toi, gc, oio, oid, pp, pen, oth, gar, pct] = r; return { id, n, pos, toi, gc, oio, oid, pp, pen, oth, gar, pct }; };
 
 
-  let warEl = null, warAt = null;
+  let warEl = null, warAt = null, warView = 'table';
+  // the table: every piece per skater, tinted in team colour (above replacement) or red (below)
+  const cellBg = (v, sc) => (v >= 0 ? `color-mix(in srgb, var(--team-hi) ${Math.round(Math.min(1, v / sc) * 70)}%, #1b1b1b)` : `color-mix(in srgb, var(--loss) ${Math.round(Math.min(1, -v / sc) * 60)}%, #1b1b1b)`);
+  const pctTone = (p) => (p == null ? 'var(--dim)' : p >= 90 ? 'var(--gold-hi)' : p <= 10 ? 'var(--loss)' : 'var(--fg)');
+  const WAR_HEAD = [['gc', 'Scor&shy;ing'], ['oio', 'Play'], ['pp', 'PP'], ['oid', 'Def'], ['pen', 'Pen'], ['oth', 'Other']];
+  function warTable(d, i, link) {
+    const w = d.war.games[d.season.games[i].id], rows = w.rows.map(warRow);
+    let h = `<div class="btab"><div class="btr bth"><span class="bn">Skater</span><span>TOI</span>${WAR_HEAD.map(([, l]) => `<span>${l}</span>`).join('')}<span>GAR</span><span>Pctl</span></div>`;
+    h += rows.map((r) => `<div class="btr"${link(r.id)}><span class="bn"><b>${esc(r.n)}</b><small>${esc(r.pos)}</small></span><span class="m bt">${mmss(r.toi)}</span>` +
+      WAR_HEAD.map(([k]) => `<span class="m bc" style="background:${cellBg(r[k], 0.25)}">${gsign(r[k])}</span>`).join('') +
+      `<span class="m bc bg" style="background:${cellBg(r.gar, 0.45)}">${gsign(r.gar)}</span><span class="m bp" style="color:${pctTone(r.pct)}">${r.pct ?? '\u2013'}</span></div>`).join('') + '</div>';
+    if (w.g.length) h += `<div class="btab bgk"><div class="btr bth"><span class="bn">Goalie</span><span>Shots</span><span>Saved vs xG</span><span>GAR</span><span>Pctl</span></div>` +
+      w.g.map(([id, n, shots, gsax, gar, pct]) => `<div class="btr"${link(id)}><span class="bn"><b>${esc(n)}</b><small>G</small></span><span class="m bt">${shots}</span>` +
+        `<span class="m bc" style="background:${cellBg(gsax, 1.5)}">${gsign(gsax)}</span><span class="m bc bg" style="background:${cellBg(gar, 1.5)}">${gsign(gar)}</span><span class="m bp" style="color:${pctTone(pct)}">${pct ?? '\u2013'}</span></div>`).join('') + '</div>';
+    return h;
+  }
   function warModal(d, i) {
     const list = warGames(d), at = list.findIndex(([, j]) => j === i), g = d.season.games[i], w = d.war.games[g.id];
     const prev = list[at - 1]?.[1], next = list[at + 1]?.[1], last = g.info.status.split('/')[1];
@@ -1199,7 +1248,9 @@
     return `<button class="px" aria-label="Close">×</button><div class="pk">Box WAR · game ${i + 1}</div>` +
       `<div class="pt">${logo(d.teams[g.opp]?.logo, g.opp)}<span>${g.home ? 'vs' : '@'} ${esc(d.teams[g.opp]?.name || g.opp)}</span><span class="wnavs">${nav(prev, 'Previous game', '‹')}${nav(next, 'Next game', '›')}</span></div>` +
       `<div class="ps">${resChip(g.result, last)}<span class="psc">${g.info.us}–${g.info.them}</span><span class="pst">${esc(g.info.date)} · GAR <b class="m">${gsign(w.us, 1)}</b> to <b class="m">${gsign(w.them, 1)}</b></span></div>` +
-      garList(d, i, { attrs: (id) => (d.cards?.[id] ? ` data-card="${id}"` : '') }) + `<div class="gfoot">${garLegend()}</div>`;
+      `<div class="wtog"><button data-warview="table"${warView === 'table' ? ' class="on"' : ''}>Table</button><button data-warview="bars"${warView === 'bars' ? ' class="on"' : ''}>Bars</button></div>` +
+      (warView === 'table' ? warTable(d, i, (id) => (d.cards?.[id] ? ` data-card="${id}"` : '')) + `<div class="gfoot">Goals above replacement · percentile among every NHL game this season</div>`
+        : garList(d, i, { attrs: (id) => (d.cards?.[id] ? ` data-card="${id}"` : '') }) + `<div class="gfoot">${garLegend()}</div>`);
   }
   function openWar(i) {
     closeWar();
@@ -1212,6 +1263,8 @@
     warEl.addEventListener('click', (e) => {
       const nav = e.target.closest('[data-warnav]'), card = e.target.closest('[data-card]');
       if (nav) { warAt = +nav.dataset.warnav; warEl.firstElementChild.innerHTML = warModal(current, warAt); return; }
+      const view = e.target.closest('[data-warview]');
+      if (view) { warView = view.dataset.warview; warEl.firstElementChild.innerHTML = warModal(current, warAt); return; }
       if (card) { const id = +card.dataset.card; closeWar(); return openCard(id); }
       if (e.target === warEl || e.target.closest('.px')) closeWar();
     });
