@@ -77,7 +77,8 @@
     return o;
   }
   const CATALOG2 = {
-    section: () => [...DIVS.map((d) => [`grid:${d}`, `${d}: results vs each team`]), ...DIVS.map((d) => [`table:${d}`, `${d} standings`]),
+    section: (d, slot) => [...DIVS.map((x) => [`grid:${x}`, `${x}: results vs each team`]), ...DIVS.map((x) => [`table:${x}`, `${x} standings`]),
+      ...(slot && slot.endsWith('.0') ? tallOptions(d) : []),
       ['table:league', 'League top 8'], ['table:conference', 'Your conference top 8']],
     picture: (d) => [['own', 'Playoff picture (your conference)'], ...(d.pictures.other ? [['other', `Playoff picture (${d.pictures.other.conference})`]] : []),
       ['wildcard', 'Wild card race'], ['league', 'League standings (top 10)'], ['teamStats', 'Team stats with ranks'],
@@ -95,6 +96,18 @@
       ...(d.ratings?.length ? [['ratings', 'Player ratings (overall %)']] : [])],
   };
   Object.assign(CATALOG, CATALOG2);
+  // tall blocks for a standings column: they take over both of the column's slots
+  const TALL_LIST = ['last5', 'next5rows', 'scorers', 'goalies', 'form', 'ratings', 'seasonChances', 'chances', 'nextOpp'];
+  function tallOptions(d) {
+    const pics = CATALOG2.picture(d).map(([k, label]) => [`tall:pic:${k}`, `Whole column: ${label}`]);
+    const lists = CATALOG2.upper(d).filter(([k]) => TALL_LIST.includes(k) && !(k === 'ratings' && pics.some(([pk]) => pk === 'tall:pic:ratings')))
+      .map(([k, label]) => [`tall:list:${k}`, `Whole column: ${label}`]);
+    return [...pics, ...lists];
+  }
+  function tallPanel(d, v) {
+    const [, kind, key] = v.split(':');
+    return kind === 'pic' ? pictureByKey(d, key) : (LIST_PANELS[key] || LIST_PANELS.last5)(d, false);
+  }
   // slot id -> [kind, read, write]
   const SLOTS = {
     chart1: ['chart', (l) => l.chart1, (l, v) => (l.chart1 = v)],
@@ -328,10 +341,10 @@
   function pictureRows(rows) {
     return rows.map((r) => `<div class="prow${r.me ? ' me' : ''}"${pop(`team:${r.abbrev}`)}><span class="lbl">${esc(r.label)}</span>${logo(r.logo, r.abbrev)}<span class="ab">${esc(r.abbrev)}</span><span class="gp">${r.gp}</span><span class="pts">${r.pts}</span></div>`).join('');
   }
-  function picture(d, slot) {
-    const which = pick(d, slot);
+  function picture(d, slot) { return pictureByKey(d, pick(d, slot)); }
+  function pictureByKey(d, which) {
     if (PICTURE_PANELS[which]) return PICTURE_PANELS[which](d);
-    const p = d.pictures[pick(d, slot)] || d.pictures.own;
+    const p = d.pictures[which] || d.pictures.own;
     return `<div class="colhead big"><span class="t">Playoff picture</span></div>` +
       `<div class="sub first"><span>${esc(p.divisionName)}</span><span class="gp">GP</span><span class="pts">PTS</span></div>${pictureRows(p.divRows)}` +
       `<div class="sub"><span>Wild card${p !== d.pictures.own ? ` · ${esc(p.conference)}` : ''}</span></div>${pictureRows(p.wcRows)}<div class="cutline"></div>${pictureRows(p.outRows)}`;
@@ -955,7 +968,17 @@
     s += pieces.chart1();
     s += pieces.chart2();
 
-    for (const k of ['col1.0', 'col1.1', 'col2.0', 'col2.1']) s += slotBox(k, ...G[k], section(d, k));
+    for (const c of ['col1', 'col2']) {
+      const top = pick(d, `${c}.0`);
+      if (top.startsWith('tall:')) {
+        // a tall block fills the whole column (both standings slots)
+        const [x, y, w] = G[`${c}.0`], b = G[`${c}.1`];
+        s += slotBox(`${c}.0`, x, y, w, b[1] + b[3] - y, tallPanel(d, top), `tallcol${top.includes(':pic:') ? ' ppic' : ''}`);
+      } else {
+        s += slotBox(`${c}.0`, ...G[`${c}.0`], section(d, `${c}.0`));
+        s += slotBox(`${c}.1`, ...G[`${c}.1`], section(d, `${c}.1`));
+      }
+    }
     s += slotBox('picture', ...G.picture, picture(d, 'picture'), 'ppic');
     const [bx, by] = G.boxes, bw = (G.picture[2] - 8) / 2;
     s += `<div class="abs st" style="left:${bx}px;top:${by}px;width:${G.picture[2]}px;margin:0">${slotBox('boxes.0', 0, 0, bw, 54, statBox(d, 'boxes.0'))}${slotBox('boxes.1', bw + 8, 0, bw, 54, statBox(d, 'boxes.1'))}</div>`;

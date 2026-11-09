@@ -577,3 +577,26 @@ body.stack .livebox .ls, body.stack .livebox .lsc { justify-content: flex-start;
 .rrt img.logo { width: 18px; height: 18px; transform: scale(1.3); }
 .rrt b { font: 700 14px var(--head); color: #cfcfcf; }
 .rrc { height: 20px; display: grid; place-items: center; border-radius: 2px; font-size: 12px; }
+
+/* ---------- tall blocks in a narrow standings column (desktop board) ---------- */
+body:not(.stack) .tallcol .prw { gap: 6px; }
+body:not(.stack) .tallcol .prw .face { width: 28px; height: 28px; }
+body:not(.stack) .tallcol .prw .pga { display: none; }
+body:not(.stack) .tallcol .prw .pn b { font-size: 14px; }
+body:not(.stack) .tallcol .prw .pv { width: 36px; font-size: 17px; }
+body:not(.stack) .tallcol .lgrow img.logo { margin-left: 4px; }
+body:not(.stack) .tallcol .lgrow .nd { margin-left: 10px; min-width: 46px; padding: 2px 3px; font-size: 10.5px; }
+body:not(.stack) .tallcol .lgrow .sc { margin-left: 6px; font-size: 15px; }
+body:not(.stack) .tallcol .lgrow .sc.nt { font-size: 13px; }
+body:not(.stack) .tallcol .lgrow .wp { display: none; }
+body:not(.stack) .tallcol .colhead .r.small { display: none; }
+body:not(.stack) .tallcol .ch .chr { grid-template-columns: 1fr 58px 1fr; }
+body:not(.stack) .tallcol .ch .cl { font-size: 8.5px; letter-spacing: 0.04em; gap: 3px; }
+body:not(.stack) .tallcol .ch .cl i { width: 6px; height: 6px; }
+body:not(.stack) .tallcol .ch .cv b { font-size: 15px; }
+body:not(.stack) .tallcol .ch .cv small { white-space: normal; text-align: center; font-size: 8.5px; line-height: 1.1; }
+body:not(.stack) .tallcol .ch .chh { gap: 3px; }
+body:not(.stack) .tallcol .ch .chh img.logo { width: 20px; height: 20px; }
+body:not(.stack) .tallcol .ch .chh > .m { font-size: 20px; }
+body:not(.stack) .tallcol .ch .chh .cf { font-size: 8.5px; letter-spacing: 0.02em; }
+body:not(.stack) .tallcol .ch .chf { flex-wrap: wrap; justify-content: flex-start; gap: 2px 8px; }
