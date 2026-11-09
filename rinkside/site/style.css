@@ -153,8 +153,6 @@ svg text { font-family: var(--cond); }
 
 /* footer */
 .foot { left: 40px; top: 1118px; width: 840px; display: flex; align-items: center; font-size: 13.5px; font-weight: 500; color: #a8a8a8; white-space: nowrap; }
-.foot .k { display: inline-flex; align-items: center; margin-right: 13px; }
-.foot .sw { width: 9px; height: 9px; margin-right: 5px; display: inline-block; }
 .foot .brand { margin-left: auto; font: 700 13.5px var(--head); letter-spacing: 0.15em; color: #bdbdbd; }
 
 /* empty / error */

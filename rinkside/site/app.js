@@ -1148,11 +1148,6 @@
     s += pieces.lower();
 
     s += `<footer class="abs foot" style="left:${G.foot[0]}px;top:${G.foot[1]}px;width:${G.foot[2]}px">
-      <span class="k"><i class="sw" style="background:var(--win)"></i>Win</span>
-      <span class="k"><i class="sw" style="background:var(--loss)"></i>Loss</span>
-      <span class="k"><i class="sw" style="background:var(--otl)"></i>OT/SO loss</span>
-      <span class="k"><i class="sw" style="background:var(--future)"></i>Still to play</span>
-      <span class="k">Filled dot or house = home, ring or plane = away</span>
       <span class="brand" title="Change team or customize">RINKSIDE</span>
     </footer>`;
     board.innerHTML = s;
