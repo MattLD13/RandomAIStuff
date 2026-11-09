@@ -827,19 +827,20 @@ await writeFile(join(outDir, 'teams.json'), JSON.stringify(teamsIndex, null, 1))
   const mug = (id, t) => `https://assets.nhle.com/mugs/nhl/${season}/${t}/${id}.png`;
   const sk = Object.values(skNow).filter((x) => x.gamesPlayed > 0), gk = Object.values(goNow).filter((x) => x.gamesPlayed > 0);
   const maxGp = Math.max(1, ...sk.map((x) => x.gamesPlayed));
-  const top = (arr, f, row, n = 10) => [...arr].sort((a, b) => f(b) - f(a)).slice(0, n).map(row);
+  // the top 100 in each: 5 on the page, the rest behind "All"
+  const top = (arr, f, row, n = 100) => [...arr].sort((a, b) => f(b) - f(a)).slice(0, n).map(row);
   const skRow = (v, sub) => (x) => ({ id: x.playerId, n: shortName(x.skaterFullName), t: teamOf(x), pos: x.positionCode, v: v(x), sub: sub(x), img: mug(x.playerId, teamOf(x)) });
   const leaders = {
     points: { label: 'Points', rows: top(sk, (x) => x.points + x.goals / 1000, skRow((x) => x.points, (x) => `${x.goals} G · ${x.assists} A`)) },
     goals: { label: 'Goals', rows: top(sk, (x) => x.goals + x.points / 1000, skRow((x) => x.goals, (x) => `${x.shots} shots`)) },
     assists: { label: 'Assists', rows: top(sk, (x) => x.assists + x.points / 1000, skRow((x) => x.assists, (x) => `${x.points} points`)) },
-    war: { label: 'Wins above replacement', rows: Object.values(WAR.season).filter((r) => r.pos !== 'G' && r.qualified).sort((a, b) => b.war - a.war).slice(0, 10)
+    war: { label: 'Wins above replacement', rows: Object.values(WAR.season).filter((r) => r.pos !== 'G' && r.qualified).sort((a, b) => b.war - a.war).slice(0, 100)
       .map((r) => ({ id: r.id, n: r.n, t: abbrevOfId[r.t], pos: r.pos, v: r.war.toFixed(1), sub: `${r.gar.toFixed(1)} GAR · ${r.gp} GP`, img: mug(r.id, abbrevOfId[r.t]) })) },
-    overall: { label: 'Rinkside overall', rows: Object.entries(ratedNow).filter(([id]) => skNow[id]).sort((a, b) => b[1].overall - a[1].overall).slice(0, 10)
+    overall: { label: 'Rinkside overall', rows: Object.entries(ratedNow).filter(([id]) => skNow[id]).sort((a, b) => b[1].overall - a[1].overall).slice(0, 100)
       .map(([id, r]) => { const x = skNow[id]; return { id: +id, n: shortName(x.skaterFullName), t: teamOf(x), pos: x.positionCode, v: r.overall, sub: `${x.points} pts in ${x.gamesPlayed}`, img: mug(id, teamOf(x)) }; }) },
     save: { label: 'Save %', rows: top(gk.filter((x) => x.gamesPlayed >= Math.max(3, maxGp / 4)), (x) => x.savePct, (x) => ({ id: x.playerId, n: shortName(x.goalieFullName), t: teamOf(x), pos: 'G',
       v: x.savePct.toFixed(3).replace(/^0/, ''), sub: `${x.wins}-${x.losses}-${x.otLosses} · ${x.goalsAgainstAverage.toFixed(2)} GAA`, img: mug(x.playerId, teamOf(x)) })) },
-    gwar: { label: 'Goalie WAR', rows: Object.values(WAR.season).filter((r) => r.pos === 'G' && r.qualified).sort((a, b) => b.war - a.war).slice(0, 10)
+    gwar: { label: 'Goalie WAR', rows: Object.values(WAR.season).filter((r) => r.pos === 'G' && r.qualified).sort((a, b) => b.war - a.war).slice(0, 100)
       .map((r) => ({ id: r.id, n: r.n, t: abbrevOfId[r.t], pos: 'G', v: r.war.toFixed(1), sub: `${r.gsax >= 0 ? '+' : ''}${r.gsax.toFixed(1)} saved vs xG`, img: mug(r.id, abbrevOfId[r.t]) })) },
   };
   const league = { generatedAt: now.toISOString(), season, date: fmt(now, { weekday: 'long', month: 'long', day: 'numeric' }), today, gpw: WAR.gpw, teams, days, leaders };

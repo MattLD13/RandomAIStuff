@@ -448,7 +448,7 @@
     return [
       ['Shots on goal', c.us.sog, c.them.sog, 'high'], ['Shot attempts', a.att, b.att, 'high'],
       ['Expected goals', c.us.xg.toFixed(2), c.them.xg.toFixed(2), 'high'],
-      ['Faceoffs', `${a.fow} · ${foPct(a)}`, `${b.fow} · ${foPct(b)}`, 'high', a.fow, b.fow],
+      ['Faceoffs', foPct(a), foPct(b), 'high', a.fow, b.fow],
       ['Power play', `${a.ppg}/${a.ppo}`, `${b.ppg}/${b.ppo}`, 'high', a.ppg, b.ppg],
       ['Hits', a.hits, b.hits, null], ['Blocked shots', a.blk, b.blk, 'high'], ['Takeaways', a.take, b.take, 'high'],
       ['Giveaways', a.give, b.give, 'low'], ['Penalty minutes', a.pim, b.pim, 'low'],
@@ -472,7 +472,7 @@
     const lg = liveStatsObj(d), i = lastStats(d);
     if (!lg && i == null) return `<div class="colhead big"><span class="t">Game stats</span></div>`;
     const g = lg || d.season.games[i], key = lg ? 'live' : d.war?.games?.[g.id] ? `war:${i}` : `game:${i}`;
-    return `<div class="colhead big"><span class="t">Game stats</span><span class="r small">${lg ? '<b class="lv">LIVE</b>' : 'LAST GAME'}</span></div><div${pop(key)}>${statsTable(d, g, n ?? (compact ? 5 : 8))}</div>`;
+    return `<div class="colhead big"><span class="t">Game stats</span><span class="r small">${lg ? '<b class="lv">LIVE</b>' : 'LAST GAME'}</span></div><div${pop(key)}>${statsTable(d, g, n ?? (compact ? 4 : 7))}</div>`;
   }
   // wide block: the same numbers in two rows, one per team
   function wideGameStats(d, w, h) {
@@ -2023,7 +2023,7 @@
     return `<div class="colhead big"><span class="t">Leaders</span><span class="r small">${league.gpw ? `${league.gpw} GOALS PER WIN` : ''}</span></div><div class="lglead">` +
       order.filter((k) => league.leaders[k]?.rows.length).map((k) => {
         const b = league.leaders[k];
-        return `<div class="lgl"><div class="lgsub">${esc(b.label)}</div>${b.rows.slice(0, 5).map((r, i) => `<a class="lglr" href="${teamLink(r.t)}" data-lp="${esc(r.t)}:${r.id}"><span class="m lgk">${i + 1}</span><span class="face"><img src="${esc(r.img)}" alt="" loading="lazy"></span><span class="lgln"><b>${esc(r.n)}</b><small>${esc(r.t)} · ${esc(r.pos)} · ${esc(r.sub)}</small></span><span class="m lgv">${esc(r.v)}</span></a>`).join('')}</div>`;
+        return `<div class="lgl"><div class="lgsub">${esc(b.label)}${b.rows.length > 5 ? `<button class="lgall" data-lall="${k}">All ${b.rows.length} \u203a</button>` : ''}</div>${b.rows.slice(0, 5).map((r, i) => `<a class="lglr" href="${teamLink(r.t)}" data-lp="${esc(r.t)}:${r.id}"><span class="m lgk">${i + 1}</span><span class="face"><img src="${esc(r.img)}" alt="" loading="lazy"></span><span class="lgln"><b>${esc(r.n)}</b><small>${esc(r.t)} · ${esc(r.pos)} · ${esc(r.sub)}</small></span><span class="m lgv">${esc(r.v)}</span></a>`).join('')}</div>`;
       }).join('') + '</div>';
   }
   function renderLeague(L) {
@@ -2076,7 +2076,28 @@
     } catch {}
     location.href = new URL(teamLink(t), document.baseURI).href;
   }
+  // the whole list for one leader board, in a card; tap a player for theirs
+  let listEl = null;
+  function openLeaderList(k) {
+    const b = league.leaders[k];
+    if (!b) return;
+    listEl?.remove();
+    listEl = document.createElement('div');
+    listEl.className = 'cardwrap';
+    listEl.innerHTML = `<div class="pcard lglist" role="dialog" aria-label="${esc(b.label)}"><button class="px" aria-label="Close">\u00d7</button>` +
+      `<div class="pk">League leaders \u00b7 top ${b.rows.length}</div><div class="pt"><span>${esc(b.label)}</span></div><div class="lgfull">` +
+      b.rows.map((r, i) => `<button class="lglr" data-lp="${esc(r.t)}:${r.id}"><span class="m lgk">${i + 1}</span><span class="face"><img src="${esc(r.img)}" alt="" loading="lazy"></span><span class="lgln"><b>${esc(r.n)}</b><small>${esc(r.t)} \u00b7 ${esc(r.pos)} \u00b7 ${esc(r.sub)}</small></span><span class="m lgv">${esc(r.v)}</span></button>`).join('') + '</div></div>';
+    listEl.addEventListener('click', (e) => {
+      const lp = e.target.closest('[data-lp]');
+      if (lp) { const [t, id] = lp.dataset.lp.split(':'); return openLeague(t, +id); }
+      if (e.target === listEl || e.target.closest('.px')) { listEl.remove(); listEl = null; }
+    });
+    document.body.appendChild(listEl);
+  }
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && listEl && !cardEl) { listEl.remove(); listEl = null; } });
   if (I) board.addEventListener('click', (e) => {
+    const all = league && e.target.closest('[data-lall]');
+    if (all) return openLeaderList(all.dataset.lall);
     const lp = league && e.target.closest('[data-lp]');
     if (lp) { e.preventDefault(); const [t, id] = lp.dataset.lp.split(':'); return openLeague(t, +id); }
     const b = e.target.closest('[data-lday]');
