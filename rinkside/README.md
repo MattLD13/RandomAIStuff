@@ -188,14 +188,17 @@ New options in Customize:
 
 ## Player cards and models
 
-Tap any player (leader rows, Top scorers, Goalies, Player ratings) for a card in the style of
-public analytics cards, built from Rinkside's own numbers.
+Tap any player (leader rows, Top scorers, Goalies, Player ratings) for a card built from the
+board's own parts:
+- stat boxes for Overall, WAR and Points (Save % for goalies);
+- a percentile bar for each rating, green when strong (67+) and red when weak (33 or under);
+- the season stat line.
 
 **Skater percentiles.** Each skater is compared with every NHL forward or every defenceman who
 has played 25%+ of games. Data comes from the NHL stats API's league-wide skater reports plus
 Rinkside's play-by-play xG.
 
-| Tile | Measure |
+| Rating | Measure |
 | --- | --- |
 | EV offence | 5v5 points / 60 and on-ice even-strength goals for / 60 |
 | EV defence | On-ice even-strength goals against / 60 and 5v5 shot attempts against / 60 (lower is better) |
@@ -242,12 +245,12 @@ the ones that fit.
 - **Team stats wall**
 - **EDGE + xG wall**
 - **Last game scoring chances**
-- **Game score breakdown:** takes over both chart slots. Every player in the last game gets a
-  diverging stacked bar of their goals above replacement. Offence pieces (production, play
-  driving, special teams) are blues; defence pieces (defence, penalties, other) are oranges.
-  Positive pieces stack right of zero and negative ones left. Forwards, defence and goalies are
-  grouped. Tap it for the Box WAR table, which also has a Breakdown view for any game.
-- **Box WAR (last game):** the full table (top slot only).
+- **Game score:** takes over both chart slots. Every player in the last game gets one bar of
+  their goals above replacement, split into its pieces: blues for offence (scoring, play
+  driving, power play) and golds for defence (defence, penalties, other). Pieces above
+  replacement stack right of the dashed zero line and pieces below it stack left. Forwards,
+  defence and goalies are grouped. Tap it for Box WAR.
+- **Box WAR (last game):** the same bars in a compact block (top slot only).
 - **WAR by component (season):** each player's goals above replacement as a stacked bar.
 - **Team leaders strip**
 
@@ -289,12 +292,11 @@ Goalies get goals saved above expected, minus the replacement rate per shot. Tha
 from the goalies outside each team's top two, shrunk toward −0.006 a shot. Wins = goals ÷
 (2 × league goals per team-game), about 6.3 this season.
 
-Percentiles compare each game with every NHL skater game this season (goalies with goalie
-games). Season percentiles compare against skaters with 25%+ of games played.
+Season WAR percentiles compare against skaters with 25%+ of games played (goalies with 3+ games).
 
 Where WAR shows up:
-- **Box WAR table:** opens from the Box WAR panels, or from "Box WAR ›" in any game popup. The ‹ › buttons step through the games, and tapping a player opens their card.
-- **Player cards:** a WAR line with the six pieces.
+- **Box WAR:** opens from the Box WAR panels, or from "Box WAR ›" in any game popup. It shows one bar per player. The ‹ › buttons step through the games, and tapping a player opens their card.
+- **Player cards:** a WAR box with the season percentile.
 - **Panels:** Box WAR (last game) and Wins above replacement (season) for the list, picture and tall-column slots.
 - **Other:** a Team WAR stat box (ranked of 32), and a WAR leader option for the leader rows.
 
