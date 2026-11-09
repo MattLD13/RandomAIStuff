@@ -55,14 +55,14 @@
   // What each kind of slot can show. Labels appear in the Customize menus.
   const DIVS = ['Atlantic', 'Metropolitan', 'Central', 'Pacific'];
   const CATALOG = {
-    chart: () => [['margins', 'Game by game (goal margin)'], ['playoffLine', 'Playoff line'], ['goalDiff', 'Goal differential'], ['race', 'Division points race']],
+    chart: () => [['margins', 'Game by game (goal margin)'], ['playoffLine', 'Playoff line'], ['goalDiff', 'Goal differential'], ['race', 'Division points race'], ['xg', 'Expected goals by game']],
     section: () => [...DIVS.map((d) => [`grid:${d}`, `${d}: results vs each team`]), ...DIVS.map((d) => [`table:${d}`, `${d} standings`]),
       ['table:league', 'League top 8'], ['table:conference', 'Your conference top 8']],
     picture: (d) => [['own', 'Playoff picture (your conference)'], ...(d.pictures.other ? [['other', `Playoff picture (${d.pictures.other.conference})`]] : [])],
-    box: (d) => Object.entries(d.stats).map(([k, v]) => [k, v.label + (v.edge ? ' (EDGE)' : '')]),
+    box: (d) => Object.entries(d.stats).map(([k, v]) => [k, v.label + (v.edge ? ' (EDGE)' : v.xg ? ' (xG)' : '')]),
     leader: (d) => Object.entries(d.leaderBoard).map(([k, v]) => [k, v.label]),
-    upper: () => [['next5', 'Next 5 (cards)'], ['last5cards', 'Last 5 (cards)']],
-    lower: () => [['last5', 'Last 5 (list)'], ['next5rows', 'Next 5 (list)']],
+    upper: (d) => [['next5', 'Next 5 (cards)'], ['last5cards', 'Last 5 (cards)'], ...(lastChances(d) != null ? [['chances', 'Scoring chances (last game)']] : [])],
+    lower: (d) => [['last5', 'Last 5 (list)'], ['next5rows', 'Next 5 (list)'], ...(lastChances(d) != null ? [['chances', 'Scoring chances (last game)']] : [])],
   };
   // slot id -> [kind, read, write]
   const SLOTS = {
@@ -206,11 +206,43 @@
     return { title: 'Division race', note: `points after each game, ${esc(d.pictures.own.divisionName)}`, svg: s };
   }
 
+  function chartXg(d, h) {
+    const season = d.season, n = Math.max(season.total, 1), slot = slotW(n);
+    const unit = (h - 50) / 10, zero = 6 + 5 * unit, cap = 5;
+    const cx = (i) => PLOT_X0 + (i + 0.5) * slot;
+    let s = gridLabels([4, 2, -2, -4], (v) => zero - v * unit, (v) => `${Math.abs(v)}`);
+    for (const v of [4, 2, -2, -4]) s += `<line x1="${PLOT_X0}" x2="${PLOT_X1}" y1="${zero - v * unit}" y2="${zero - v * unit}" stroke="#262626" stroke-dasharray="1 4.8"/>`;
+    s += `<line x1="${PLOT_X0}" x2="${PLOT_X1}" y1="${zero}" y2="${zero}" stroke="#4d4d4d"/>`;
+    const bw = Math.min(7.2, slot * 0.75);
+    let xf = 0, xa = 0, gf = 0, ga = 0;
+    season.games.forEach((g, i) => {
+      const c = g.chances;
+      if (!c) return;
+      xf += c.us.xg; xa += c.them.xg; gf += c.us.goals; ga += c.them.goals;
+      const up = Math.min(cap, c.us.xg) * unit, dn = Math.min(cap, c.them.xg) * unit, x = cx(i);
+      s += `<rect x="${(x - bw / 2).toFixed(2)}" y="${zero - up}" width="${bw.toFixed(2)}" height="${up}" fill="#2f8a3a"/>`;
+      s += `<rect x="${(x - bw / 2).toFixed(2)}" y="${zero}" width="${bw.toFixed(2)}" height="${dn}" fill="#a3303f"/>`;
+      s += `<circle cx="${x.toFixed(2)}" cy="${zero - Math.min(cap, c.us.goals) * unit}" r="2.2" fill="#fff"/>`;
+      s += `<circle cx="${x.toFixed(2)}" cy="${zero + Math.min(cap, c.them.goals) * unit}" r="2.2" fill="#fff"/>`;
+      if (I) s += `<rect class="hit"${pop(`chances:${i}`)} x="${(x - slot / 2).toFixed(2)}" y="2" width="${slot.toFixed(2)}" height="${h - 26}"/>`;
+    });
+    const count = {};
+    season.games.forEach((g) => (count[g.month] = (count[g.month] || 0) + 1));
+    let prev = null;
+    season.games.forEach((g, i) => {
+      if (g.month !== prev && count[g.month] >= 3)
+        s += `<text x="${Math.min(Math.max(cx(i), 13), PLOT_X1 - 13).toFixed(1)}" y="${h - 9}" fill="#9a9a9a" font-size="13" font-weight="500" text-anchor="middle">${esc(g.month)}</text>`;
+      prev = g.month;
+    });
+    return { title: `<span${pop('xginfo')}>Expected goals<span class="big">${xf.toFixed(1)}–${xa.toFixed(1)}</span></span>`,
+      note: `xG for (up) and against (down), dots = actual goals · goals ${gf}–${ga}`, svg: s };
+  }
+
   function chartSlot(d, slot, x, top, w, svgTop, h) {
     setChartWidth(w);
     const kind = pick(d, slot);
     const c = kind === 'playoffLine' ? chartPlayoffLine(d, h, slot) : kind === 'goalDiff' ? chartGoalDiff(d, h, slot)
-      : kind === 'race' ? chartRace(d, h) : chartMargins(d, h);
+      : kind === 'race' ? chartRace(d, h) : kind === 'xg' ? chartXg(d, h) : chartMargins(d, h);
     return slotBox(slot, x, top, w, svgTop + h - 2,
       `<div class="abs title" style="left:0;top:0">${c.title}</div><div class="abs note" style="${MODE === 'stack' ? 'left:0;top:28px' : 'right:32px;top:6px'}">${esc(c.note)}</div>` +
       `<svg class="abs" style="left:0;top:${svgTop}px" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${c.svg}</svg>`);
@@ -248,7 +280,7 @@
       `<div class="sub"><span>Wild card${p !== d.pictures.own ? ` · ${esc(p.conference)}` : ''}</span></div>${pictureRows(p.wcRows)}<div class="cutline"></div>${pictureRows(p.outRows)}`;
   }
   // short names that fit a stat box on one line (full names stay in the menu and popup)
-  const SHORT = { pp: 'Power play', pk: 'Penalty kill', gfpg: 'Goals for/gm', gapg: 'Goals agst/gm', sfpg: 'Shots for/gm',
+  const SHORT = { xgPct: 'xG share', finishing: 'Finishing', hdcPct: 'HD chance %', pp: 'Power play', pk: 'Penalty kill', gfpg: 'Goals for/gm', gapg: 'Goals agst/gm', sfpg: 'Shots for/gm',
     sapg: 'Shots agst/gm', fo: 'Faceoffs', shpct: 'Shooting', svpct: 'Team save %', ptspct: 'Points %', gdpg: 'Goal diff/gm',
     topSpeed: 'Top speed', bursts20: '20+ mph bursts', bursts22: '22+ mph bursts', topShot: 'Hardest shot', shots90: '90+ mph shots',
     distance: 'Distance', hdShots: 'HD shots', hdPct: 'HD shooting', ozTime: 'O-zone time', dzTime: 'D-zone time', satDiff: 'Shot att. diff' };
@@ -286,6 +318,33 @@
   };
   let MODE = 'board';
   const modeFor = () => (!wallpaper && (document.documentElement.clientWidth || innerWidth) < 700 ? 'stack' : 'board');
+
+  // ---------- scoring chances report ----------
+  const lastChances = (d) => {
+    for (let i = d.season.games.length - 1; i >= 0; i--) if (d.season.games[i].chances) return i;
+    return null;
+  };
+  const DANGER = [['hi', 'High danger', 'var(--win)'], ['mid', 'Mid danger', '#e0b23a'], ['low', 'Low danger', 'var(--loss)']];
+  function chancesTable(d, i, compact) {
+    const g = d.season.games[i], c = g.chances, me = d.team.abbrev, opp = g.opp;
+    const cell = (v, sub, win, tint) => `<div class="cv${win ? ' win' : ''}"${win && tint ? ` style="--tint:${tint}"` : ''}><b class="m">${v}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
+    const row = (label, a, b, dot, tint, subA, subB) =>
+      `<div class="chr">${cell(a, subA, +a > +b, tint)}<div class="cl">${dot ? `<i style="background:${dot}"></i>` : ''}${label}</div>${cell(b, subB, +b > +a, tint)}</div>`;
+    const lg = (t) => d.teams[t]?.logo;
+    const ot = g.info.status.includes('/') ? '/' + g.info.status.split('/')[1] : '';
+    let h = `<div class="chh">${logo(lg(me), me)}<span class="m">${c.us.goals}</span><span class="cf">${g.home ? 'vs' : '@'} ${esc(opp)} · Final${ot}<br>${esc(g.info.date)}</span><span class="m">${c.them.goals}</span>${logo(lg(opp), opp)}</div>`;
+    h += row('Chances', c.us.chances, c.them.chances);
+    for (const [k, label, col] of DANGER)
+      h += row(label, c.us[k].n, c.them[k].n, col, col, `xG ${c.us[k].xg.toFixed(2)} · G ${c.us[k].g}`, `xG ${c.them[k].xg.toFixed(2)} · G ${c.them[k].g}`);
+    h += row('Expected goals', c.us.xg.toFixed(2), c.them.xg.toFixed(2), null, '#5b8fd6');
+    if (!compact) h += `<div class="chf"><span>Empty net <b class="m">${c.us.en}–${c.them.en}</b></span><span>Dumps <b class="m">${c.us.dumps}–${c.them.dumps}</b></span><span>Blocked <b class="m">${c.us.blocked}–${c.them.blocked}</b></span></div>`;
+    return `<div class="ch${compact ? ' compact' : ''}">${h}</div>`;
+  }
+  const chancesPanel = (d, compact) => {
+    const i = lastChances(d);
+    if (i == null) return '';
+    return `<div class="colhead big"><span class="t">Scoring chances</span><span class="r small">LAST GAME</span></div><div${pop('xginfo')}>${chancesTable(d, i, compact)}</div>`;
+  };
 
   // ---------- full board ----------
   let current = null;
@@ -332,8 +391,8 @@
     s += `<div class="abs" style="left:${lx}px;top:${ly}px;width:${G.picture[2]}px"><div class="colhead big"><span class="t">Team leaders</span></div></div>`;
     for (let i = 0; i < 3; i++) s += slotBox(`leaders.${i}`, lx, ly + 36 + i * 55, G.picture[2], 55, leaderRow(d, `leaders.${i}`));
     const up = pick(d, 'upper'), lo = pick(d, 'lower');
-    s += slotBox('upper', ...G.upper, up === 'last5cards' ? lastCards(d) : nextCards(d));
-    s += slotBox('lower', ...G.lower, lo === 'next5rows' ? nextRows(d) : lastRows(d));
+    s += slotBox('upper', ...G.upper, up === 'last5cards' ? lastCards(d) : up === 'chances' ? chancesPanel(d, false) : nextCards(d));
+    s += slotBox('lower', ...G.lower, lo === 'next5rows' ? nextRows(d) : lo === 'chances' ? chancesPanel(d, true) : lastRows(d));
 
     s += `<footer class="abs foot" style="left:${G.foot[0]}px;top:${G.foot[1]}px;width:${G.foot[2]}px">
       <span class="k"><i class="sw" style="background:var(--win)"></i>Win</span>
@@ -384,6 +443,12 @@
     switch (kind) {
       case 'game': return gamePop(d.season.games[+arg].info, `Game ${+arg + 1} of ${d.season.total}`);
       case 'next': return gamePop(d.nextGames[+arg].info, `Next up · game ${+arg + 1} of 5`);
+      case 'chances': return `<div class="pk">Scoring chances · game ${+arg + 1}</div>${chancesTable(d, +arg, false)}`;
+      case 'xginfo':
+        return `<div class="pk">How this works</div><div class="pt"><span>Scoring chances &amp; xG</span></div>` +
+          note('A scoring chance is a shot on goal from inside the offensive zone with the goalie in net. High danger: within 20 ft of the goal line and 19 ft of centre. Mid: within 30 ft. Low: anywhere else in the zone. Shots from 58+ ft out are dumps.') +
+          note('Expected goals (xG) is the chance each shot becomes a goal, from Rinkside’s model fitted on every shot on goal in the NHL this season: distance, angle, shot type, rebounds, rush chances and power play. Across the league, xG adds up to actual goals.') +
+          note('Tap a column in the Expected goals chart for any game’s report.');
       case 'line': {
         const k = +arg, v = d.playoffLine.history[k], prev = d.playoffLine.history[k - 1], g = playedGame(d, k);
         return `<div class="pk">Playoff line · after game ${k}</div><div class="pt"><span class="big m">${sign(v)}</span><span>${v >= 0 ? 'points clear of the line' : 'points behind the line'}</span></div>` +

@@ -5,3 +5,4 @@ site/*/
 !site/alt/
 site/wallpaper.png
 __pycache__/
+.cache/

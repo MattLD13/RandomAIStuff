@@ -155,6 +155,31 @@ skating and shot speeds, distance skated, zone time and shot locations, each wit
 rank. Individual players' EDGE pages (percentiles for speed, shot speed, distance and zone
 time) are also available if you want more panels later.
 
+## Scoring chances and expected goals
+
+`scripts/chances.mjs` reads the NHL play-by-play for every finished game (cached in `.cache/`,
+also between GitHub Action runs, so each build only downloads new games):
+
+- **Expected goals (xG):** a logistic-regression model fitted on every shot on goal in the
+  league this season, using distance, angle, shot type, rebound (a shot within 3 s of the
+  team's last attempt), rush (within 4 s of play at the other end) and power play /
+  shorthanded. Across the league, xG adds up to actual goals.
+- **Scoring chances:** shots on goal from the offensive zone with the goalie in net.
+  - **High danger:** within 20 ft of the goal line and 19 ft of centre.
+  - **Mid danger:** within 30 ft out and 30 ft wide.
+  - **Low danger:** the rest of the zone.
+  - **Dumps:** shots from more than 58 ft out, or from outside the zone.
+
+  Boundaries were calibrated against a published scoring-chances report for NYR @ SEA on
+  2026-11-07 (the Rangers' 24 chances, 8 high-danger and 2 dumps match exactly). xG values
+  differ from that report's, since every xG model is different.
+
+New options in Customize:
+- **Scoring chances (last game):** a report panel for the upper or lower list slot.
+- **Expected goals by game:** a chart. Tap a game for its full report.
+- **Stat boxes:** xG share, finishing (goals minus xG) and high-danger chance share, each
+  ranked across the league.
+
 ## Screen sizes
 
 - **Phones (under 700px wide):** the board reflows into a two-column phone layout at

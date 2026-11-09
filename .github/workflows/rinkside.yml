@@ -30,6 +30,13 @@ jobs:
         with:
           node-version: 22
 
+      # play-by-play of finished games never changes: keep it between runs so only new games download
+      - uses: actions/cache@v4
+        with:
+          path: rinkside/.cache
+          key: rinkside-shots-${{ github.run_id }}
+          restore-keys: rinkside-shots-
+
       - name: Fetch NHL data
         run: node scripts/build-data.mjs
 

@@ -4,6 +4,7 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import * as chances from './chances.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const config = JSON.parse(await readFile(join(ROOT, 'config.json'), 'utf8'));
@@ -112,6 +113,16 @@ function tableAt(dateStr) {
   }
   return t;
 }
+// ---------- scoring chances + expected goals (league-wide play-by-play) ----------
+const { games: pbpGames, fetched: pbpFetched } = await chances.loadGames(finals.map((g) => g.id), get, join(ROOT, '.cache', 'shots'));
+const allShots = [...pbpGames.values()].flatMap((g) => g.shots.filter((s) => !s.en));
+const xgModel = chances.fitModel(allShots);
+const xgTotals = chances.seasonTotals(pbpGames, xgModel);
+{
+  const xgSum = allShots.reduce((a, s) => a + chances.xg(xgModel, s), 0), gSum = allShots.reduce((a, s) => a + s.goal, 0);
+  console.log(`xG model: ${pbpGames.size} games (${pbpFetched} new), ${allShots.length} shots on goal, xG ${xgSum.toFixed(1)} vs goals ${gSum}`);
+}
+
 const tableCache = new Map();
 const tableAtCached = (d) => {
   if (!tableCache.has(d)) tableCache.set(d, tableAt(d));
@@ -229,7 +240,10 @@ async function buildTeam(TEAM) {
   const games = myRegular.map((g) => {
     const p = perspective(g, TEAM);
     const d = new Date(g.startTimeUTC);
+    const pg = pbpGames.get(g.id);
     return {
+      id: g.id,
+      chances: pg && isFinal(g) ? chances.report(pg, myId, xgModel) : null,
       date: g.gameDate,
       month: fmt(d, { month: 'short' }),
       home: p.home,
@@ -383,6 +397,19 @@ async function buildTeam(TEAM) {
     const f = (v) => (key === 'gdpg' && v > 0 ? '+' : '') + v.toFixed(dp);
     stats[key] = { label, value: f(vals[i].v), unit, rank: i + 1, of: vals.length, avg: f(avg), best: `${vals[0].name} ${f(vals[0].v)}${unit}` };
   }
+  // Expected-goals stats from the play-by-play model, ranked across the league
+  const xgRank = (key, label, fn, dp, unit, signed) => {
+    const vals = Object.entries(xgTotals).map(([id, t]) => ({ id: +id, v: fn(t) })).filter((x) => Number.isFinite(x.v)).sort((a, b) => b.v - a.v);
+    const i = vals.findIndex((x) => x.id === myId);
+    if (i < 0) return;
+    const f = (v) => (signed && v > 0 ? '+' : '') + v.toFixed(dp);
+    const avg = vals.reduce((a, x) => a + x.v, 0) / vals.length;
+    stats[key] = { label, value: f(vals[i].v), unit, rank: i + 1, of: vals.length, avg: f(avg), xg: true };
+  };
+  xgRank('xgPct', 'Expected goals share', (t) => (100 * t.xgf) / (t.xgf + t.xga), 1, '%');
+  xgRank('finishing', 'Finishing (goals minus xG)', (t) => t.gf - t.xgf, 1, '', true);
+  xgRank('hdcPct', 'High-danger chance share', (t) => (100 * t.hcf) / (t.hcf + t.hca), 1, '%');
+
   // NHL EDGE: values arrive with their league rank and average
   const edge = (key, label, node, value, unit, dp, by) => {
     if (!node || node.rank == null || value == null) return;
