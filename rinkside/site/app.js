@@ -1991,8 +1991,8 @@
     const T = Object.entries(league.teams);
     const div = (name) => {
       const rows = T.filter(([, t]) => t.div === name).sort((a, b) => a[1].divSeq - b[1].divSeq);
-      return `<div class="lgdiv"><div class="lgrow lgh"><span>${esc(name)}</span><span>GP</span><span>PTS</span><span>DIFF</span><span>L10</span><span>PO%</span></div>` +
-        rows.map(([a, t], k) => `${k === 3 ? '<div class="cutline"></div>' : ''}<a class="lgrow" href="${teamLink(a)}"><span class="lgn"><i class="m">${t.divSeq}</i>${logo(t.logo, a)}<b>${esc(a)}</b></span><span class="m">${t.gp}</span><span class="m lgp">${t.pts}</span><span class="m">${t.diff > 0 ? '+' : ''}${t.diff}</span><span class="m">${esc(t.l10)}</span><span class="m">${t.odds ? Math.round(t.odds.playoff) : '–'}</span></a>`).join('') + '</div>';
+      return `<div class="lgdiv"><div class="lgsr lgh"><span>${esc(name)}</span><span>GP</span><span>PTS</span><span>DIFF</span><span>L10</span><span>PO%</span></div>` +
+        rows.map(([a, t], k) => `${k === 3 ? '<div class="cutline"></div>' : ''}<a class="lgsr" href="${teamLink(a)}"><span class="lgn"><i class="m">${t.divSeq}</i>${logo(t.logo, a)}<b>${esc(a)}</b></span><span class="m">${t.gp}</span><span class="m lgp">${t.pts}</span><span class="m">${t.diff > 0 ? '+' : ''}${t.diff}</span><span class="m">${esc(t.l10)}</span><span class="m">${t.odds ? Math.round(t.odds.playoff) : '–'}</span></a>`).join('') + '</div>';
     };
     return `<div class="colhead big"><span class="t">Standings</span><span class="r small">TOP 3 IN EACH DIVISION + 2 WILD CARDS</span></div>` +
       `<div class="lgstand">${['Atlantic', 'Metropolitan', 'Central', 'Pacific'].map(div).join('')}</div>`;

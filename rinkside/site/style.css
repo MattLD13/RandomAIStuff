@@ -771,16 +771,16 @@ body.leaguepage #board { position: relative; width: auto; height: auto; max-widt
 .lgwp i { display: block; height: 100%; }
 .lgf small { font-size: 11px; color: #bdbdbd; }
 .lgstand { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; margin-top: 8px; }
-.lgrow { display: grid; grid-template-columns: 1fr 26px 30px 34px 44px 32px; align-items: center; gap: 4px; height: 25px; color: var(--fg); text-decoration: none; font-size: 13px; }
-.lgrow > :not(:first-child) { text-align: right; }
-.lgrow.lgh { color: var(--muted); font: 600 10px var(--cond); letter-spacing: 0.1em; text-transform: uppercase; border-bottom: 1px solid var(--rule); }
-.lgrow.lgh > :first-child { color: var(--otl); font-weight: 700; }
+.lgsr { display: grid; grid-template-columns: 1fr 26px 30px 34px 44px 32px; align-items: center; gap: 4px; height: 25px; color: var(--fg); text-decoration: none; font-size: 13px; }
+.lgsr > :not(:first-child) { text-align: right; }
+.lgsr.lgh { color: var(--muted); font: 600 10px var(--cond); letter-spacing: 0.1em; text-transform: uppercase; border-bottom: 1px solid var(--rule); }
+.lgsr.lgh > :first-child { color: var(--otl); font-weight: 700; }
 .lgn { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .lgn i { font-style: normal; width: 12px; color: var(--muted); font-size: 11px; }
 .lgn img.logo { width: 18px; height: 18px; transform: scale(1.35); }
 .lgn b { font: 700 15px var(--head); }
-.lgrow .lgp { color: var(--fg); font-size: 15px; }
-a.lgrow:hover { background: rgba(255, 255, 255, 0.04); }
+.lgsr .lgp { color: var(--fg); font-size: 15px; }
+a.lgsr:hover { background: rgba(255, 255, 255, 0.04); }
 .lgpow { margin-top: 8px; display: grid; gap: 1px; }
 .lgpr { display: grid; grid-template-columns: 20px 22px 40px 1fr 40px 46px; align-items: center; gap: 8px; height: 27px; color: var(--fg); text-decoration: none; font-size: 13px; }
 .lgpr img.logo { width: 18px; height: 18px; transform: scale(1.35); }
