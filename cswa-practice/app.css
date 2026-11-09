@@ -153,7 +153,8 @@ td { font-variant-numeric: tabular-nums; }
 .rules { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 70ch; }
 
 /* ---- exam screen ---- */
-.exam-screen { height: 100vh; height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+body:has(#exam:not([hidden])) #app { height: 100%; }
+.exam-screen { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
 .exam-top {
   padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px));
   flex-wrap: wrap; row-gap: 2px;
