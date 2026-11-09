@@ -242,6 +242,11 @@ the ones that fit.
 - **Team stats wall**
 - **EDGE + xG wall**
 - **Last game scoring chances**
+- **Game score breakdown:** takes over both chart slots. Every player in the last game gets a
+  diverging stacked bar of their goals above replacement. Offence pieces (production, play
+  driving, special teams) are blues; defence pieces (defence, penalties, other) are oranges.
+  Positive pieces stack right of zero and negative ones left. Forwards, defence and goalies are
+  grouped. Tap it for the Box WAR table, which also has a Breakdown view for any game.
 - **Box WAR (last game):** the full table (top slot only).
 - **WAR by component (season):** each player's goals above replacement as a stacked bar.
 - **Team leaders strip**

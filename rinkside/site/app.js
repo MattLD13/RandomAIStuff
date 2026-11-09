@@ -73,7 +73,7 @@
     if (tall) o.push(['wideOdds', 'Block: playoff odds (conference)'], ['wideRatings', 'Block: player ratings grid']);
     o.push(['wideRun', 'Block: playoff run odds (opens the Cup wheel)'], ['wideMatchup', 'Block: next-game matchup'], ['wideStats', 'Block: team stats wall'], ['wideEdge', 'Block: EDGE + xG stats wall']);
     if (lastChances(d) != null) o.push(['wideChances', 'Block: last game scoring chances']);
-    if (tall && hasWar(d)) o.push(['wideWar', 'Block: Box WAR (last game)']);
+    if (tall && hasWar(d)) o.push(['spanBreakdown', 'Big block over both charts: game score breakdown'], ['wideWar', 'Block: Box WAR (last game)']);
     if (hasWar(d)) o.push(['wideWarSeason', 'Block: WAR by component (season)']);
     o.push(['wideLeaders', 'Block: team leaders strip']);
     return o;
@@ -957,8 +957,10 @@
     const h = d.header;
     pieces = {
       meta: () => (live && live.state !== 'FUT' ? liveMeta(d) : `<div class="meta"><div>${esc(h.date)}</div><div${pop('splits')}>${esc(h.splits)}</div><div${pop('sos')}>${esc(h.schedule)}</div></div>`),
-      chart1: () => chartSlot(d, 'chart1', ...G.chart1),
-      chart2: () => chartSlot(d, 'chart2', ...G.chart2),
+      chart1: () => (pick(d, 'chart1').startsWith('span')
+        ? spanBreakdown(d, G.chart1[0], G.chart1[1], G.chart1[2], Math.min(G.chart2[1] + G.chart2[3] + G.chart2[4] - 2, G['col1.0'][1] - 4) - G.chart1[1], G.chart1[3])
+        : chartSlot(d, 'chart1', ...G.chart1)),
+      chart2: () => (pick(d, 'chart1').startsWith('span') ? '' : chartSlot(d, 'chart2', ...G.chart2)),
       upper: () => slotBox('upper', ...G.upper, (LIST_PANELS[pick(d, 'upper')] || LIST_PANELS.next5)(d, false)),
       lower: () => slotBox('lower', ...G.lower, (LIST_PANELS[pick(d, 'lower')] || LIST_PANELS.last5)(d, true)),
     };
@@ -1160,7 +1162,7 @@
   }
   const WAR_NOTE = 'Goals above replacement (GAR) from play-by-play and shift charts. Each shot on goal is worth half its xG plus half a goal if it scores: the shooter gets 35% (assists 15% and 5% on goals) as goal creation, the rest is shared by the attacking skaters on the ice; the defending skaters share minus its xG. Power play: the same while on the power play. Penalties: 0.17 goals per minor drawn or taken. Other: faceoffs, takeaways, giveaways and blocks. Every piece is measured against replacement level (skaters outside each team’s top 13 forwards and 7 defencemen by ice time). Percentile: among every NHL skater game (goalie game) this season.';
 
-  let warEl = null, warAt = null;
+  let warEl = null, warAt = null, warView = 'table';
   function warModal(d, i) {
     const list = warGames(d), at = list.findIndex(([, j]) => j === i), g = d.season.games[i], w = d.war.games[g.id];
     const prev = list[at - 1]?.[1], next = list[at + 1]?.[1], last = g.info.status.split('/')[1];
@@ -1169,7 +1171,9 @@
     return `<button class="px" aria-label="Close">×</button><div class="pc-head">${logo(d.team.logo, d.team.abbrev)}<div class="pc-name">Box WAR</div></div>` +
       `<div class="wgh">${nav(prev, 'Previous game', '‹')}<span class="wgt">${resChip(g.result, last)}<b class="m">${g.info.us}–${g.info.them}</b> ${g.home ? 'vs' : '@'} ${esc(g.opp)} · ${esc(g.info.date)}</span>${nav(next, 'Next game', '›')}</div>` +
       `<div class="pc-extra"><span>${esc(d.team.abbrev)} GAR <b class="m">${gsign(w.us, 1)}</b></span><span>${esc(g.opp)} GAR <b class="m">${gsign(w.them, 1)}</b></span><span>Goals per win <b class="m">${d.war.gpw}</b></span></div>` +
-      warTable(d, i, { link }) + warGoalies(d, i, link) + note(WAR_NOTE);
+      `<div class="wtog"><button data-warview="table"${warView === 'table' ? ' class="on"' : ''}>Table</button><button data-warview="chart"${warView === 'chart' ? ' class="on"' : ''}>Breakdown</button></div>` +
+      (warView === 'chart' ? `<div class="bdmodal">${breakdownSvg(d, i, innerWidth < 560 ? 340 : 670, (innerWidth < 560 ? 60 : 40) + 21 * (w.rows.length + w.g.length + 1.1))}</div>`
+        : warTable(d, i, { link }) + warGoalies(d, i, link)) + note(WAR_NOTE);
   }
   function openWar(i) {
     closeWar();
@@ -1182,6 +1186,8 @@
     warEl.addEventListener('click', (e) => {
       const nav = e.target.closest('[data-warnav]'), card = e.target.closest('[data-card]');
       if (nav) { warAt = +nav.dataset.warnav; warEl.firstElementChild.innerHTML = warModal(current, warAt); return; }
+      const view = e.target.closest('[data-warview]');
+      if (view) { warView = view.dataset.warview; warEl.firstElementChild.innerHTML = warModal(current, warAt); return; }
       if (card) { const id = +card.dataset.card; closeWar(); return openCard(id); }
       if (e.target === warEl || e.target.closest('.px')) closeWar();
     });
@@ -1245,6 +1251,74 @@
     const legend = WAR_COLS.map(([k, l]) => `<i style="background:${WAR_TINT[k]}"></i>${esc(l)}`).join(' ');
     const total = d.stats.teamWar;
     return { title: `Wins above replacement${total ? `<span class="big">${esc(total.value)}</span>` : ''}`, note: `<span class="wleg">${legend}</span>`, noteHtml: true, html };
+  }
+
+  // ---------- game score breakdown: every player's GAR as a diverging stacked bar ----------
+  // offence pieces in blues, defence pieces in oranges; positive pieces stack right of zero, negative left
+  const BD_PARTS = [['gc', 'Production', '#2c5577', 'Goals, assists and shots (goal creation)'], ['oio', 'Play driving', '#5f8fae', 'On-ice offence share'],
+    ['pp', 'Special teams', '#9fd0ea', 'Power play'], ['oid', 'Defence', '#c4621f', 'On-ice defence share'], ['pen', 'Penalties', '#8a2c25', 'Penalties drawn minus taken'],
+    ['oth', 'Other', '#d6ccbb', 'Faceoffs, takeaways, giveaways, blocks']];
+  function breakdownSvg(d, i, W, H, { legend = true } = {}) {
+    const g = d.season.games[i], wg = d.war.games[g.id], rows = wg.rows.map(warRow);
+    const F = rows.filter((r) => r.pos !== 'D'), D = rows.filter((r) => r.pos === 'D');
+    const gk = wg.g.map(([id, n, , gsax, gar]) => ({ id, n, gar, gsax, goalie: true }));
+    const list = [...F, null, ...D, ...(gk.length ? [null, ...gk] : [])];
+    const legH = legend ? (W >= 600 ? 22 : 40) : 0, axisH = 16;
+    const slots = list.reduce((a, r) => a + (r ? 1 : 0.55), 0), rh = Math.min(22, (H - axisH - legH) / slots);
+    const nameW = W >= 600 ? 150 : 104, x0 = nameW + 44, x1 = W - 16;
+    const ends = list.filter(Boolean).map((r) => r.goalie ? [Math.min(0, r.gar), Math.max(0, r.gar)]
+      : [BD_PARTS.reduce((a, [k]) => a + Math.min(0, r[k]), 0), BD_PARTS.reduce((a, [k]) => a + Math.max(0, r[k]), 0)]);
+    let lo = Math.min(-0.05, ...ends.map((e) => e[0])), hi = Math.max(0.05, ...ends.map((e) => e[1]));
+    const step = [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2].find((s) => (hi - lo) / s <= 6) || 2;
+    lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+    const X = (v) => x0 + ((v - lo) / (hi - lo)) * (x1 - x0);
+    let s = '', y = 0;
+    for (let t = lo; t <= hi + 1e-9; t += step) {
+      const tx = X(t).toFixed(1);
+      s += `<line x1="${tx}" x2="${tx}" y1="0" y2="${H - axisH - legH}" stroke="${Math.abs(t) < 1e-9 ? '#8a8a8a' : '#262626'}" stroke-width="1"${Math.abs(t) < 1e-9 ? '' : ' stroke-dasharray="1 3"'}/>`;
+      s += `<text x="${tx}" y="${H - legH - 4}" fill="#8a8a8a" font-size="10" text-anchor="${t + step > hi + 1e-9 ? 'end' : 'middle'}" class="m">${gsign(t, step < 0.1 ? 2 : 1)}</text>`;
+    }
+    const bh = Math.max(6, rh * 0.62);
+    for (const r of list) {
+      if (!r) { y += rh * 0.55; continue; }
+      const cy = y + rh / 2, by = (cy - bh / 2).toFixed(1);
+      s += `<text x="${nameW}" y="${(cy + 4).toFixed(1)}" text-anchor="end" class="bdn">${esc(r.n.toUpperCase())}</text>`;
+      s += `<text x="${nameW + 8}" y="${(cy + 4).toFixed(1)}" class="bdv m">${gsign(r.gar)}</text>`;
+      if (r.goalie) {
+        const a = X(Math.min(0, r.gar)), b = X(Math.max(0, r.gar));
+        s += `<rect x="${a.toFixed(1)}" y="${by}" width="${Math.max(2, b - a).toFixed(1)}" height="${bh.toFixed(1)}" fill="#ece8df"><title>${esc(r.n)}: ${gsign(r.gsax)} goals saved above expected</title></rect>`;
+      } else {
+        let pos = 0, neg = 0;
+        for (const [k, label, col] of BD_PARTS) {
+          const v = r[k];
+          if (!v) continue;
+          const a = v > 0 ? pos : neg + v, wpx = X(a + Math.abs(v)) - X(a);
+          if (v > 0) pos += v; else neg += v;
+          s += `<rect x="${X(a).toFixed(1)}" y="${by}" width="${Math.max(0.5, wpx).toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}"><title>${esc(r.n)} · ${label}: ${gsign(v)}</title></rect>`;
+        }
+      }
+      y += rh;
+    }
+    if (legend) {
+      const items = [...BD_PARTS.map(([, l, c]) => [l, c]), ...(gk.length ? [['Goaltending', '#ece8df']] : [])];
+      const per = W >= 600 ? items.length : 4, cw = (W - 8) / per;
+      items.forEach(([l, c], k) => {
+        const lx = 4 + (k % per) * cw, ly = H - legH + 8 + Math.floor(k / per) * 18;
+        s += `<rect x="${lx.toFixed(1)}" y="${ly}" width="10" height="10" rx="1" fill="${c}"/><text x="${(lx + 15).toFixed(1)}" y="${ly + 9}" class="bdl">${esc(l)}</text>`;
+      });
+    }
+    return `<svg class="bdsvg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${s}</svg>`;
+  }
+  // a block over both chart slots
+  function spanBreakdown(d, x, top, w, h, svgTop) {
+    const i = lastWar(d);
+    if (i == null) return slotBox('chart1', x, top, w, h, '');
+    const g = d.season.games[i], last = g.info.status.split('/')[1];
+    const res = g.result === 'W' ? 'W' : g.result === 'O' ? (last || 'OT') : 'L';
+    return slotBox('chart1', x, top, w, h,
+      `<div class="abs title" style="left:0;top:0"><span${pop(`war:${i}`)}>Game score breakdown<span class="big">${res} ${g.info.us}–${g.info.them}</span></span></div>` +
+      `<div class="abs note" style="${MODE === 'stack' ? 'left:0;top:28px' : 'right:0;top:6px'}">${g.home ? 'vs' : '@'} ${esc(g.opp)}, ${esc(g.info.date)} · goals above replacement · tap for the table</div>` +
+      `<div class="abs bdblock" style="left:0;top:${svgTop}px"${pop(`war:${i}`)}>${breakdownSvg(d, i, w, h - svgTop)}</div>`, 'span');
   }
 
   function warCardHtml(c) {

@@ -662,3 +662,15 @@ body:not(.stack) .tallcol .ch .chf { flex-wrap: wrap; justify-content: flex-star
   .wtr.wth { font-size: 8.5px; }
   .wtr .wn small { display: none; }
 }
+
+/* ---------- game score breakdown ---------- */
+.bdsvg { display: block; overflow: visible; }
+.bdsvg .bdn { fill: #e8e8e8; font: 700 12px var(--cond); letter-spacing: 0.06em; }
+.bdsvg .bdv { fill: #bdbdbd; font-size: 11.5px; }
+.bdsvg .bdl { fill: #bdbdbd; font: 500 11.5px var(--cond); }
+.bdblock { cursor: pointer; }
+.slot.span .bdsvg .bdn { font-size: 11.5px; }
+.wtog { display: flex; gap: 4px; margin-top: 10px; }
+.wtog button { flex: none; padding: 4px 12px; border-radius: 3px; border: 1px solid #333; background: var(--card); color: var(--muted); font: 700 11px var(--cond); letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
+.wtog button.on { color: var(--fg); border-color: var(--gold); }
+.bdmodal { margin-top: 8px; overflow-x: auto; }
