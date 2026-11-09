@@ -60,9 +60,23 @@
   // What each kind of slot can show. Labels appear in the Customize menus.
   const DIVS = ['Atlantic', 'Metropolitan', 'Central', 'Pacific'];
   const CATALOG = {
-    chart: () => [['margins', 'Game by game (goal margin)'], ['playoffLine', 'Playoff line'], ['goalDiff', 'Goal differential'], ['race', 'Division points race'],
+    chart: (d, slot) => [...CHARTS, ...wideOptions(d, slot)],
+  };
+  const CHARTS = [['margins', 'Game by game (goal margin)'], ['playoffLine', 'Playoff line'], ['goalDiff', 'Goal differential'], ['race', 'Division points race'],
       ['xg', 'Expected goals by game'], ['pace', 'Points vs playoff pace'], ['rollingXg', 'Rolling xG share (5 games)'], ['shots', 'Shots on goal by game'],
-      ['hd', 'High-danger chances by game'], ['confRank', 'Conference rank over time']],
+      ['hd', 'High-danger chances by game'], ['confRank', 'Conference rank over time']];
+  // big blocks that can take over a chart slot (the shorter middle slot only gets the ones that fit)
+  function wideOptions(d, slot) {
+    const tall = slot === 'chart1';
+    const o = [];
+    if (tall) for (const r of (d.ratings || []).slice(0, 5)) o.push([`wideCard:${r.id}`, `Block: player card \u2014 ${r.name}`]);
+    if (tall) o.push(['wideOdds', 'Block: playoff odds (conference)'], ['wideRatings', 'Block: player ratings grid']);
+    o.push(['wideMatchup', 'Block: next-game matchup'], ['wideStats', 'Block: team stats wall'], ['wideEdge', 'Block: EDGE + xG stats wall']);
+    if (lastChances(d) != null) o.push(['wideChances', 'Block: last game scoring chances']);
+    o.push(['wideLeaders', 'Block: team leaders strip']);
+    return o;
+  }
+  const CATALOG2 = {
     section: () => [...DIVS.map((d) => [`grid:${d}`, `${d}: results vs each team`]), ...DIVS.map((d) => [`table:${d}`, `${d} standings`]),
       ['table:league', 'League top 8'], ['table:conference', 'Your conference top 8']],
     picture: (d) => [['own', 'Playoff picture (your conference)'], ...(d.pictures.other ? [['other', `Playoff picture (${d.pictures.other.conference})`]] : []),
@@ -80,6 +94,7 @@
       ['nextOpp', 'Next opponent comparison'], ['scorers', 'Top scorers'], ['goalies', 'Goalies'], ['form', 'Recent form (last 10)'],
       ...(d.ratings?.length ? [['ratings', 'Player ratings (overall %)']] : [])],
   };
+  Object.assign(CATALOG, CATALOG2);
   // slot id -> [kind, read, write]
   const SLOTS = {
     chart1: ['chart', (l) => l.chart1, (l, v) => (l.chart1 = v)],
@@ -95,7 +110,7 @@
   // a slot's widget, falling back to the default when the saved choice isn't available for this team
   function pick(d, slot) {
     const [kind, read] = SLOTS[slot];
-    const v = read(layout), ok = CATALOG[kind](d).some(([k]) => k === v);
+    const v = read(layout), ok = CATALOG[kind](d, slot).some(([k]) => k === v);
     return ok ? v : read(DEFAULT_LAYOUT);
   }
   const slotBox = (slot, x, y, w, h, html, cls = '') =>
@@ -273,6 +288,12 @@
   function chartSlot(d, slot, x, top, w, svgTop, h) {
     setChartWidth(w);
     const kind = pick(d, slot);
+    if (kind.startsWith('wide')) {
+      const b = wideBlock(d, kind, w, h);
+      return slotBox(slot, x, top, w, svgTop + h - 2,
+        `<div class="abs title" style="left:0;top:0">${b.title}</div><div class="abs note" style="${MODE === 'stack' ? 'left:0;top:28px' : 'right:0;top:6px'}">${esc(b.note)}</div>` +
+        `<div class="abs wblock" style="left:0;top:${svgTop}px;width:${w}px;height:${h - 4}px">${b.html}</div>`);
+    }
     const c = kind === 'playoffLine' ? chartPlayoffLine(d, h, slot) : kind === 'goalDiff' ? chartGoalDiff(d, h, slot)
       : kind === 'race' ? chartRace(d, h) : kind === 'xg' ? chartXg(d, h) : kind === 'pace' ? chartPace(d, h, slot)
       : kind === 'rollingXg' ? chartRollingXg(d, h, slot) : kind === 'shots' ? chartShots(d, h) : kind === 'hd' ? chartHd(d, h)
@@ -678,6 +699,132 @@
   PICTURE_PANELS.odds = oddsPanel;
   LIST_PANELS.ratings = (d, compact) => ratingsPanel(d, compact ? 6 : 9);
 
+  // ======================= wide blocks for the chart slots =======================
+  // Each returns { title, note, html } and lays itself out for the slot's width and height
+  // (840 x 200 on the full board, narrower on phones, 110 tall in the middle slot).
+  const WIDE_TALL = ['wideCard', 'wideOdds', 'wideRatings'];          // need the tall top slot
+  const wideStatKeys = {
+    wideStats: ['pp', 'pk', 'gfpg', 'gapg', 'sfpg', 'sapg', 'fo', 'shpct', 'svpct', 'ptspct', 'xgPct', 'finishing', 'hdcPct', 'playoffOdds', 'projPts', 'strength'],
+    wideEdge: ['topSpeed', 'bursts20', 'bursts22', 'topShot', 'shots90', 'distance', 'hdShots', 'hdPct', 'ozTime', 'dzTime', 'satDiff', 'xgPct', 'finishing', 'hdcPct', 'gdpg', 'strength'],
+  };
+
+  function wideCard(d, id, w, h) {
+    const c = d.cards?.[id];
+    if (!c) return { title: 'Player card', note: '', html: '' };
+    const wide = w >= 700;
+    const tiles = c.tiles.slice(0, 10).map(([label, p]) => `<div class="wt"><small>${esc(label)}</small><b class="m" style="background:${pctColor(p)}">${pctText(p)}</b></div>`).join('');
+    const html = `<div class="wcard${wide ? '' : ' narrow'}"${pop(`card:${id}`)}>` +
+      `<div class="wc-id"><span class="pc-face"><img src="${esc(c.headshot)}" alt=""></span><div><b class="wc-n">${esc(c.full)}</b><small>${esc(c.pos)}${c.number != null ? ` · #${c.number}` : ''}${c.age ? ` · ${c.age}` : ''}${c.usage ? ` · ${esc(c.usage)}` : ''}</small>` +
+      `<div class="wc-ovr"><small>Overall</small><b class="m" style="background:${pctColor(c.overall)}">${pctText(c.overall)}</b></div></div></div>` +
+      `<div class="wc-tiles${c.kind === 'G' ? ' g' : ''}">${tiles}</div>${wide && c.trend?.length ? `<div class="wc-trend">${trendSvg(c.trend)}</div>` : ''}</div>`;
+    return { title: `<span${pop(`card:${id}`)}>Player card</span>`, note: `${c.full}: Rinkside overall ${pctText(c.overall)} among NHL ${c.kind === 'G' ? 'goalies' : c.group === 'D' ? 'defencemen' : 'forwards'}`, html };
+  }
+
+  function wideOdds(d, w, h) {
+    const me = d.team.abbrev, conf = d.teams[me].conf;
+    const cols = w >= 700 ? 2 : 1, per = Math.max(1, Math.floor(h / 24)), n = cols * per;
+    let rows = Object.entries(d.teams).filter(([, t]) => t.conf === conf).sort((a, b) => b[1].odds.playoff - a[1].odds.playoff || b[1].odds.projPts - a[1].odds.projPts);
+    const mine = rows.findIndex(([a]) => a === me);
+    rows = mine < n ? rows.slice(0, n) : [...rows.slice(0, n - 1), rows[mine]];
+    const row = ([a, t], i) => `<div class="orow${a === me ? ' me' : ''}"${pop(`team:${a}`)}><span class="on m">${i + 1}</span>${logo(t.logo, a)}<span class="ab">${esc(a)}</span><span class="orec">${esc(t.record)}</span><span class="opts m">${t.odds.projPts}</span>` +
+      `<span class="obar"><i style="width:${t.odds.playoff}%"></i></span><span class="opct m">${t.odds.playoff >= 99.5 ? '>99' : t.odds.playoff < 0.5 ? '<1' : Math.round(t.odds.playoff)}%</span><span class="odiv m">${Math.round(t.odds.division)}%</span></div>`;
+    const html = `<div class="wodds" style="grid-template-columns:repeat(${cols},1fr)">${Array.from({ length: cols }, (_, c) => `<div class="olist">${rows.slice(c * per, (c + 1) * per).map((r, i) => row(r, c * per + i)).join('')}</div>`).join('')}</div>`;
+    return { title: `<span${pop('stat:playoffOdds')}>Playoff odds<span class="big">${d.teams[me].odds.playoff}%</span></span>`, note: `${conf} conference · projected points, playoff %, division % · 10,000 simulations`, html };
+  }
+
+  function wideRatings(d, w, h) {
+    const cols = w >= 700 ? 4 : 2, rows = Math.max(1, Math.floor(h / 48));
+    const list = (d.ratings || []).slice(0, cols * rows);
+    const html = `<div class="wratings" style="grid-template-columns:repeat(${cols},1fr)">${list.map((r) => {
+      const c = d.cards[r.id];
+      return `<div class="wr"${pop(`card:${r.id}`)}><span class="face"><img src="${esc(c?.headshot || '')}" alt=""></span><span class="rname"><b>${esc(r.name)}</b><small>${esc(r.pos)}${r.usage ? ` · ${esc(r.usage)}` : ''}</small></span><span class="rp m" style="background:${pctColor(r.overall)}">${r.overall}</span></div>`;
+    }).join('')}</div>`;
+    return { title: 'Player ratings', note: 'Rinkside overall percentile among NHL players at the same position · tap for the card', html };
+  }
+
+  function wideMatchup(d, w, h) {
+    const g = d.nextGames[0];
+    if (!g) return { title: 'Next game', note: '', html: '<div class="note">No games scheduled</div>' };
+    const me = d.team.abbrev, t = d.teams[me], o = d.teams[g.opp] || {}, p = g.winPct ?? 50;
+    const metrics = [['Points %', t.pct, o.pct, (v) => pct3(v)], ['xG share', t.xgPct, o.xgPct, f1], ['Power play', t.pp, o.pp, f1], ['Penalty kill', t.pk, o.pk, f1], ['Goals / gm', t.gfpg, o.gfpg, (v) => Number(v).toFixed(2)]]
+      .slice(0, h >= 150 ? 5 : 2);
+    const bar = ([label, a, b, fmt]) => {
+      const sa = +a || 0, sb = +b || 0, share = sa + sb ? (100 * sa) / (sa + sb) : 50;
+      return `<div class="mrow"><span class="mv m${sa >= sb ? ' hi' : ''}">${esc(fmt(a))}</span><span class="mbar"><i style="width:${share}%"></i></span><span class="mv m${sb > sa ? ' hi' : ''}">${esc(fmt(b))}</span><span class="ml">${esc(label)}</span></div>`;
+    };
+    const html = `<div class="wmatch"${pop(`team:${g.opp}`)}><div class="mtop">${logo(t.logo, me)}<span class="mt"><b>${esc(me)}</b><small>${esc(t.record)}</small></span>` +
+      `<span class="mwin"><small>${esc(g.dow)} ${esc(g.day)} · ${esc(g.time)} · ${g.home ? 'home' : 'away'}</small><span class="wbar"><i style="width:${p}%"></i></span><span class="wlab"><b class="m">${p}%</b><b class="m">${100 - p}%</b></span></span>` +
+      `<span class="mt r"><b>${esc(g.opp)}</b><small>${esc(o.record || '')}</small></span>${logo(o.logo || g.logo, g.opp)}</div><div class="mrows">${metrics.map(bar).join('')}</div></div>`;
+    return { title: 'Next game', note: 'win chance from Rinkside’s model · bars compare the two teams', html };
+  }
+
+  function wideTiles(d, w, h, which) {
+    const per = w >= 700 ? 8 : 4, rows = h >= 150 ? 2 : 1;
+    const keys = wideStatKeys[which].filter((k) => d.stats[k]).slice(0, per * rows);
+    const html = `<div class="wtiles" style="grid-template-columns:repeat(${per},1fr)">${keys.map((k) => {
+      const v = d.stats[k];
+      return `<div class="tile"${pop(`stat:${k}`)}><div class="k">${esc(SHORT[k] || v.label)}</div><div class="v">${esc(v.value)}<small>${esc(v.unit.trim() ? ` ${v.unit.trim()}` : '')}</small></div><div class="rk">${v.rank}${suffix(v.rank)} of ${v.of}</div></div>`;
+    }).join('')}</div>`;
+    return { title: which === 'wideEdge' ? 'EDGE + xG' : 'Team stats', note: 'league rank in each · tap a tile for detail', html };
+  }
+
+  function wideChances(d, w, h) {
+    const i = lastChances(d);
+    if (i == null) return { title: 'Scoring chances', note: '', html: '' };
+    const g = d.season.games[i], c = g.chances, me = d.team.abbrev;
+    const cols = [['Chances', 'chances', null], ['High', 'hi', 'var(--win)'], ['Mid', 'mid', '#e0b23a'], ['Low', 'low', 'var(--loss)'], ['xG', 'xg', '#5b8fd6'], ['Goals', 'goals', null]];
+    const val = (x, k) => (k === 'hi' || k === 'mid' || k === 'low' ? x[k].n : k === 'xg' ? x.xg.toFixed(2) : x[k]);
+    const sub = (x, k) => (k === 'hi' || k === 'mid' || k === 'low' ? `xG ${x[k].xg.toFixed(2)}` : '');
+    const cell = (x, y, k, tint) => `<div class="cv${+val(x, k) > +val(y, k) ? ' win' : ''}"${tint ? ` style="--tint:${tint}"` : ''}><b class="m">${val(x, k)}</b>${h >= 150 && sub(x, k) ? `<small>${sub(x, k)}</small>` : ''}</div>`;
+    const html = `<div class="wch${h >= 150 ? '' : ' short'}"${pop(`chances:${i}`)} style="grid-template-columns:70px repeat(${cols.length},1fr)">` +
+      `<div></div>${cols.map(([l]) => `<div class="wl">${l}</div>`).join('')}` +
+      `<div class="wtm">${logo(d.teams[me]?.logo, me)}<b>${esc(me)}</b></div>${cols.map(([, k, t]) => cell(c.us, c.them, k, t)).join('')}` +
+      `<div class="wtm">${logo(d.teams[g.opp]?.logo, g.opp)}<b>${esc(g.opp)}</b></div>${cols.map(([, k, t]) => cell(c.them, c.us, k, t)).join('')}</div>`;
+    return { title: `<span${pop('xginfo')}>Scoring chances<span class="big">${c.us.goals}–${c.them.goals}</span></span>`, note: `last game: ${g.home ? 'vs' : '@'} ${g.opp}, ${g.info.date}`, html };
+  }
+
+  function wideLeaders(d, w, h) {
+    const keys = ['points', 'goals', 'assists', 'svpct', 'fastest', 'hardest'].filter((k) => d.leaderBoard[k]).slice(0, w >= 700 ? 6 : 3);
+    const html = `<div class="wlead" style="grid-template-columns:repeat(${keys.length},1fr)">${keys.map((k) => {
+      const l = d.leaderBoard[k];
+      return `<div class="wld${h >= 150 ? '' : ' short'}"${pop(cardKey(d, l.id) || `leader:${k}`)}><span class="face"><img src="${esc(l.headshot)}" alt=""></span><small>${esc(l.label.replace(' (EDGE)', ''))}</small><b>${esc(l.name)}</b><span class="m">${esc(l.value)}</span></div>`;
+    }).join('')}</div>`;
+    return { title: 'Team leaders', note: 'tap a player for the card', html };
+  }
+
+  function wideBlock(d, kind, w, h) {
+    const [k, arg] = kind.split(':');
+    if (k === 'wideCard') return wideCard(d, +arg, w, h);
+    if (k === 'wideOdds') return wideOdds(d, w, h);
+    if (k === 'wideRatings') return wideRatings(d, w, h);
+    if (k === 'wideMatchup') return wideMatchup(d, w, h);
+    if (k === 'wideStats' || k === 'wideEdge') return wideTiles(d, w, h, k);
+    if (k === 'wideChances') return wideChances(d, w, h);
+    return wideLeaders(d, w, h);
+  }
+
+  // ---------- live win probability ----------
+  // Goals as Poisson: the pregame win chance sets each team's scoring rate, then the score and
+  // the time left decide the rest. A tie after regulation is a coin flip weighted by the same rates.
+  const poisson = (l) => { const p = [Math.exp(-l)]; for (let k = 1; k < 15; k++) p.push((p[k - 1] * l) / k); return p; };
+  function winFrom(lu, lt, lead) {
+    const a = poisson(lu), b = poisson(lt);
+    let win = 0, tie = 0;
+    for (let i = 0; i < 15; i++) for (let j = 0; j < 15; j++) { const q = a[i] * b[j], m = lead + i - j; if (m > 0) win += q; else if (m === 0) tie += q; }
+    return win + tie * (lu / (lu + lt || 1));
+  }
+  function liveWinPct(L, pre) {
+    if (!L || pre == null) return null;
+    if (L.state === 'FINAL' || L.state === 'OFF') return L.us > L.them ? 100 : 0;
+    // scoring-rate split that reproduces the pregame chance over a full game (about 3 goals a side)
+    let lo = 0.2, hi = 5;
+    for (let it = 0; it < 40; it++) { const m = (lo + hi) / 2; if (winFrom(3 * Math.sqrt(m), 3 / Math.sqrt(m), 0) < pre / 100) lo = m; else hi = m; }
+    const m = (lo + hi) / 2, [mm, ss] = String(L.clock || '20:00').split(':').map(Number);
+    const periodNo = { '1st': 1, '2nd': 2, '3rd': 3 }[L.period] || 4;
+    const left = periodNo >= 4 ? 0.05 : Math.max(0, ((3 - periodNo) * 20 + (L.intermission ? 0 : mm + ss / 60)) / 60);
+    return Math.round(100 * winFrom(3 * Math.sqrt(m) * left, (3 / Math.sqrt(m)) * left, L.us - L.them));
+  }
+
   // ---------- full board ----------
   let current = null;
   function render(d) {
@@ -757,7 +904,8 @@
   function liveMeta(d) {
     const L = live, me = d.team.abbrev;
     const status = isOver(L) ? 'Final' : L.state === 'PRE' ? 'Pregame' : L.intermission ? `${L.period} intermission` : `${L.period} · ${L.clock}`;
-    const extra = [`Shots ${L.sogUs}–${L.sogThem}`, L.chances ? `xG ${L.chances.us.xg.toFixed(2)}–${L.chances.them.xg.toFixed(2)}` : '', L.pp].filter(Boolean).join(' · ');
+    const wp = liveWinPct(L, d.nextGames.find((g) => g.id === L.id)?.winPct);
+    const extra = [wp != null && !isOver(L) ? `Win ${wp}%` : '', `Shots ${L.sogUs}\u2013${L.sogThem}`, L.chances ? `xG ${L.chances.us.xg.toFixed(2)}\u2013${L.chances.them.xg.toFixed(2)}` : '', L.pp].filter(Boolean).join(' \u00b7 ');
     return `<div class="meta livebox"${pop('live')}><div class="ls"><i class="dot${isOver(L) ? ' off' : ''}"></i>${esc(status)}</div>` +
       `<div class="lsc">${logo(d.teams[me]?.logo, me)}<span class="m">${L.us}</span><span class="dash">–</span><span class="m">${L.them}</span>${logo(d.teams[L.opp]?.logo || L.oppLogo, L.opp)}</div>` +
       `<div class="lx">${esc(extra)}</div></div>`;
@@ -769,7 +917,8 @@
     const me = d.team.abbrev;
     let h = `<div class="pk">${isOver(L) ? 'Final' : '<b class="lv">Live</b>'} · ${L.home ? 'vs' : '@'} ${esc(L.opp)}</div>`;
     h += `<div class="pt">${logo(d.teams[me]?.logo, me)}<span class="big m">${L.us}–${L.them}</span>${logo(d.teams[L.opp]?.logo || L.oppLogo, L.opp)}<span class="pst">${esc(isOver(L) ? 'Final' : L.intermission ? `${L.period} int.` : `${L.period} ${L.clock}`)}</span></div>`;
-    h += rowsHtml([['Shots on goal', `${L.sogUs}–${L.sogThem}`, true], L.chances ? ['Expected goals', `${L.chances.us.xg.toFixed(2)}–${L.chances.them.xg.toFixed(2)}`, true] : null,
+    const wp = liveWinPct(L, d.nextGames.find((g) => g.id === L.id)?.winPct);
+    h += rowsHtml([!isOver(L) && wp != null ? ['Win chance (live)', `${wp}%`, true] : null, ['Shots on goal', `${L.sogUs}\u2013${L.sogThem}`, true], L.chances ? ['Expected goals', `${L.chances.us.xg.toFixed(2)}–${L.chances.them.xg.toFixed(2)}`, true] : null,
       L.chances ? ['High-danger chances', `${L.chances.us.hi.n}–${L.chances.them.hi.n}`, true] : null, ['Situation', L.pp || 'Even strength']]);
     h += L.goals.length
       ? `<div class="pgoals">${L.goals.map((g) => `<div><span class="m">${esc(g.when)}</span>${logo(d.teams[g.team]?.logo, g.team)}<span><b>${esc(g.scorer)}</b>${g.assists ? ` <small>(${esc(g.assists)})</small>` : ''}${g.tag ? ` <small class="tag">${esc(g.tag)}</small>` : ''}</span></div>`).join('')}</div>`
@@ -1119,7 +1268,7 @@
     closePop();
     popKey = `slot:${slot}`;
     slotEl.classList.add('is-active');
-    const opts = CATALOG[kind](current);
+    const opts = CATALOG[kind](current, slot);
     placePop(slotEl, `<div class="pk">Change panel</div><div class="opts">${opts.map(([k, label]) =>
       `<button class="opt${k === cur ? ' on' : ''}" data-opt="${esc(k)}">${esc(label)}</button>`).join('')}</div>`, 'menu');
     popEl.addEventListener('click', (e) => {
