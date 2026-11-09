@@ -260,11 +260,10 @@
     dl.hidden = !q.parts;
     if (q.parts) {
       const name = q.parts.split('/').pop();
-      const status = el('span', { class: 'small muted', role: 'status' });
       dl.append(
         el('div', { class: 'parts-row' },
-          el('button', { class: 'btn primary', type: 'button', onclick: () => downloadParts(q.parts, name, status) }, 'Download parts (zip)'),
-          el('span', { class: 'mono small' }, name), status),
+          el('button', { class: 'btn primary', type: 'button', onclick: () => downloadParts(q.parts, name) }, 'Download parts (zip)'),
+          el('span', { class: 'mono small' }, name)),
         el('p', { class: 'small muted' }, 'Open each .step file in SOLIDWORKS (answer No if it offers feature recognition) and save it as a part. Apply the materials listed in the question. Insert the Base first and leave it fixed at the assembly origin: its part origin is already on the origin shown in the image.'));
     }
 
@@ -333,24 +332,13 @@
     }
   }
 
-  // Hosted page: the platform's save dialog. Local file: a plain download link.
-  let dlCap;
-  async function downloadParts(href, name, status) {
-    status.textContent = '';
-    try {
-      if (dlCap === undefined) dlCap = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
-    } catch (e) { dlCap = null; }
-    if (dlCap) {
-      try {
-        const blob = await (await fetch(href)).blob();
-        await dlCap.save({ filename: name, data: blob });
-        status.textContent = 'Saved.';
-      } catch (e) {
-        status.textContent = e && e.code === 'declined' ? 'Download cancelled.' : 'This view cannot save files. Open the app from the repo to download the parts.';
-      }
-      return;
-    }
-    const a = el('a', { href, download: name });
+  // The part zips are served by cswa.mattdicks.org and work from a local copy. Anywhere else
+  // (e.g. a preview that can't serve archives) the button fetches them from the live site.
+  const LIVE = 'https://cswa.mattdicks.org/';
+  function downloadParts(href, name) {
+    const here = location.protocol === 'file:' || location.hostname === 'cswa.mattdicks.org' ||
+      /^(localhost|127\.0\.0\.1)$|\.workers\.dev$/.test(location.hostname);
+    const a = here ? el('a', { href, download: name }) : el('a', { href: LIVE + href, target: '_blank', rel: 'noopener' });
     document.body.append(a);
     a.click();
     a.remove();
