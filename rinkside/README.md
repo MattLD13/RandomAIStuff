@@ -242,6 +242,8 @@ the ones that fit.
 - **Team stats wall**
 - **EDGE + xG wall**
 - **Last game scoring chances**
+- **Box WAR (last game):** the full table (top slot only).
+- **WAR by component (season):** each player's goals above replacement as a stacked bar.
 - **Team leaders strip**
 
 The playoff simulation also plays out the bracket each time. The division winner meets a wild
@@ -256,6 +258,40 @@ to the team with more points. Tap the Playoff run odds or Playoff odds titles fo
 During a live game, the header and live popup also show a **live win chance**. It starts from
 the pregame odds and models the rest of the game as Poisson scoring from the current score and
 time left.
+
+## Box WAR (wins above replacement)
+
+`scripts/war.mjs` gives every skater and goalie a goals-above-replacement (GAR) value for each
+game. It uses the play-by-play and the shift chart (who was on the ice each second). When the
+stats API has no shift chart for a game, the build reads the NHL's HTML time-on-ice reports
+instead. Results are cached in `.cache/war-v1/`.
+
+Each shot on goal is worth ½ × its xG, plus ½ if it scores. The value is split into six pieces:
+
+| Piece | What goes in it |
+| --- | --- |
+| Goal creation | The shooter's 35%. On a goal, 15% to the first assist and 5% to the second. |
+| On-ice offence | The rest of the shot, shared by the attacking skaters on the ice. |
+| On-ice defence | Minus the shot's xG, shared by the defending skaters. Goals beyond xG are the goalie's. |
+| Power play | The three pieces above, while on the power play. |
+| Penalties | +0.17 goals per minor drawn, −0.17 per minor taken (a major counts as 2.5 minors). |
+| Other | Faceoffs ±0.008, takeaways +0.015, giveaways −0.01, blocked shots +0.012. |
+
+Each piece is measured against **replacement level**: the per-60 rate, at the same strength,
+of the skaters outside each team's top 13 forwards and top 7 defencemen by ice time.
+
+Goalies get goals saved above expected, minus the replacement rate per shot. That rate comes
+from the goalies outside each team's top two, shrunk toward −0.006 a shot. Wins = goals ÷
+(2 × league goals per team-game), about 6.3 this season.
+
+Percentiles compare each game with every NHL skater game this season (goalies with goalie
+games). Season percentiles compare against skaters with 25%+ of games played.
+
+Where WAR shows up:
+- **Box WAR table:** opens from the Box WAR panels, or from "Box WAR ›" in any game popup. The ‹ › buttons step through the games, and tapping a player opens their card.
+- **Player cards:** a WAR line with the six pieces.
+- **Panels:** Box WAR (last game) and Wins above replacement (season) for the list, picture and tall-column slots.
+- **Other:** a Team WAR stat box (ranked of 32), and a WAR leader option for the leader rows.
 
 ## Live games
 

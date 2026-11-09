@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import * as chances from './chances.mjs';
 import * as players from './players.mjs';
 import * as odds from './odds.mjs';
+import * as war from './war.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const config = JSON.parse(await readFile(join(ROOT, 'config.json'), 'utf8'));
@@ -21,6 +22,19 @@ async function get(url, tries = 4) {
       const res = await fetch(url, { headers: { 'user-agent': 'rinkside' } });
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
       return await res.json();
+    } catch (err) {
+      if (i >= tries) throw new Error(`GET ${url} failed: ${err.message}`);
+      await new Promise((r) => setTimeout(r, 1000 * 2 ** i));
+    }
+  }
+}
+
+async function getText(url, tries = 3) {
+  for (let i = 1; ; i++) {
+    try {
+      const res = await fetch(url, { headers: { 'user-agent': 'rinkside' } });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      return await res.text();
     } catch (err) {
       if (i >= tries) throw new Error(`GET ${url} failed: ${err.message}`);
       await new Promise((r) => setTimeout(r, 1000 * 2 ** i));
@@ -130,6 +144,15 @@ const [skNow, skLast, goNow] = await Promise.all([players.loadSkaters(get, seaso
 const { shooters, goalies: facedByGoalie } = players.shotTotals(pbpGames, xgModel);
 const ratedNow = players.rateSkaters(skNow, shooters), ratedLast = players.rateSkaters(skLast), ratedGoalies = players.rateGoalies(goNow, facedByGoalie);
 console.log(`player ratings: ${Object.keys(ratedNow).length} skaters, ${Object.keys(ratedGoalies).length} goalies (last season ${Object.keys(ratedLast).length})`);
+
+// ---------- Box WAR (play-by-play + shift charts, see scripts/war.mjs) ----------
+const warDigests = await war.loadDigests(finals.map((g) => g.id), get, getText, join(ROOT, '.cache', 'war-v1'));
+const WAR = war.computeWar(warDigests.digests, xgModel);
+const abbrevOfId = {};
+for (const g of finals) { abbrevOfId[g.homeTeam.id] = g.homeTeam.abbrev; abbrevOfId[g.awayTeam.id] = g.awayTeam.abbrev; }
+const teamGar = {};
+for (const v of WAR.games.values()) for (const r of [...v.rows, ...v.goalies]) teamGar[abbrevOfId[r.t]] = (teamGar[abbrevOfId[r.t]] || 0) + r.gar;
+console.log(`box WAR: ${warDigests.digests.size} games (${warDigests.fetched} new, ${warDigests.fromReport} from HTML reports, ${warDigests.missing} without shifts yet), ${WAR.gpw} goals per win`);
 
 // ---------- team strength, win probabilities, playoff odds ----------
 const xgPctByAbbrev = Object.fromEntries(abbrevs.map((a) => {
@@ -461,6 +484,7 @@ async function buildTeam(TEAM) {
     stats.projPts = { label: 'Projected points', value: String(o.projPts), unit: '', rank: rankBy((a) => playoffOdds[a].projPts), of: 32, sim: true, avg: '' };
     stats.cupOdds = { label: 'Stanley Cup odds', value: o.cup.toFixed(1), unit: '%', rank: rankBy((a) => playoffOdds[a].cup), of: 32, sim: true, avg: '3.1' };
     stats.divOdds = { label: 'Division title odds', value: o.division.toFixed(1), unit: '%', rank: rankBy((a) => playoffOdds[a].division), of: 32, sim: true, avg: '' };
+    if (teamGar[TEAM] != null) stats.teamWar = { label: 'Team WAR (skaters + goalies)', value: (teamGar[TEAM] / WAR.gpw).toFixed(1), unit: '', rank: rankBy((a) => teamGar[a] ?? -1e9), of: 32, war: true, avg: '' };
     stats.strength = { label: 'Team strength rating', value: (strength[TEAM] > 0 ? '+' : '') + strength[TEAM].toFixed(2), unit: '', rank: rankBy((a) => strength[a]), of: 32, sim: true, avg: '0.00' };
   }
 
@@ -602,6 +626,40 @@ async function buildTeam(TEAM) {
       extra: r ? r.raw : null, trend: [], stats: gl(x),
     };
   }
+  // ---------- Box WAR: every game's table for this team, season totals on the cards ----------
+  const R2 = war.round2;
+  const warOut = { gpw: WAR.gpw, games: {}, season: {} };
+  const warIds = new Set();
+  for (const g of games) {
+    const v = g.id && WAR.games.get(g.id);
+    if (!v) continue;
+    const mine = v.rows.filter((r) => r.t === myId).sort((a, b) => b.gar - a.gar), theirs = v.rows.filter((r) => r.t !== myId);
+    const gl = v.goalies.filter((r) => r.t === myId), gt = v.goalies.filter((r) => r.t !== myId);
+    const sum = (a) => a.reduce((x, r) => x + r.gar, 0);
+    warOut.games[g.id] = {
+      us: R2(sum(mine) + sum(gl)), them: R2(sum(theirs) + sum(gt)),
+      rows: mine.map((r) => [r.id, r.n, r.pos, r.toi, R2(r.gc), R2(r.oio), R2(r.oid), R2(r.pp), R2(r.pen), R2(r.oth), R2(r.gar), r.pct]),
+      g: gl.map((r) => [r.id, r.n, r.shots, R2(r.gsax), R2(r.gar), r.pct]),
+    };
+    for (const r of [...mine, ...gl]) warIds.add(r.id);
+  }
+  for (const id of warIds) {
+    const r = WAR.season[id];
+    if (!r) continue;
+    warOut.season[id] = r.pos === 'G'
+      ? { n: r.n, pos: 'G', gp: r.gp, shots: r.shots, gsax: R2(r.gsax), gar: R2(r.gar), war: R2(r.war), pct: r.pct }
+      : { n: r.n, pos: r.pos, gp: r.gp, toi: r.toi, gc: R2(r.gc), oio: R2(r.oio), oid: R2(r.oid), pp: R2(r.pp), pen: R2(r.pen), oth: R2(r.oth), gar: R2(r.gar), war: R2(r.war), pct: r.pct };
+    if (cards[id]) cards[id].war = warOut.season[id];
+  }
+  {
+    const best = Object.entries(warOut.season).filter(([id]) => cards[id]).sort((a, b) => b[1].war - a[1].war)[0];
+    if (best) {
+      const [id, r] = best, c = cards[id];
+      leaderBoard.war = { id: +id, label: 'Wins above repl.', name: c.name, full: c.full, headshot: c.headshot, value: r.war.toFixed(1),
+        sub: `${r.gar.toFixed(1)} goals above repl.`, stats: c.stats };
+    }
+  }
+
   const ratings = Object.values(cards).filter((c) => c.qualified && c.overall != null).sort((a, b) => b.overall - a.overall)
     .map((c) => ({ id: c.id, name: c.name, pos: c.pos, number: c.number, usage: c.usage, overall: c.overall, headshot: c.headshot }));
 
@@ -706,6 +764,7 @@ async function buildTeam(TEAM) {
     goalies: goalieList,
     cards,
     ratings,
+    war: warOut,
     xgModel,   // weights for site/chances-core.mjs, so live games get the same xG
     stats,
     leaderBoard,
