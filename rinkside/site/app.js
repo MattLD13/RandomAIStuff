@@ -60,14 +60,22 @@
   // What each kind of slot can show. Labels appear in the Customize menus.
   const DIVS = ['Atlantic', 'Metropolitan', 'Central', 'Pacific'];
   const CATALOG = {
-    chart: () => [['margins', 'Game by game (goal margin)'], ['playoffLine', 'Playoff line'], ['goalDiff', 'Goal differential'], ['race', 'Division points race'], ['xg', 'Expected goals by game']],
+    chart: () => [['margins', 'Game by game (goal margin)'], ['playoffLine', 'Playoff line'], ['goalDiff', 'Goal differential'], ['race', 'Division points race'],
+      ['xg', 'Expected goals by game'], ['pace', 'Points vs playoff pace'], ['rollingXg', 'Rolling xG share (5 games)'], ['shots', 'Shots on goal by game'],
+      ['hd', 'High-danger chances by game'], ['confRank', 'Conference rank over time']],
     section: () => [...DIVS.map((d) => [`grid:${d}`, `${d}: results vs each team`]), ...DIVS.map((d) => [`table:${d}`, `${d} standings`]),
       ['table:league', 'League top 8'], ['table:conference', 'Your conference top 8']],
-    picture: (d) => [['own', 'Playoff picture (your conference)'], ...(d.pictures.other ? [['other', `Playoff picture (${d.pictures.other.conference})`]] : [])],
+    picture: (d) => [['own', 'Playoff picture (your conference)'], ...(d.pictures.other ? [['other', `Playoff picture (${d.pictures.other.conference})`]] : []),
+      ['wildcard', 'Wild card race'], ['league', 'League standings (top 10)'], ['teamStats', 'Team stats with ranks'],
+      ...(d.stats.topSpeed ? [['edgeStats', 'NHL EDGE stats with ranks']] : []), ['results', 'Last 10 results'], ['schedule', 'Next 10 games']],
     box: (d) => Object.entries(d.stats).map(([k, v]) => [k, v.label + (v.edge ? ' (EDGE)' : v.xg ? ' (xG)' : '')]),
     leader: (d) => Object.entries(d.leaderBoard).map(([k, v]) => [k, v.label]),
-    upper: (d) => [['next5', 'Next 5 (cards)'], ['last5cards', 'Last 5 (cards)'], ...(lastChances(d) != null ? [['chances', 'Scoring chances (last game)']] : [])],
-    lower: (d) => [['last5', 'Last 5 (list)'], ['next5rows', 'Next 5 (list)'], ...(lastChances(d) != null ? [['chances', 'Scoring chances (last game)']] : [])],
+    upper: (d) => [['next5', 'Next 5 (cards)'], ['last5cards', 'Last 5 (cards)'], ['next5rows', 'Next 5 (list)'], ['last5', 'Last 5 (list)'],
+      ...(lastChances(d) != null ? [['chances', 'Scoring chances (last game)'], ['seasonChances', 'Season scoring chances']] : []),
+      ['nextOpp', 'Next opponent comparison'], ['scorers', 'Top scorers'], ['goalies', 'Goalies'], ['form', 'Recent form (last 10)']],
+    lower: (d) => [['last5', 'Last 5 (list)'], ['next5rows', 'Next 5 (list)'],
+      ...(lastChances(d) != null ? [['chances', 'Scoring chances (last game)'], ['seasonChances', 'Season scoring chances']] : []),
+      ['nextOpp', 'Next opponent comparison'], ['scorers', 'Top scorers'], ['goalies', 'Goalies'], ['form', 'Recent form (last 10)']],
   };
   // slot id -> [kind, read, write]
   const SLOTS = {
@@ -263,7 +271,9 @@
     setChartWidth(w);
     const kind = pick(d, slot);
     const c = kind === 'playoffLine' ? chartPlayoffLine(d, h, slot) : kind === 'goalDiff' ? chartGoalDiff(d, h, slot)
-      : kind === 'race' ? chartRace(d, h) : kind === 'xg' ? chartXg(d, h) : chartMargins(d, h);
+      : kind === 'race' ? chartRace(d, h) : kind === 'xg' ? chartXg(d, h) : kind === 'pace' ? chartPace(d, h, slot)
+      : kind === 'rollingXg' ? chartRollingXg(d, h, slot) : kind === 'shots' ? chartShots(d, h) : kind === 'hd' ? chartHd(d, h)
+      : kind === 'confRank' ? chartConfRank(d, h) : chartMargins(d, h);
     return slotBox(slot, x, top, w, svgTop + h - 2,
       `<div class="abs title" style="left:0;top:0">${c.title}</div><div class="abs note" style="${MODE === 'stack' ? 'left:0;top:28px' : 'right:32px;top:6px'}">${esc(c.note)}</div>` +
       `<svg class="abs" style="left:0;top:${svgTop}px" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${c.svg}</svg>`);
@@ -295,6 +305,8 @@
     return rows.map((r) => `<div class="prow${r.me ? ' me' : ''}"${pop(`team:${r.abbrev}`)}><span class="lbl">${esc(r.label)}</span>${logo(r.logo, r.abbrev)}<span class="ab">${esc(r.abbrev)}</span><span class="gp">${r.gp}</span><span class="pts">${r.pts}</span></div>`).join('');
   }
   function picture(d, slot) {
+    const which = pick(d, slot);
+    if (PICTURE_PANELS[which]) return PICTURE_PANELS[which](d);
     const p = d.pictures[pick(d, slot)] || d.pictures.own;
     return `<div class="colhead big"><span class="t">Playoff picture</span></div>` +
       `<div class="sub first"><span>${esc(p.divisionName)}</span><span class="gp">GP</span><span class="pts">PTS</span></div>${pictureRows(p.divRows)}` +
@@ -386,6 +398,209 @@
     return `<div class="colhead big"><span class="t">Scoring chances</span><span class="r small">${lg ? '<b class="lv">LIVE</b>' : 'LAST GAME'}</span></div><div${pop(lg ? 'live' : 'xginfo')}>${chancesTable(d, lg || d.season.games[i], compact)}</div>`;
   };
 
+  // ======================= more panels =======================
+  const playedGames = (d) => d.season.games.filter((g) => g.result);
+  const withChances = (d) => d.season.games.filter((g) => g.result && g.chances);
+  const r1 = (v) => (Math.round(v * 10) / 10).toFixed(1);
+  function monthLabels(season, h, cx) {
+    const count = {};
+    season.games.forEach((g) => (count[g.month] = (count[g.month] || 0) + 1));
+    let prev = null, s = '';
+    season.games.forEach((g, i) => {
+      if (g.month !== prev && count[g.month] >= 3)
+        s += `<text x="${Math.min(Math.max(cx(i), 13), PLOT_X1 - 13).toFixed(1)}" y="${h - 9}" fill="#9a9a9a" font-size="13" font-weight="500" text-anchor="middle">${esc(g.month)}</text>`;
+      prev = g.month;
+    });
+    return s;
+  }
+
+  // paired bars per played game: up = us, down = them
+  function pairBars(d, h, upF, dnF, cap, step, key) {
+    const season = d.season, n = Math.max(season.total, 1), slot = slotW(n);
+    const top = 6, bot = h - 30, zero = (top + bot) / 2, unit = (bot - top) / 2 / cap;
+    const cx = (i) => PLOT_X0 + (i + 0.5) * slot;
+    const ticks = [cap, step, -step, -cap];
+    let s = gridLabels(ticks, (v) => zero - v * unit, (v) => `${Math.abs(v)}`);
+    for (const v of ticks) s += `<line x1="${PLOT_X0}" x2="${PLOT_X1}" y1="${zero - v * unit}" y2="${zero - v * unit}" stroke="#262626" stroke-dasharray="1 4.8"/>`;
+    s += `<line x1="${PLOT_X0}" x2="${PLOT_X1}" y1="${zero}" y2="${zero}" stroke="#4d4d4d"/>`;
+    const bw = Math.min(7.2, slot * 0.75);
+    season.games.forEach((g, i) => {
+      if (!g.result || !g.chances) return;
+      const u = Math.min(cap, upF(g)) * unit, dn = Math.min(cap, dnF(g)) * unit, x = cx(i);
+      s += `<rect x="${(x - bw / 2).toFixed(2)}" y="${zero - u}" width="${bw.toFixed(2)}" height="${u}" fill="#2f8a3a"/>`;
+      s += `<rect x="${(x - bw / 2).toFixed(2)}" y="${zero}" width="${bw.toFixed(2)}" height="${dn}" fill="#a3303f"/>`;
+      if (I) s += `<rect class="hit"${pop(`${key}:${i}`)} x="${(x - slot / 2).toFixed(2)}" y="2" width="${slot.toFixed(2)}" height="${h - 26}"/>`;
+    });
+    return s + monthLabels(season, h, cx);
+  }
+
+  function chartShots(d, h) {
+    const gs = withChances(d), n = gs.length || 1;
+    const f = gs.reduce((a, g) => a + g.chances.us.sog, 0) / n, a = gs.reduce((x, g) => x + g.chances.them.sog, 0) / n;
+    return { title: `Shots on goal<span class="big">${r1(f)}–${r1(a)}</span>`, note: 'per game: for (up) and against (down)',
+      svg: pairBars(d, h, (g) => g.chances.us.sog, (g) => g.chances.them.sog, 50, 25, 'shots') };
+  }
+  function chartHd(d, h) {
+    const gs = withChances(d);
+    const f = gs.reduce((a, g) => a + g.chances.us.hi.n, 0), a = gs.reduce((x, g) => x + g.chances.them.hi.n, 0);
+    return { title: `High-danger chances<span class="big">${f}–${a}</span>`, note: 'for (up) and against (down) each game',
+      svg: pairBars(d, h, (g) => g.chances.us.hi.n, (g) => g.chances.them.hi.n, 15, 5, 'hd') };
+  }
+  const paceSeries = (d) => {
+    const cut = d.pictures.own.wcRows[d.pictures.own.wcRows.length - 1];
+    const perGame = cut && cut.gp ? cut.pts / cut.gp : 1.1;
+    let pts = 0;
+    const out = [0];
+    playedGames(d).forEach((g, k) => { pts += g.result === 'W' ? 2 : g.result === 'O' ? 1 : 0; out.push(+(pts - perGame * (k + 1)).toFixed(1)); });
+    return { out, perGame };
+  };
+  function chartPace(d, h, id) {
+    const { out, perGame } = paceSeries(d), last = out[out.length - 1];
+    return { title: `Points vs playoff pace<span class="big">${sign(Math.round(last))}</span>`,
+      note: `points minus the last wild card's pace (${perGame.toFixed(2)} pts/game)`, svg: lineArea(d, h, out, 10, 'pace', id) };
+  }
+  const rollingXg = (d, n = 5) => {
+    const gs = playedGames(d), out = [0];
+    gs.forEach((g, k) => {
+      const win = gs.slice(Math.max(0, k - n + 1), k + 1).filter((x) => x.chances);
+      const f = win.reduce((a, x) => a + x.chances.us.xg, 0), a = win.reduce((x2, x) => x2 + x.chances.them.xg, 0);
+      out.push(f + a ? +((100 * f) / (f + a) - 50).toFixed(1) : 0);
+    });
+    return out;
+  };
+  function chartRollingXg(d, h, id) {
+    const s = rollingXg(d), last = s[s.length - 1];
+    return { title: `Rolling xG share<span class="big">${(50 + last).toFixed(1)}%</span>`, note: 'last 5 games’ expected-goals share, above or below 50%',
+      svg: lineArea(d, h, s, 20, 'rxg', id) };
+  }
+  function chartConfRank(d, h) {
+    const n = Math.max(d.season.total, 1), slot = slotW(n), N = d.confSize || 16, ranks = d.rankHistory || [];
+    const xk = (k) => PLOT_X0 + Math.max(0, k - 0.5) * slot;
+    const y = (r) => 8 + ((r - 1) / (N - 1)) * (h - 22);
+    let s = gridLabels([1, 8, N], y, (v) => `${v}${suffix(v)}`);
+    s += `<line x1="${PLOT_X0}" x2="${PLOT_X1}" y1="${y(8.5)}" y2="${y(8.5)}" stroke="#6a6a6a" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+    s += `<text x="${PLOT_X1 - 4}" y="${y(8.5) - 4}" fill="#8a8a8a" font-size="9.5" text-anchor="end">playoff line</text>`;
+    if (ranks.length) {
+      const pts = ranks.map((r, i) => [xk(i + 1), y(r)]);
+      s += `<path d="${pts.map(([a, b], i) => `${i ? 'L' : 'M'}${a.toFixed(1)} ${b.toFixed(1)}`).join('')}" fill="none" stroke="#bdbdbd" stroke-width="1.5" stroke-linejoin="round"/>`;
+      ranks.forEach((r, i) => { s += `<circle cx="${pts[i][0].toFixed(1)}" cy="${pts[i][1].toFixed(1)}" r="2.6" fill="${r <= 8 ? 'var(--win)' : 'var(--loss)'}"/>`; });
+      if (I) ranks.forEach((r, i) => { s += `<rect class="hit"${pop(`rank:${i + 1}`)} x="${(xk(i + 1) - slot / 2).toFixed(2)}" y="2" width="${slot.toFixed(2)}" height="${h - 6}"/>`; });
+    }
+    const last = ranks[ranks.length - 1];
+    return { title: `Conference rank<span class="big">${last ? `${last}${suffix(last)}` : '–'}</span>`, note: `after each game, of ${N} (top 8 make the playoffs)`, svg: s };
+  }
+
+  // ---------- picture-slot panels ----------
+  const prow = (label, t, a, me) => `<div class="prow${a === me ? ' me' : ''}"${pop(`team:${a}`)}><span class="lbl">${esc(label)}</span>${logo(t.logo, a)}<span class="ab">${esc(a)}</span><span class="gp">${t.gp}</span><span class="pts">${t.pts}</span></div>`;
+  function wildcardRace(d) {
+    const me = d.team.abbrev, conf = d.teams[me].conf;
+    const rows = Object.entries(d.teams).filter(([, t]) => t.conf === conf && t.wcSeq > 0).sort((a, b) => a[1].wcSeq - b[1].wcSeq).slice(0, 9);
+    return `<div class="colhead big"><span class="t">Wild card race</span></div><div class="sub first tight"><span>${esc(conf)}</span><span class="gp">GP</span><span class="pts">PTS</span></div>` +
+      `<div class="tightrows">${rows.map(([a, t], i) => (i === 2 ? '<div class="cutline"></div>' : '') + prow(i < 2 ? `WC${i + 1}` : `${i + 1}`, t, a, me)).join('')}</div>`;
+  }
+  function leagueTable(d) {
+    const me = d.team.abbrev, rows = Object.entries(d.teams).sort((a, b) => a[1].leagueSeq - b[1].leagueSeq).slice(0, 10);
+    return `<div class="colhead big"><span class="t">League standings</span></div><div class="sub first tight"><span>Top 10</span><span class="gp">GP</span><span class="pts">PTS</span></div>` +
+      `<div class="tightrows">${rows.map(([a, t], i) => prow(`${i + 1}`, t, a, me)).join('')}</div>`;
+  }
+  function statTiles(d, title, keys) {
+    const tiles = keys.filter((k) => d.stats[k]).slice(0, 8).map((k) => {
+      const v = d.stats[k];
+      return `<div class="tile"${pop(`stat:${k}`)}><div class="k">${esc(SHORT[k] || v.label)}</div><div class="v">${esc(v.value)}<small>${esc(v.unit.trim() ? ` ${v.unit.trim()}` : '')}</small></div><div class="rk">${v.rank}${suffix(v.rank)} of ${v.of}</div></div>`;
+    }).join('');
+    return `<div class="colhead big"><span class="t">${esc(title)}</span><span class="r small">LEAGUE RANK</span></div><div class="tiles">${tiles}</div>`;
+  }
+  function resultsList(d) {
+    const gs = playedGames(d).slice(-10).reverse();
+    return `<div class="colhead big"><span class="t">Last 10</span><span class="r small">${esc(d.teams[d.team.abbrev].l10)}</span></div><div class="glist"${pop('form')}>` +
+      gs.map((g) => `<div class="grow"><span class="gd">${esc(g.info.date.replace(/^\w+, /, ''))}</span><span class="ga">${g.home ? 'vs' : '@'}</span>${logo(g.info.oppLogo, g.opp)}<span class="res ${g.result === 'O' ? (g.info.status.split('/')[1] || 'OT') : g.result}">${g.result === 'O' ? (g.info.status.split('/')[1] || 'OT') : g.result}</span><span class="gs m">${g.info.us}–${g.info.them}</span></div>`).join('') + '</div>';
+  }
+  function scheduleList(d) {
+    const gs = d.season.games.map((g, i) => [g, i]).filter(([g]) => !g.result).slice(0, 10);
+    return `<div class="colhead big"><span class="t">Coming up</span><span class="r small">EASTERN TIME</span></div><div class="glist">` +
+      gs.map(([g, i]) => `<div class="grow"${pop(`sched:${i}`)}><span class="gd">${esc(g.info.date.replace(/^\w+, /, ''))}</span><span class="ga">${g.home ? 'vs' : '@'}</span>${logo(g.info.oppLogo, g.opp)}<span class="gn">${esc(g.opp)}</span><span class="gs">${esc(g.info.time.replace(' ET', ''))}</span></div>`).join('') + '</div>';
+  }
+
+  // ---------- list-slot panels ----------
+  // a comparison row: our value | label | their value, better side tinted
+  const cmpRow = (label, a, b, better, fa = (v) => v) => {
+    const win = better === 'high' ? [+a > +b, +b > +a] : better === 'low' ? [+a < +b, +b < +a] : [false, false];
+    const cell = (v, w) => `<div class="cv${w ? ' win' : ''}"${w ? ' style="--tint:#5b8fd6"' : ''}><b class="m">${esc(fa(v))}</b></div>`;
+    return `<div class="chr">${cell(a, win[0])}<div class="cl">${esc(label)}</div>${cell(b, win[1])}</div>`;
+  };
+  const f1 = (v) => (v == null ? '\u2013' : Number(v).toFixed(1));
+  function nextOpponent(d, compact) {
+    const g = d.nextGames[0];
+    if (!g) return `<div class="colhead big"><span class="t">Next opponent</span></div><div class="note" style="margin-top:12px">No games scheduled</div>`;
+    const me = d.team.abbrev, t = d.teams[me], o = d.teams[g.opp] || {};
+    const series = d.season.games.filter((x) => x.opp === g.opp && x.result);
+    const c = (r) => series.filter((x) => x.result === r).length;
+    const rows = [
+      ['Points %', pct3(t.pct), pct3(o.pct ?? 0), 'high'], ['Goal diff', sign(t.diff), sign(o.diff ?? 0), 'high', null, t.diff, o.diff],
+      ['Last 10', t.l10, o.l10 || '\u2013'], ['xG share', f1(t.xgPct), f1(o.xgPct), 'high'],
+      ['Power play', f1(t.pp), f1(o.pp), 'high'], ['Penalty kill', f1(t.pk), f1(o.pk), 'high'],
+      ['Goals for / gm', t.gfpg ?? '–', o.gfpg ?? '–', 'high'], ['Goals agst / gm', t.gapg ?? '–', o.gapg ?? '–', 'low'],
+    ].slice(0, compact ? 4 : 6);
+    let h = `<div class="colhead big"><span class="t">Next opponent</span><span class="r small">${esc(g.dow)} ${esc(g.day)} · ${esc(g.time)}</span></div>`;
+    h += `<div class="ch opp${compact ? ' compact' : ''}"${pop(`team:${g.opp}`)}><div class="chh">${logo(t.logo, me)}<span class="cf">${esc(me)}<br>${esc(t.record)}</span><span class="cmid">${g.home ? 'vs' : '@'}<small>series ${c('W')}-${c('L')}-${c('O')}</small></span><span class="cf">${esc(g.opp)}<br>${esc(o.record || '')}</span>${logo(o.logo || g.logo, g.opp)}</div>`;
+    h += rows.map(([label, a, b, better, , na, nb]) => {
+      if (na !== undefined) {   // compare on the raw numbers when the label is formatted
+        const w = [na > nb, nb > na];
+        return `<div class="chr"><div class="cv${w[0] ? ' win' : ''}" style="--tint:#5b8fd6"><b class="m">${esc(a)}</b></div><div class="cl">${esc(label)}</div><div class="cv${w[1] ? ' win' : ''}" style="--tint:#5b8fd6"><b class="m">${esc(b)}</b></div></div>`;
+      }
+      return cmpRow(label, a, b, better);
+    }).join('');
+    return h + '</div>';
+  }
+  function topScorers(d, compact) {
+    const list = (d.scorers || []).slice(0, compact ? 4 : 6);
+    return `<div class="colhead big"><span class="t">Top scorers</span><span class="r small">G · A · P</span></div><div class="plist">` +
+      list.map((x, i) => `<div class="prw"${pop(`scorer:${i}`)}><span class="face"><img src="${esc(x.headshot)}" alt=""></span><span class="pn"><b>${esc(x.name)}</b><small>${esc(x.pos)} · ${x.gp} GP</small></span><span class="pga m">${x.g}·${x.a}</span><span class="pv m">${x.p}</span></div>`).join('') + '</div>';
+  }
+  function goalieList(d, compact) {
+    const list = (d.goalies || []).slice(0, compact ? 3 : 4);
+    return `<div class="colhead big"><span class="t">Goalies</span><span class="r small">SV% · GAA</span></div><div class="plist">` +
+      list.map((x, i) => `<div class="prw"${pop(`goalie:${i}`)}><span class="face"><img src="${esc(x.headshot)}" alt=""></span><span class="pn"><b>${esc(x.name)}</b><small>${esc(x.record)} · ${x.gp} GP</small></span><span class="pga m">${esc(x.gaa)}</span><span class="pv m">${esc(x.sv)}</span></div>`).join('') + '</div>';
+  }
+  function seasonChances(d, compact) {
+    const gs = withChances(d), n = gs.length || 1;
+    const avg = (f) => gs.reduce((a, g) => a + f(g), 0) / n;
+    const rows = [
+      ['Chances / gm', avg((g) => g.chances.us.chances), avg((g) => g.chances.them.chances), 'high', 1],
+      ['High danger', avg((g) => g.chances.us.hi.n), avg((g) => g.chances.them.hi.n), 'high', 1],
+      ['Mid danger', avg((g) => g.chances.us.mid.n), avg((g) => g.chances.them.mid.n), 'high', 1],
+      ['Low danger', avg((g) => g.chances.us.low.n), avg((g) => g.chances.them.low.n), 'high', 1],
+      ['xG / gm', avg((g) => g.chances.us.xg), avg((g) => g.chances.them.xg), 'high', 2],
+      ['Goals / gm', avg((g) => g.chances.us.goals), avg((g) => g.chances.them.goals), 'high', 2],
+      ['Shots / gm', avg((g) => g.chances.us.sog), avg((g) => g.chances.them.sog), 'high', 1],
+    ].slice(0, compact ? 5 : 7);
+    return `<div class="colhead big"><span class="t">Season chances</span><span class="r small">PER GAME</span></div><div class="ch${compact ? ' compact' : ''}"${pop('xginfo')}>` +
+      rows.map(([label, a, b, better, dp]) => cmpRow(label, a.toFixed(dp), b.toFixed(dp), better)).join('') + '</div>';
+  }
+  function formPanel(d, compact) {
+    const gs = playedGames(d).slice(-10);
+    const c = (r) => gs.filter((g) => g.result === r).length;
+    const gf = gs.reduce((a, g) => a + g.info.us, 0), ga = gs.reduce((a, g) => a + g.info.them, 0);
+    const xs = gs.filter((g) => g.chances), xf = xs.reduce((a, g) => a + g.chances.us.xg, 0), xa = xs.reduce((a, g) => a + g.chances.them.xg, 0);
+    const home = gs.filter((g) => g.home), road = gs.filter((g) => !g.home);
+    const rec3 = (a) => `${a.filter((g) => g.result === 'W').length}-${a.filter((g) => g.result === 'L').length}-${a.filter((g) => g.result === 'O').length}`;
+    const chips = gs.map((g) => `<span class="res ${g.result === 'O' ? 'OT' : g.result}">${g.result === 'O' ? 'OT' : g.result}</span>`).join('');
+    const rows = [['Record', `${c('W')}-${c('L')}-${c('O')}`], ['Goals', `${gf}–${ga} (${sign(gf - ga)})`], ['xG share', xf + xa ? `${((100 * xf) / (xf + xa)).toFixed(1)}%` : '–'],
+      ['Home', rec3(home)], ['Road', rec3(road)], ['Streak', d.teams[d.team.abbrev].streak]].slice(0, compact ? 4 : 6);
+    return `<div class="colhead big"><span class="t">Recent form</span><span class="r small">LAST ${gs.length}</span></div><div class="formp"${pop('form')}><div class="chips">${chips}</div>` +
+      `<dl class="frows">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd class="m">${esc(v)}</dd></div>`).join('')}</dl></div>`;
+  }
+  const LIST_PANELS = {
+    next5: (d) => nextCards(d), last5cards: (d) => lastCards(d), next5rows: (d) => nextRows(d), last5: (d) => lastRows(d),
+    chances: (d, c) => chancesPanel(d, c), nextOpp: (d, c) => nextOpponent(d, c), scorers: (d, c) => topScorers(d, c),
+    goalies: (d, c) => goalieList(d, c), seasonChances: (d, c) => seasonChances(d, c), form: (d, c) => formPanel(d, c),
+  };
+  const PICTURE_PANELS = {
+    wildcard: wildcardRace, league: leagueTable, results: resultsList, schedule: scheduleList,
+    teamStats: (d) => statTiles(d, 'Team stats', ['pp', 'pk', 'gfpg', 'gapg', 'sfpg', 'fo', 'xgPct', 'ptspct']),
+    edgeStats: (d) => statTiles(d, 'NHL EDGE', ['topSpeed', 'bursts20', 'topShot', 'shots90', 'distance', 'hdShots', 'ozTime', 'satDiff']),
+  };
+
   // ---------- full board ----------
   let current = null;
   function render(d) {
@@ -413,8 +628,8 @@
       meta: () => (live && live.state !== 'FUT' ? liveMeta(d) : `<div class="meta"><div>${esc(h.date)}</div><div${pop('splits')}>${esc(h.splits)}</div><div${pop('sos')}>${esc(h.schedule)}</div></div>`),
       chart1: () => chartSlot(d, 'chart1', ...G.chart1),
       chart2: () => chartSlot(d, 'chart2', ...G.chart2),
-      upper: () => { const up = pick(d, 'upper'); return slotBox('upper', ...G.upper, up === 'last5cards' ? lastCards(d) : up === 'chances' ? chancesPanel(d, false) : nextCards(d)); },
-      lower: () => { const lo = pick(d, 'lower'); return slotBox('lower', ...G.lower, lo === 'next5rows' ? nextRows(d) : lo === 'chances' ? chancesPanel(d, true) : lastRows(d)); },
+      upper: () => slotBox('upper', ...G.upper, (LIST_PANELS[pick(d, 'upper')] || LIST_PANELS.next5)(d, false)),
+      lower: () => slotBox('lower', ...G.lower, (LIST_PANELS[pick(d, 'lower')] || LIST_PANELS.last5)(d, true)),
     };
     let s = `<header class="abs hdr">
       <svg class="band" viewBox="0 0 210 95" width="210" height="95" preserveAspectRatio="none">
@@ -703,6 +918,39 @@
           rowsHtml([['Longest win streak', longW, true], ['Longest winless run', longL, true], ['One-goal games', `${c(one, 'W')}-${c(one, 'L')}-${c(one, 'O')}`, true],
             ['Biggest win margin', best > 0 ? `+${best}` : '', true], ['Heaviest loss margin', worst < 0 ? sign(worst) : '', true],
             ['Shutouts', `${ps.filter((g) => g.info.them === 0).length} for, ${ps.filter((g) => g.info.us === 0).length} against`, true]]);
+      }
+      case 'shots': {
+        const g = d.season.games[+arg], c = g.chances;
+        return `<div class="pk">Shots · ${g.home ? 'vs' : '@'} ${esc(g.opp)} · ${esc(g.info.date)}</div><div class="pt"><span class="big m">${c.us.sog}–${c.them.sog}</span><span>shots on goal</span></div>` +
+          rowsHtml([['Shooting %', c.us.sog ? `${((100 * c.us.goals) / c.us.sog).toFixed(1)}%` : '–', true], ['Save %', c.them.sog ? pct3(1 - c.them.goals / c.them.sog) : '–', true],
+            ['Shots blocked by them', c.us.blocked, true], ['Shots blocked by us', c.them.blocked, true]]);
+      }
+      case 'hd': {
+        const g = d.season.games[+arg], c = g.chances;
+        return `<div class="pk">High danger · ${g.home ? 'vs' : '@'} ${esc(g.opp)} · ${esc(g.info.date)}</div><div class="pt"><span class="big m">${c.us.hi.n}–${c.them.hi.n}</span><span>high-danger chances</span></div>` +
+          rowsHtml([['High-danger xG', `${c.us.hi.xg.toFixed(2)}–${c.them.hi.xg.toFixed(2)}`, true], ['High-danger goals', `${c.us.hi.g}–${c.them.hi.g}`, true]]) +
+          note('Within 20 ft of the goal line and 19 ft of centre.');
+      }
+      case 'pace': {
+        const k = +arg, { out, perGame } = paceSeries(d), g = playedGame(d, k);
+        return `<div class="pk">Playoff pace · after game ${k}</div><div class="pt"><span class="big m">${sign(Math.round(out[k]))}</span><span>points vs pace</span></div>` +
+          rowsHtml([['Game', vsLine(g)], ['Pace', `${(perGame * k).toFixed(1)} pts after ${k} games`, true]]);
+      }
+      case 'rxg': {
+        const k = +arg, s = rollingXg(d), g = playedGame(d, k);
+        return `<div class="pk">Rolling xG share · after game ${k}</div><div class="pt"><span class="big m">${(50 + s[k]).toFixed(1)}%</span><span>last 5 games</span></div>` +
+          rowsHtml([['Game', vsLine(g)], g?.chances ? ['That game’s xG', `${g.chances.us.xg.toFixed(2)}–${g.chances.them.xg.toFixed(2)}`, true] : null]);
+      }
+      case 'rank': {
+        const k = +arg, r = d.rankHistory[k - 1], g = playedGame(d, k);
+        return `<div class="pk">Conference rank · after game ${k}</div><div class="pt"><span class="big m">${r}${suffix(r)}</span><span>of ${d.confSize}</span></div>` +
+          rowsHtml([['Game', vsLine(g)], ['In a playoff spot', r <= 8 ? 'Yes' : 'No']]) + note('By points, then games played and regulation wins (the official tiebreakers can differ slightly).');
+      }
+      case 'sched': return gamePop(d.season.games[+arg].info, `Game ${+arg + 1} of ${d.season.total}`);
+      case 'scorer': case 'goalie': {
+        const x = (kind === 'scorer' ? d.scorers : d.goalies)[+arg];
+        return `<div class="pk">${kind === 'scorer' ? 'Top scorers' : 'Goalies'}</div><div class="pt"><span class="face sm"><img src="${esc(x.headshot)}" alt=""></span><span>${esc(x.full)}</span></div>` +
+          `<div class="pgrid">${(x.stats || []).map(([k2, v]) => `<div><b class="m">${esc(v)}</b><span>${esc(k2)}</span></div>`).join('')}</div>`;
       }
       case 'cut': {
         const p = d.pictures.own, lastIn = p.wcRows[p.wcRows.length - 1], firstOut = p.outRows[0];

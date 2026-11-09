@@ -356,3 +356,55 @@ body.stack .livebox .ls, body.stack .livebox .lsc { justify-content: flex-start;
 .pop .pgoals small { color: var(--muted); }
 .pop .pgoals .tag { color: var(--otl); font-weight: 700; }
 .pop .pt .pst { margin-left: auto; color: var(--muted); font: 600 13px var(--cond); }
+
+/* ---------- more panels ---------- */
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.tiles .tile { background: var(--card); border-radius: 3px; padding: 6px 7px 5px; height: 61px; overflow: hidden; }
+.tiles .tile .k { font: 700 10px var(--cond); letter-spacing: 0.08em; color: var(--otl); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tiles .tile .v { font: 400 20px var(--mono); margin-top: 4px; line-height: 1; }
+.tiles .tile .v small { font-size: 11px; color: var(--muted); }
+.tiles .tile .rk { font: 500 10px var(--cond); color: var(--muted); margin-top: 3px; }
+.tiles .tile[data-pop]:hover { background: #242424; }
+.glist { margin-top: 6px; }
+.grow { display: flex; align-items: center; gap: 7px; height: 26px; font-size: 14px; }
+.grow .gd { width: 52px; color: var(--muted); font: 600 12px var(--cond); white-space: nowrap; }
+.grow .ga { width: 18px; color: var(--muted); font: 500 12px var(--cond); text-align: center; }
+.grow img.logo { width: 18px; height: 18px; transform: scale(1.4); }
+.grow .gn { font: 700 14px var(--head); margin-left: 4px; }
+.grow .res { margin-left: auto; width: 26px; height: 20px; display: grid; place-items: center; font: 600 13px var(--head); border-radius: 1px; }
+.grow .res.W { background: var(--win); color: var(--win-ink); }
+.grow .res.L { background: var(--loss); color: #fff; }
+.grow .res.OT, .grow .res.SO { background: var(--otl); color: #3a2c12; font-size: 11px; }
+.grow .gs { margin-left: auto; width: 54px; text-align: right; font: 600 14px var(--head); }
+.grow .res + .gs { margin-left: 0; width: 42px; font: 400 15px var(--mono); }
+.grow[data-pop]:hover { background: rgba(255, 255, 255, 0.04); }
+.plist { margin-top: 8px; display: grid; gap: 4px; }
+.prw { display: flex; align-items: center; gap: 9px; height: 44px; padding: 0 2px; }
+.prw .face { width: 34px; height: 34px; border-radius: 50%; overflow: hidden; background: #1d1d1b; border: 1.5px solid color-mix(in srgb, var(--primary) 80%, #fff); flex: none; }
+.prw .face img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+.prw .pn { display: flex; flex-direction: column; line-height: 1.1; min-width: 0; }
+.prw .pn b { font: 700 16px var(--head); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prw .pn small { color: var(--muted); font: 500 11.5px var(--cond); }
+.prw .pga { margin-left: auto; color: var(--muted); font: 400 13px var(--mono); }
+.prw .pv { width: 46px; text-align: right; font: 400 21px var(--mono); }
+.prw[data-pop]:hover { background: rgba(255, 255, 255, 0.04); }
+.formp .chips { display: flex; gap: 3px; margin: 10px 0 8px; }
+.formp .chips .res { flex: 1; height: 24px; display: grid; place-items: center; font: 600 12px var(--head); border-radius: 1px; }
+.formp .chips .res.W { background: var(--win); color: var(--win-ink); }
+.formp .chips .res.L { background: var(--loss); color: #fff; }
+.formp .chips .res.OT { background: var(--otl); color: #3a2c12; font-size: 10px; }
+.formp .frows { margin: 0; display: grid; gap: 2px; }
+.formp .frows div { display: flex; justify-content: space-between; align-items: center; height: 29px; padding: 0 6px; background: var(--card); border-radius: 3px; }
+.formp .frows dt { color: var(--muted); font: 600 13px var(--cond); }
+.formp .frows dd { margin: 0; font: 400 16px var(--mono); }
+.ch .chh .cf + .cf { text-align: right; }
+
+.ppic .sub.tight { margin-top: 6px; height: 20px; }
+.tightrows .prow { height: 23.5px; }
+
+.ch .chh .cf { min-width: 0; }
+.ch .chh .cf + .cf { white-space: nowrap; }
+.ch.opp .chh img.logo { transform: scale(1.15); }
+.ch .chh .cmid { display: flex; flex-direction: column; align-items: center; color: var(--muted); font: 700 15px var(--head); line-height: 1.05; white-space: nowrap; }
+.ch .chh .cmid small { font: 600 9.5px var(--cond); letter-spacing: 0.06em; text-transform: uppercase; }
+.ch.opp .chh .cf { font-size: 11px; color: #cfcfcf; }

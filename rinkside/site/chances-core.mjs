@@ -69,10 +69,10 @@ export function danger(s) {
 // One team's side of a game's report.
 export function side(g, team, w) {
   const b = { hi: { n: 0, xg: 0, g: 0 }, mid: { n: 0, xg: 0, g: 0 }, low: { n: 0, xg: 0, g: 0 } };
-  let goals = 0, en = 0, dumps = 0, dumpGoals = 0;
+  let goals = 0, en = 0, dumps = 0, dumpGoals = 0, sog = 0;
   for (const s of g.shots) {
     if (s.team !== team) continue;
-    goals += s.goal;
+    goals += s.goal; sog++;
     if (s.en) { en += s.goal; continue; }
     if (s.zone !== 'O' || s.fx > 58) { dumps++; dumpGoals += s.goal; continue; }   // long shots from the blue line or beyond
     const k = danger(s), v = xg(w, s);
@@ -80,7 +80,7 @@ export function side(g, team, w) {
   }
   const r2 = (v) => Math.round(v * 100) / 100;
   for (const k of Object.keys(b)) b[k].xg = r2(b[k].xg);
-  return { chances: b.hi.n + b.mid.n + b.low.n, hi: b.hi, mid: b.mid, low: b.low, xg: r2(b.hi.xg + b.mid.xg + b.low.xg), goals, en, dumps, dumpGoals, blocked: g.blocked[team] || 0 };
+  return { chances: b.hi.n + b.mid.n + b.low.n, hi: b.hi, mid: b.mid, low: b.low, xg: r2(b.hi.xg + b.mid.xg + b.low.xg), goals, sog, en, dumps, dumpGoals, blocked: g.blocked[team] || 0 };
 }
 export function report(g, teamId, w) {
   const opp = g.home === teamId ? g.away : g.home;

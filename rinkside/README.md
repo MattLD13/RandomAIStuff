@@ -142,12 +142,13 @@ gets a ⇄ button; tap a panel to pick what it shows. Choices are saved in your 
 
 | Slot | Options |
 | --- | --- |
-| Top and middle charts | Game by game (goal margin), playoff line, goal differential, division points race |
-| The four grid sections | Any division's results grid, any division's standings, league top 8, conference top 8 |
-| Playoff picture | Your conference, or the other conference |
-| The two stat boxes (22 options) | Power play, penalty kill, goals for/against per game, shots for/against per game, faceoffs, shooting %, team save %, points %, goal diff per game, plus NHL EDGE: top skating speed, bursts over 20/22 mph, hardest shot, shots over 90 mph, distance skated, high-danger shots and shooting %, offensive/defensive-zone time, shot-attempt differential |
-| The three leader rows (15 options) | Points, goals, assists, shots, +/-, power-play goals, game-winners, ice time, PIM, save %, GAA, goalie wins, shutouts, plus EDGE fastest skater and hardest shot |
-| Upper / lower lists | Next 5 or Last 5, as cards or as a list |
+| Top and middle charts (10) | Game by game (goal margin), playoff line, goal differential, division points race, expected goals by game, points vs playoff pace, rolling 5-game xG share, shots on goal by game, high-danger chances by game, conference rank over time |
+| The four grid sections (10) | Any division's results grid, any division's standings, league top 8, conference top 8 |
+| Playoff-picture slot (8) | Playoff picture (your conference or the other), wild card race, league standings top 10, team stats with ranks, NHL EDGE stats with ranks, last 10 results, next 10 games |
+| The two stat boxes (25) | Power play, penalty kill, goals for/against per game, shots for/against per game, faceoffs, shooting %, team save %, points %, goal diff per game, xG share, finishing, high-danger chance share, plus NHL EDGE: top skating speed, bursts over 20/22 mph, hardest shot, shots over 90 mph, distance skated, high-danger shots and shooting %, offensive/defensive-zone time, shot-attempt differential |
+| The three leader rows (15) | Points, goals, assists, shots, +/-, power-play goals, game-winners, ice time, PIM, save %, GAA, goalie wins, shutouts, plus EDGE fastest skater and hardest shot |
+| Upper list (10) | Next 5 (cards or list), Last 5 (cards or list), scoring chances (last game), season scoring chances, next-opponent comparison, top scorers, goalies, recent form |
+| Lower list (8) | The same, apart from the two card layouts, which don't fit |
 
 To change the default for everyone (and the published wallpapers), add `"layout"` to
 `config.json` with the slots you want to change, e.g.
