@@ -1,5 +1,6 @@
 {
   "defaultTeam": "NYR",
+  "liveProxy": "",
   "teams": {
     "ANA": { "primary": "#F47A38", "accent": "#B9975B", "slug": "ducks", "altLogo": "ANA_19931994-19951996_dark.svg" },
     "BOS": { "primary": "#FFB81C", "accent": "#FFFFFF", "slug": "bruins", "aliases": ["bs"], "altLogo": "BOS_alt.svg" },

@@ -55,6 +55,9 @@ rinkside/
   site/alt/                    optional alternate-logo images of your own (see config "altLogo")
   site/fonts/RinksideMono.woff2  the numeral font (built by fonts/build-font.py, committed)
   fonts/build-font.py          draws Rinkside Mono (pip install fonttools brotli shapely)
+  scripts/chances.mjs          league play-by-play -> xG model + scoring chances (cached in .cache/)
+  site/chances-core.mjs        per-shot xG / danger logic, shared by the build and the browser (live games)
+  cloudflare/live-proxy.js     Cloudflare Worker that relays live-game data with CORS headers
   SETUP-WITH-CLAUDE.md         a prompt that has Claude (desktop) do the setup below for you
 .github/workflows/rinkside.yml runs every 30 min and on every push to main, deploys to GitHub Pages
 ```
@@ -179,6 +182,35 @@ New options in Customize:
 - **Expected goals by game:** a chart. Tap a game for its full report.
 - **Stat boxes:** xG share, finishing (goals minus xG) and high-danger chance share, each
   ranked across the league.
+
+## Live games
+
+When the team's game is on, the page polls the NHL every 15 seconds and shows it live:
+- **Header:** a live strip with period, clock, score, shots, xG and power-play status.
+  Tap it for goals with scorers, assists and PP/SH/EN tags.
+- **Season and xG charts:** a dashed "LIVE" bar.
+- **Next 5:** the game's card shows the score.
+- **Scoring-chances panel:** switches to the game in progress. The browser runs the same xG
+  model as the build (`site/chances-core.mjs`), so live xG matches the final numbers.
+
+When the game ends, polling stops and the regular 30-minute refresh brings in the final.
+
+The NHL API doesn't send CORS headers, so browsers can't read it directly. A small
+**Cloudflare Worker** (`cloudflare/live-proxy.js`) relays only the live-game endpoints, with
+CORS headers and an 8-second shared cache. The free plan is plenty.
+
+**One-time setup:**
+
+1. **Create the Worker:** Cloudflare dashboard → **Workers & Pages** → **Create** →
+   **Create Worker**. Name it `rinkside-live`, **Deploy**, then **Edit code**. Replace the
+   code with `rinkside/cloudflare/live-proxy.js` and **Deploy** again. (CLI alternative:
+   `cd rinkside/cloudflare && npx wrangler deploy`.)
+2. **Test it:** open its address (like `https://rinkside-live.<you>.workers.dev`) followed by
+   `/v1/score/now`. It should return JSON.
+3. **Point the site at it:** set `"liveProxy": "https://rinkside-live.<you>.workers.dev"` in
+   `rinkside/config.json` and push.
+
+Without `liveProxy`, the site works as before, refreshing every 30 minutes.
 
 ## Screen sizes
 

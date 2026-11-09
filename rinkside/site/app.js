@@ -24,6 +24,11 @@
   };
   const pct3 = (v) => Number(v).toFixed(3).replace(/^0/, '');
 
+  // ---------- live game state (polled through the Cloudflare relay; see cloudflare/live-proxy.js) ----------
+  let live = null;            // parsed state of the team's game in progress
+  const inProgress = () => live && (live.state === 'LIVE' || live.state === 'CRIT');
+  const isLiveGame = (id) => live && live.id === id && live.state !== 'FUT';
+
   // ---------- layout ----------
   const DEFAULT_LAYOUT = {
     chart1: 'margins', chart2: 'playoffLine',
@@ -122,9 +127,17 @@
         s += `<text x="${Math.min(Math.max(cx(i), 13), PLOT_X1 - 13).toFixed(1)}" y="${h - 9}" fill="#9a9a9a" font-size="13" font-weight="500" text-anchor="middle">${esc(g.month)}</text>`;
       prev = g.month;
     });
+    // the game in progress: an outlined bar at the current margin
+    const li = live && inProgress() ? season.games.findIndex((g) => g.id === live.id) : -1;
+    if (li >= 0) {
+      const m = Math.max(-cap, Math.min(cap, live.us - live.them)), bh = Math.max(Math.abs(m) * unit, 2);
+      s += `<rect class="livebar" x="${(cx(li) - bw / 2).toFixed(2)}" y="${m > 0 ? zero - bh : m < 0 ? zero : zero - 1}" width="${bw.toFixed(2)}" height="${bh}" fill="none" stroke="#fff" stroke-width="1.4" stroke-dasharray="2 1.5"/>`;
+      s += `<text x="${cx(li).toFixed(1)}" y="${zero - 5 * unit - 2}" fill="var(--loss)" font-size="9" font-weight="700" text-anchor="middle">LIVE</text>`;
+    }
     // one tap target per played game: the only place a game's score opens
     if (I) season.games.forEach((g, i) => {
       if (g.result) s += `<rect class="hit"${pop(`game:${i}`)} x="${(cx(i) - slot / 2).toFixed(2)}" y="2" width="${slot.toFixed(2)}" height="${h - 26}"/>`;
+      else if (i === li) s += `<rect class="hit"${pop('live')} x="${(cx(i) - slot / 2).toFixed(2)}" y="2" width="${slot.toFixed(2)}" height="${h - 26}"/>`;
     });
     return {
       title: `<span${pop('season')}>The season, game by game</span>`,
@@ -226,6 +239,14 @@
       s += `<circle cx="${x.toFixed(2)}" cy="${zero + Math.min(cap, c.them.goals) * unit}" r="2.2" fill="#fff"/>`;
       if (I) s += `<rect class="hit"${pop(`chances:${i}`)} x="${(x - slot / 2).toFixed(2)}" y="2" width="${slot.toFixed(2)}" height="${h - 26}"/>`;
     });
+    const li = live && inProgress() && live.chances ? season.games.findIndex((g) => g.id === live.id) : -1;
+    if (li >= 0) {
+      const c = live.chances, x = cx(li), up = Math.min(cap, c.us.xg) * unit, dn = Math.min(cap, c.them.xg) * unit;
+      s += `<rect x="${(x - bw / 2).toFixed(2)}" y="${zero - up}" width="${bw.toFixed(2)}" height="${up}" fill="none" stroke="#2f8a3a" stroke-width="1.4" stroke-dasharray="2 1.5"/>`;
+      s += `<rect x="${(x - bw / 2).toFixed(2)}" y="${zero}" width="${bw.toFixed(2)}" height="${dn}" fill="none" stroke="#c42a3c" stroke-width="1.4" stroke-dasharray="2 1.5"/>`;
+      s += `<text x="${x.toFixed(1)}" y="${zero - 5 * unit - 2}" fill="var(--loss)" font-size="9" font-weight="700" text-anchor="middle">LIVE</text>`;
+      if (I) s += `<rect class="hit"${pop('live')} x="${(x - slot / 2).toFixed(2)}" y="2" width="${slot.toFixed(2)}" height="${h - 26}"/>`;
+    }
     const count = {};
     season.games.forEach((g) => (count[g.month] = (count[g.month] || 0) + 1));
     let prev = null;
@@ -297,14 +318,20 @@
 
   // ---------- upper / lower lists ----------
   const nextCards = (d) => `<div class="colhead big"><span class="t">Next 5</span><span class="r small">EASTERN TIME</span></div><div class="nlist">${
-    d.nextGames.length ? d.nextGames.map((g, i) => `<div class="ncard"${pop(`next:${i}`)}><div class="date"><span class="dow">${esc(g.dow)}</span><span class="day">${esc(g.day)}</span></div><span class="at">${g.home ? 'vs' : '@'}</span>${logo(g.logo, g.opp)}<span class="time">${esc(g.time)}</span></div>`).join('')
+    d.nextGames.length ? d.nextGames.map((g, i) => {
+      const L = isLiveGame(g.id);
+      return `<div class="ncard${L ? ' live' : ''}"${pop(L ? 'live' : `next:${i}`)}><div class="date"><span class="dow">${esc(g.dow)}</span><span class="day">${esc(g.day)}</span></div><span class="at">${g.home ? 'vs' : '@'}</span>${logo(g.logo, g.opp)}<span class="time">${L ? liveShort() : esc(g.time)}</span></div>`;
+    }).join('')
       : '<div class="note" style="margin-top:12px">No games scheduled</div>'}</div>`;
   const lastCards = (d) => `<div class="colhead big"><span class="t">Last 5</span><span class="r small">FINAL SCORES</span></div><div class="nlist"${pop('form')}>${
     d.lastGames.map((g) => `<div class="ncard"><div class="date"><span class="dow">${esc(g.dow)}</span><span class="day">${esc(g.day)}</span></div><span class="at">${g.info.home ? 'vs' : '@'}</span>${logo(g.logo, g.opp)}<span class="time"><span class="res ${g.result}">${esc(g.result)}</span> ${esc(g.score.replace('-', '–'))}</span></div>`).join('')}</div>`;
   const lastRows = (d) => `<div class="colhead big"><span class="t">Last 5</span></div><div class="llist"${pop('form')}>${
     d.lastGames.map((g) => `<div class="lgrow">${logo(g.logo, g.opp)}<span class="res ${g.result}">${esc(g.result)}</span><span class="sc">${esc(g.score.replace('-', '–'))}</span></div>`).join('')}</div>`;
   const nextRows = (d) => `<div class="colhead big"><span class="t">Next 5</span><span class="r small">EASTERN TIME</span></div><div class="llist">${
-    d.nextGames.map((g, i) => `<div class="lgrow"${pop(`next:${i}`)}>${logo(g.logo, g.opp)}<span class="nd">${esc(g.dow)} ${esc(g.day)}</span><span class="sc nt">${g.home ? 'vs' : '@'} ${esc(g.time)}</span></div>`).join('')}</div>`;
+    d.nextGames.map((g, i) => {
+      const L = isLiveGame(g.id);
+      return `<div class="lgrow${L ? ' live' : ''}"${pop(L ? 'live' : `next:${i}`)}>${logo(g.logo, g.opp)}<span class="nd">${L ? 'LIVE' : `${esc(g.dow)} ${esc(g.day)}`}</span><span class="sc nt">${L ? liveShort() : `${g.home ? 'vs' : '@'} ${esc(g.time)}`}</span></div>`;
+    }).join('')}</div>`;
 
   // ---------- geometry: the full board, or a narrower two-column board for phones ----------
   const GEOM = {
@@ -325,25 +352,38 @@
     return null;
   };
   const DANGER = [['hi', 'High danger', 'var(--win)'], ['mid', 'Mid danger', '#e0b23a'], ['low', 'Low danger', 'var(--loss)']];
-  function chancesTable(d, i, compact) {
-    const g = d.season.games[i], c = g.chances, me = d.team.abbrev, opp = g.opp;
+  function chancesTable(d, g, compact) {
+    const c = g.chances, me = d.team.abbrev, opp = g.opp;
     const cell = (v, sub, win, tint) => `<div class="cv${win ? ' win' : ''}"${win && tint ? ` style="--tint:${tint}"` : ''}><b class="m">${v}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
     const row = (label, a, b, dot, tint, subA, subB) =>
       `<div class="chr">${cell(a, subA, +a > +b, tint)}<div class="cl">${dot ? `<i style="background:${dot}"></i>` : ''}${label}</div>${cell(b, subB, +b > +a, tint)}</div>`;
     const lg = (t) => d.teams[t]?.logo;
-    const ot = g.info.status.includes('/') ? '/' + g.info.status.split('/')[1] : '';
-    let h = `<div class="chh">${logo(lg(me), me)}<span class="m">${c.us.goals}</span><span class="cf">${g.home ? 'vs' : '@'} ${esc(opp)} · Final${ot}<br>${esc(g.info.date)}</span><span class="m">${c.them.goals}</span>${logo(lg(opp), opp)}</div>`;
+    const ot = g.liveLabel ? '' : g.info.status.includes('/') ? '/' + g.info.status.split('/')[1] : '';
+    const fu = g.info?.us ?? c.us.goals, ft = g.info?.them ?? c.them.goals;   // official final (adds the shootout winner)
+    let h = `<div class="chh">${logo(lg(me), me)}<span class="m">${fu}</span><span class="cf">${g.home ? 'vs' : '@'} ${esc(opp)} \u00b7 ${g.liveLabel ? `<b class="lv">${esc(g.liveLabel)}</b>` : `Final${ot}`}<br>${esc(g.info.date)}</span><span class="m">${ft}</span>${logo(lg(opp), opp)}</div>`;
     h += row('Chances', c.us.chances, c.them.chances);
     for (const [k, label, col] of DANGER)
       h += row(label, c.us[k].n, c.them[k].n, col, col, `xG ${c.us[k].xg.toFixed(2)} · G ${c.us[k].g}`, `xG ${c.them[k].xg.toFixed(2)} · G ${c.them[k].g}`);
     h += row('Expected goals', c.us.xg.toFixed(2), c.them.xg.toFixed(2), null, '#5b8fd6');
+    // goals = goals on chances + empty-net goals + long-range goals, so the row always matches the score
+    const so = (g.info?.status || '').endsWith('SO');
+    const extra = (x, won) => {
+      const parts = [x.en ? `${x.en} empty net` : '', x.dumpGoals ? `${x.dumpGoals} long range` : ''].filter(Boolean);
+      return [parts.length ? `incl. ${parts.join(', ')}` : '', so && won ? 'won shootout' : ''].filter(Boolean).join(' \u00b7 ');
+    };
+    h += row('Goals', c.us.goals, c.them.goals, null, null, extra(c.us, fu > ft), extra(c.them, ft > fu));
     if (!compact) h += `<div class="chf"><span>Empty net <b class="m">${c.us.en}–${c.them.en}</b></span><span>Dumps <b class="m">${c.us.dumps}–${c.them.dumps}</b></span><span>Blocked <b class="m">${c.us.blocked}–${c.them.blocked}</b></span></div>`;
     return `<div class="ch${compact ? ' compact' : ''}">${h}</div>`;
   }
+  const liveGameObj = (d) => {
+    if (!inProgress() || !live.chances) return null;
+    return { opp: live.opp, home: live.home, chances: live.chances, liveLabel: `${live.period} ${live.clock}`.trim(),
+      info: { us: live.us, them: live.them, date: 'In progress', status: 'Live' } };
+  };
   const chancesPanel = (d, compact) => {
-    const i = lastChances(d);
-    if (i == null) return '';
-    return `<div class="colhead big"><span class="t">Scoring chances</span><span class="r small">LAST GAME</span></div><div${pop('xginfo')}>${chancesTable(d, i, compact)}</div>`;
+    const lg = liveGameObj(d), i = lastChances(d);
+    if (!lg && i == null) return '';
+    return `<div class="colhead big"><span class="t">Scoring chances</span><span class="r small">${lg ? '<b class="lv">LIVE</b>' : 'LAST GAME'}</span></div><div${pop(lg ? 'live' : 'xginfo')}>${chancesTable(d, lg || d.season.games[i], compact)}</div>`;
   };
 
   // ---------- full board ----------
@@ -369,6 +409,13 @@
     }
 
     const h = d.header;
+    pieces = {
+      meta: () => (live && live.state !== 'FUT' ? liveMeta(d) : `<div class="meta"><div>${esc(h.date)}</div><div${pop('splits')}>${esc(h.splits)}</div><div${pop('sos')}>${esc(h.schedule)}</div></div>`),
+      chart1: () => chartSlot(d, 'chart1', ...G.chart1),
+      chart2: () => chartSlot(d, 'chart2', ...G.chart2),
+      upper: () => { const up = pick(d, 'upper'); return slotBox('upper', ...G.upper, up === 'last5cards' ? lastCards(d) : up === 'chances' ? chancesPanel(d, false) : nextCards(d)); },
+      lower: () => { const lo = pick(d, 'lower'); return slotBox('lower', ...G.lower, lo === 'next5rows' ? nextRows(d) : lo === 'chances' ? chancesPanel(d, true) : lastRows(d)); },
+    };
     let s = `<header class="abs hdr">
       <svg class="band" viewBox="0 0 210 95" width="210" height="95" preserveAspectRatio="none">
         <polygon points="0,0 196,0 171,95 0,95" fill="var(--primary)"/>
@@ -377,11 +424,11 @@
       <div class="band" style="background:none" title="Change team"${I ? ' role="button" tabindex="0"' : ''}><img src="${esc(d.team.logo)}" alt="${esc(d.team.name)}"></div>
       <div class="record"${pop('record')}>${esc(h.record)}</div>
       <div class="summary"><b>${h.points} points</b>, ${esc(h.summary)}</div>
-      <div class="meta"><div>${esc(h.date)}</div><div${pop('splits')}>${esc(h.splits)}</div><div${pop('sos')}>${esc(h.schedule)}</div></div>
+      ${pieces.meta()}
     </header>`;
 
-    s += chartSlot(d, 'chart1', ...G.chart1);
-    s += chartSlot(d, 'chart2', ...G.chart2);
+    s += pieces.chart1();
+    s += pieces.chart2();
 
     for (const k of ['col1.0', 'col1.1', 'col2.0', 'col2.1']) s += slotBox(k, ...G[k], section(d, k));
     s += slotBox('picture', ...G.picture, picture(d, 'picture'), 'ppic');
@@ -390,9 +437,8 @@
     const [lx, ly] = G.leaders;
     s += `<div class="abs" style="left:${lx}px;top:${ly}px;width:${G.picture[2]}px"><div class="colhead big"><span class="t">Team leaders</span></div></div>`;
     for (let i = 0; i < 3; i++) s += slotBox(`leaders.${i}`, lx, ly + 36 + i * 55, G.picture[2], 55, leaderRow(d, `leaders.${i}`));
-    const up = pick(d, 'upper'), lo = pick(d, 'lower');
-    s += slotBox('upper', ...G.upper, up === 'last5cards' ? lastCards(d) : up === 'chances' ? chancesPanel(d, false) : nextCards(d));
-    s += slotBox('lower', ...G.lower, lo === 'next5rows' ? nextRows(d) : lo === 'chances' ? chancesPanel(d, true) : lastRows(d));
+    s += pieces.upper();
+    s += pieces.lower();
 
     s += `<footer class="abs foot" style="left:${G.foot[0]}px;top:${G.foot[1]}px;width:${G.foot[2]}px">
       <span class="k"><i class="sw" style="background:var(--win)"></i>Win</span>
@@ -403,10 +449,124 @@
       <span class="brand" title="Change team or customize">RINKSIDE</span>
     </footer>`;
     board.innerHTML = s;
+    lastPieces = Object.fromEntries(Object.entries(pieces).map(([k, f]) => [k, f()]));
     closePop();
     if (editing) decorateSlots();
     fit();
+    if (I) maybeStartLive(d);
   }
+
+  // ---------- live games ----------
+  let pieces = {}, lastPieces = {}, liveTimer = null, liveFor = null, core = null;
+  const ordinalPeriod = (n, type) => (type === 'OT' ? (n > 4 ? `${n - 3}OT` : 'OT') : type === 'SO' ? 'SO' : ['1st', '2nd', '3rd'][n - 1] || `${n}th`);
+  const liveShort = () => `<b class="lv">${live.us}–${live.them}</b> <small>${esc(live.period)}</small>`;
+  const isOver = (L) => L.state === 'FINAL' || L.state === 'OFF';
+
+  function liveMeta(d) {
+    const L = live, me = d.team.abbrev;
+    const status = isOver(L) ? 'Final' : L.state === 'PRE' ? 'Pregame' : L.intermission ? `${L.period} intermission` : `${L.period} · ${L.clock}`;
+    const extra = [`Shots ${L.sogUs}–${L.sogThem}`, L.chances ? `xG ${L.chances.us.xg.toFixed(2)}–${L.chances.them.xg.toFixed(2)}` : '', L.pp].filter(Boolean).join(' · ');
+    return `<div class="meta livebox"${pop('live')}><div class="ls"><i class="dot${isOver(L) ? ' off' : ''}"></i>${esc(status)}</div>` +
+      `<div class="lsc">${logo(d.teams[me]?.logo, me)}<span class="m">${L.us}</span><span class="dash">–</span><span class="m">${L.them}</span>${logo(d.teams[L.opp]?.logo || L.oppLogo, L.opp)}</div>` +
+      `<div class="lx">${esc(extra)}</div></div>`;
+  }
+
+  function livePop(d) {
+    const L = live;
+    if (!L) return '';
+    const me = d.team.abbrev;
+    let h = `<div class="pk">${isOver(L) ? 'Final' : '<b class="lv">Live</b>'} · ${L.home ? 'vs' : '@'} ${esc(L.opp)}</div>`;
+    h += `<div class="pt">${logo(d.teams[me]?.logo, me)}<span class="big m">${L.us}–${L.them}</span>${logo(d.teams[L.opp]?.logo || L.oppLogo, L.opp)}<span class="pst">${esc(isOver(L) ? 'Final' : L.intermission ? `${L.period} int.` : `${L.period} ${L.clock}`)}</span></div>`;
+    h += rowsHtml([['Shots on goal', `${L.sogUs}–${L.sogThem}`, true], L.chances ? ['Expected goals', `${L.chances.us.xg.toFixed(2)}–${L.chances.them.xg.toFixed(2)}`, true] : null,
+      L.chances ? ['High-danger chances', `${L.chances.us.hi.n}–${L.chances.them.hi.n}`, true] : null, ['Situation', L.pp || 'Even strength']]);
+    h += L.goals.length
+      ? `<div class="pgoals">${L.goals.map((g) => `<div><span class="m">${esc(g.when)}</span>${logo(d.teams[g.team]?.logo, g.team)}<span><b>${esc(g.scorer)}</b>${g.assists ? ` <small>(${esc(g.assists)})</small>` : ''}${g.tag ? ` <small class="tag">${esc(g.tag)}</small>` : ''}</span></div>`).join('')}</div>`
+      : note('No goals yet.');
+    h += `<a class="plink" href="https://www.nhl.com/gamecenter/${L.id}" target="_blank" rel="noopener">Game Center ↗</a>`;
+    return h;
+  }
+
+  function parseLive(pbp, d) {
+    const me = d.team.abbrev, isHome = pbp.homeTeam.abbrev === me;
+    const us = isHome ? pbp.homeTeam : pbp.awayTeam, them = isHome ? pbp.awayTeam : pbp.homeTeam;
+    const pd = pbp.periodDescriptor || {};
+    const names = Object.fromEntries((pbp.rosterSpots || []).map((r) => [r.playerId, `${r.firstName.default[0]}. ${r.lastName.default}`]));
+    const abbrevOf = (id) => (id === pbp.homeTeam.id ? pbp.homeTeam.abbrev : pbp.awayTeam.abbrev);
+    const lastSit = [...(pbp.plays || [])].reverse().find((p) => p.situationCode)?.situationCode || '1551';
+    const [ag, as, hs, hg] = String(lastSit).padStart(4, '0').split('').map(Number);
+    const own = isHome ? hs : as, opp = isHome ? as : hs;
+    const pp = own > opp ? `${me} power play` : own < opp ? `${them.abbrev} power play`
+      : (isHome ? ag : hg) === 0 ? `${them.abbrev} net empty` : (isHome ? hg : ag) === 0 ? `${me} net empty` : '';
+    const goals = (pbp.plays || []).filter((p) => p.typeDescKey === 'goal').map((p) => {
+      const x = p.details || {}, gp = p.periodDescriptor || {};
+      const sc = String(p.situationCode || '1551').padStart(4, '0').split('').map(Number), home = x.eventOwnerTeamId === pbp.homeTeam.id;
+      const o = home ? sc[2] : sc[1], t = home ? sc[1] : sc[2], oppG = home ? sc[0] : sc[3];
+      return { when: `${ordinalPeriod(gp.number, gp.periodType)} ${p.timeInPeriod}`, team: abbrevOf(x.eventOwnerTeamId), scorer: names[x.scoringPlayerId] || 'Goal',
+        assists: [x.assist1PlayerId, x.assist2PlayerId].filter(Boolean).map((a) => names[a]).join(', '),
+        tag: oppG === 0 ? 'EN' : o > t ? 'PP' : o < t ? 'SH' : '' };
+    });
+    let chances = null;
+    if (core && d.xgModel) try { chances = core.report(core.reduce(pbp), us.id, d.xgModel); } catch {}
+    return {
+      id: pbp.id, state: pbp.gameState, home: isHome, opp: them.abbrev, oppLogo: them.darkLogo || them.logo,
+      us: us.score ?? 0, them: them.score ?? 0, sogUs: us.sog ?? 0, sogThem: them.sog ?? 0,
+      period: pd.number ? ordinalPeriod(pd.number, pd.periodType) : '', clock: pbp.clock?.timeRemaining || '',
+      intermission: !!pbp.clock?.inIntermission, pp, goals, chances,
+    };
+  }
+
+  // redraw only the pieces that changed, keeping any open popup
+  function renderLive() {
+    if (!current) return;
+    for (const [k, f] of Object.entries(pieces)) {
+      const html = f();
+      if (html === lastPieces[k]) continue;
+      lastPieces[k] = html;
+      const el = k === 'meta' ? board.querySelector('.hdr .meta') : board.querySelector(`.slot[data-slot="${k}"]`);
+      if (el) el.outerHTML = html;
+    }
+    if (editing) decorateSlots();
+    if (popKey) board.querySelector(`[data-pop="${CSS.escape(popKey)}"]`)?.classList.add('is-active');
+    if (popKey === 'live' && popEl) {
+      popEl.innerHTML = `<button class="px" aria-label="Close">×</button>${livePop(current)}`;
+      popEl.querySelector('.px').addEventListener('click', closePop);
+    }
+  }
+
+  async function pollLive() {
+    if (!liveFor || document.hidden || !current) return;
+    try {
+      core ??= await import('./chances-core.mjs').catch(() => null);
+      const res = await fetch(`${index.liveProxy}/v1/gamecenter/${liveFor}/play-by-play`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(res.status);
+      const L = parseLive(await res.json(), current);
+      if (L.state === 'FUT') return;   // not started yet; keep the normal header
+      const justEnded = isOver(L) && live && !isOver(live);
+      live = L;
+      renderLive();
+      if (isOver(L)) {
+        // game over: stop polling; the regular data refresh picks up the final within minutes
+        clearInterval(liveTimer); liveTimer = null; liveFor = null;
+        if (justEnded) setTimeout(() => load(), 3 * 60 * 1000);
+      }
+    } catch { /* keep the last state; try again on the next tick */ }
+  }
+
+  function maybeStartLive(d) {
+    if (!index?.liveProxy || wallpaper) return;
+    if (live && d.season.games.some((x) => x.id === live.id && x.result)) live = null;   // data has caught up with the final
+    const g = d.nextGames?.[0];
+    if (!g?.id) return;
+    const start = Date.parse(g.startUTC), now = Date.now();
+    const inWindow = now >= start - 15 * 60 * 1000 && now <= start + 6 * 3600 * 1000;
+    if (!inWindow || liveFor === g.id) return;
+    liveFor = g.id;
+    clearInterval(liveTimer);
+    pollLive();
+    liveTimer = setInterval(pollLive, 15000);
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && liveFor) pollLive(); });
+
 
   // ---------- detail popups ----------
   let popEl = null, popKey = null;
@@ -443,7 +603,8 @@
     switch (kind) {
       case 'game': return gamePop(d.season.games[+arg].info, `Game ${+arg + 1} of ${d.season.total}`);
       case 'next': return gamePop(d.nextGames[+arg].info, `Next up · game ${+arg + 1} of 5`);
-      case 'chances': return `<div class="pk">Scoring chances · game ${+arg + 1}</div>${chancesTable(d, +arg, false)}`;
+      case 'chances': return `<div class="pk">Scoring chances \u00b7 game ${+arg + 1}</div>${chancesTable(d, d.season.games[+arg], false)}`;
+      case 'live': return livePop(d);
       case 'xginfo':
         return `<div class="pk">How this works</div><div class="pt"><span>Scoring chances &amp; xG</span></div>` +
           note('A scoring chance is a shot on goal from inside the offensive zone with the goalie in net. High danger: within 20 ft of the goal line and 19 ft of centre. Mid: within 30 ft. Low: anywhere else in the zone. Shots from 58+ ft out are dumps.') +

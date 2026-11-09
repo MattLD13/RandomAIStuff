@@ -537,6 +537,8 @@ async function buildTeam(TEAM) {
       const tbd = g.gameScheduleState === 'TBD';
       const live = g.gameState === 'LIVE' || g.gameState === 'CRIT';
       return {
+        id: g.id,
+        startUTC: g.startTimeUTC,
         dow: fmt(d, { weekday: 'short' }).toUpperCase(),
         day: fmt(d, { day: 'numeric' }),
         home: p.home,
@@ -587,6 +589,7 @@ async function buildTeam(TEAM) {
     divisions,
     pictures,
     race,
+    xgModel,   // weights for site/chances-core.mjs, so live games get the same xG
     stats,
     leaderBoard,
     nextGames,
@@ -610,6 +613,7 @@ const teamsIndex = {
   generatedAt: now.toISOString(),
   default: teamInfo[DEFAULT_TEAM] ? DEFAULT_TEAM : built[0],
   layout: config.layout || null,   // optional default board layout (see README)
+  liveProxy: (process.env.LIVE_PROXY ?? config.liveProxy ?? '').replace(/\/$/, ''),   // Cloudflare Worker relay for live games
   teams: standings
     .map((t) => ({
       abbrev: t.teamAbbrev.default,
