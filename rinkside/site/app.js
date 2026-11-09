@@ -247,10 +247,15 @@
       `<div class="sub first"><span>${esc(p.divisionName)}</span><span class="gp">GP</span><span class="pts">PTS</span></div>${pictureRows(p.divRows)}` +
       `<div class="sub"><span>Wild card${p !== d.pictures.own ? ` · ${esc(p.conference)}` : ''}</span></div>${pictureRows(p.wcRows)}<div class="cutline"></div>${pictureRows(p.outRows)}`;
   }
+  // short names that fit a stat box on one line (full names stay in the menu and popup)
+  const SHORT = { pp: 'Power play', pk: 'Penalty kill', gfpg: 'Goals for/gm', gapg: 'Goals agst/gm', sfpg: 'Shots for/gm',
+    sapg: 'Shots agst/gm', fo: 'Faceoffs', shpct: 'Shooting', svpct: 'Team save %', ptspct: 'Points %', gdpg: 'Goal diff/gm',
+    topSpeed: 'Top speed', bursts20: '20+ mph bursts', bursts22: '22+ mph bursts', topShot: 'Hardest shot', shots90: '90+ mph shots',
+    distance: 'Distance', hdShots: 'HD shots', hdPct: 'HD shooting', ozTime: 'O-zone time', dzTime: 'D-zone time', satDiff: 'Shot att. diff' };
   function statBox(d, slot) {
     const k = pick(d, slot), v = d.stats[k];
     if (!v) return '<div class="box"></div>';
-    return `<div class="box"${pop(`stat:${k}`)}><div class="k">${esc(v.label)}</div><div class="rk">${v.rank}${suffix(v.rank)} of ${v.of}</div><div class="v">${esc(v.value)}<small>${esc(v.unit.trim() ? ` ${v.unit.trim()}` : '')}</small></div></div>`;
+    return `<div class="box"${pop(`stat:${k}`)}><div class="k" title="${esc(v.label)}">${esc(SHORT[k] || v.label)}</div><div class="rk">${v.rank}${suffix(v.rank)} of ${v.of}</div><div class="v">${esc(v.value)}<small>${esc(v.unit.trim() ? ` ${v.unit.trim()}` : '')}</small></div></div>`;
   }
   function leaderRow(d, slot) {
     const k = pick(d, slot), l = d.leaderBoard[k];

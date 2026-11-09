@@ -100,7 +100,7 @@ svg text { font-family: var(--cond); }
 .prow .ab { margin-left: 10px; font: 700 17px var(--head); }
 .prow .gp { margin-left: auto; width: 30px; text-align: right; font: 700 18.5px var(--head); }
 .prow .pts { width: 40px; text-align: right; padding-right: 4px; font: 400 18.3px var(--mono); }
-.cutline { border-top: 1.5px dashed #8a8a8a; margin: 1px 0 0; }
+.cutline { height: 1.5px; margin: 1px 0 0; background: repeating-linear-gradient(to right, #8a8a8a 0 4px, transparent 4px 7px); }
 
 .st { display: flex; gap: 8px; margin-top: 10px; }
 .st .box { flex: 1; background: var(--card); border-radius: 4px; padding: 6px 7px 5px; height: 54px; }
@@ -123,7 +123,7 @@ svg text { font-family: var(--cond); }
 /* next 5 */
 .ncard { position: relative; display: flex; align-items: center; height: 56px; margin-top: 7px; background: var(--card); border-radius: 4px; }
 .ncard .date {
-  position: relative; width: 73px; height: 56px; border: 1.5px solid var(--gold); border-right-style: dashed; border-radius: 4px 0 0 4px;
+  position: relative; width: 73px; height: 56px; border: 1.5px solid var(--gold); border-right: 0; border-radius: 4px 0 0 4px;
   display: flex; align-items: center;
 }
 .ncard .dow {
@@ -299,3 +299,9 @@ body.stack .hdr .meta { left: 16px; right: auto; top: 134px; text-align: left; l
 body.stack .hdr .meta div:first-child { margin-bottom: 0; }
 body.stack .foot { flex-wrap: wrap; row-gap: 6px; }
 body.stack .foot .brand { margin-left: 0; width: 100%; }
+
+/* dashed edges drawn as gradients: CSS dashed borders vanish on phones when the board is scaled down */
+.ncard .date::after { content: ''; position: absolute; top: -1.5px; bottom: -1.5px; right: 0; width: 1.5px;
+  background: repeating-linear-gradient(to bottom, var(--gold) 0 3.5px, transparent 3.5px 6.5px); }
+
+.st .k, .st .rk { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
