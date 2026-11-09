@@ -1,0 +1,13 @@
+{
+  "name": "cswa-practice-tools",
+  "private": true,
+  "type": "module",
+  "description": "Builds the part models, drawings and answer keys for the CSWA practice tester",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "manifold-3d": "^3.5.4",
+    "three": "^0.187.0"
+  }
+}

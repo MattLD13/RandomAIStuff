@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="1800" height="1040" font-family="DejaVu Sans, Arial, sans-serif">
+<defs>
+  <pattern id="hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <rect width="9" height="9" fill="#fff"/><line x1="0" y1="0" x2="0" y2="9" stroke="#111" stroke-width="1"/>
+  </pattern>
+  <marker id="ar" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+    <path d="M0,1.5 L10,5 L0,8.5 z" fill="#111"/>
+  </marker>
+  <marker id="arBig" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="16" markerHeight="16" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+    <path d="M0,1 L10,5 L0,9 z" fill="#111"/>
+  </marker>
+</defs>
+<rect x="0" y="0" width="900" height="520" fill="#fff"/>
+<rect x="10" y="10" width="880" height="500" fill="none" stroke="#111" stroke-width="2"/>
+<g transform="translate(650 460)" font-size="10" fill="#111">
+  <rect width="240" height="50" fill="none" stroke="#111" stroke-width="1.2"/>
+  <line x1="0" y1="25" x2="240" y2="25" stroke="#111"/><line x1="150" y1="25" x2="150" y2="50" stroke="#111"/>
+  <text x="8" y="17" font-size="12" font-weight="700">PRACTICE DRAWING</text>
+  <text x="8" y="42">UNITS: MM</text><text x="158" y="42">SHEET 1 OF 1</text>
+</g>
+<g fill="none" stroke="#111" stroke-width="1.8" stroke-linejoin="round">
+
+  <path d="M120,440 H400 V410 H160 V300 H120 Z"/>
+  <line x1="300" y1="410" x2="300" y2="440" stroke-width="1.1" stroke-dasharray="6 4"/><line x1="330" y1="410" x2="330" y2="440" stroke-width="1.1" stroke-dasharray="6 4"/>
+  <text x="470" y="400" fill="#b3261e" stroke="none" font-size="17" font-weight="700" text-anchor="middle">View A</text>
+  <rect x="120" y="70" width="280" height="140"/>
+  <line x1="160" y1="70" x2="160" y2="210" stroke-width="1.4"/>
+  <circle cx="315" cy="140" r="15"/><line x1="292" y1="140" x2="338" y2="140" stroke-width="0.9" stroke-dasharray="18 4 3 4"/><line x1="315" y1="117" x2="315" y2="163" stroke-width="0.9" stroke-dasharray="18 4 3 4"/>
+  <text x="470" y="140" fill="#b3261e" stroke="none" font-size="17" font-weight="700" text-anchor="middle">View B</text>
+  <line x1="315" y1="160" x2="315" y2="430" stroke-width="0.9" stroke-dasharray="18 4 3 4"/>
+</g>
+</svg>

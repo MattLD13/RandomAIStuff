@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="1800" height="1040" font-family="DejaVu Sans, Arial, sans-serif">
+<defs>
+  <pattern id="hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <rect width="9" height="9" fill="#fff"/><line x1="0" y1="0" x2="0" y2="9" stroke="#111" stroke-width="1"/>
+  </pattern>
+  <marker id="ar" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+    <path d="M0,1.5 L10,5 L0,8.5 z" fill="#111"/>
+  </marker>
+  <marker id="arBig" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="16" markerHeight="16" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+    <path d="M0,1 L10,5 L0,9 z" fill="#111"/>
+  </marker>
+</defs>
+<rect x="0" y="0" width="900" height="520" fill="#fff"/>
+<rect x="10" y="10" width="880" height="500" fill="none" stroke="#111" stroke-width="2"/>
+<g transform="translate(650 460)" font-size="10" fill="#111">
+  <rect width="240" height="50" fill="none" stroke="#111" stroke-width="1.2"/>
+  <line x1="0" y1="25" x2="240" y2="25" stroke="#111"/><line x1="150" y1="25" x2="150" y2="50" stroke="#111"/>
+  <text x="8" y="17" font-size="12" font-weight="700">PRACTICE DRAWING</text>
+  <text x="8" y="42">UNITS: MM</text><text x="158" y="42">SHEET 1 OF 1</text>
+</g>
+<g fill="none" stroke="#111" stroke-width="1.8" stroke-linejoin="round">
+<path d="M60,98 H110 V88 H780 V98 H830 V142 H780 V152 H110 V142 H60 Z"/>
+        <line x1="110" y1="98" x2="110" y2="142" stroke-width="1.2"/><line x1="780" y1="98" x2="780" y2="142" stroke-width="1.2"/><line x1="45" y1="120" x2="845" y2="120" stroke-width="0.9" stroke-dasharray="18 4 3 4"/><text x="445" y="195" fill="#b3261e" stroke="none" font-size="17" font-weight="700" text-anchor="middle">View A</text><path d="M410,258 H110 V268 H60 V312 H110 V322 H410"/>
+      <path d="M480,258 H780 V268 H830 V312 H780 V322 H480"/>
+      <line x1="110" y1="268" x2="110" y2="312" stroke-width="1.2"/><line x1="780" y1="268" x2="780" y2="312" stroke-width="1.2"/>
+      <path d="M410,250 L410,278 L402,286 L418,294 L410,302 L410,330" stroke-width="1"/><path d="M480,250 L480,278 L472,286 L488,294 L480,302 L480,330" stroke-width="1"/>
+      <line x1="45" y1="290" x2="395" y2="290" stroke-width="0.9" stroke-dasharray="18 4 3 4"/><line x1="495" y1="290" x2="845" y2="290" stroke-width="0.9" stroke-dasharray="18 4 3 4"/>
+      <line x1="60" y1="365" x2="830" y2="365" stroke-width="1" marker-start="url(#ar)" marker-end="url(#ar)"/>
+      <line x1="60" y1="320" x2="60" y2="372" stroke-width="0.9"/><line x1="830" y1="320" x2="830" y2="372" stroke-width="0.9"/>
+      <text x="445" y="358" fill="#111" stroke="none" font-size="15" font-weight="400" text-anchor="middle">1200</text><text x="445" y="405" fill="#b3261e" stroke="none" font-size="17" font-weight="700" text-anchor="middle">View B</text>
+</g>
+</svg>

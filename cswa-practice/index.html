@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CSWA Practice Tester</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== Home ===== -->
+  <section id="home" class="screen">
+    <header class="band">
+      <div class="band-inner">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" width="28" height="28"><path d="M5 22 L16 27 L27 22 L27 10 L16 5 L5 10 Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 10 L16 15 L27 10 M16 15 V27" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+          </span>
+          <div>
+            <h1>CSWA Practice Tester</h1>
+            <p class="sub">Timed mock exams for the Certified SOLIDWORKS Associate (Mechanical Design)</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="wrap home-grid">
+      <div class="home-main">
+        <div id="resume" class="notice" hidden>
+          <div><b>Exam in progress.</b> <span id="resume-text"></span></div>
+          <div class="row">
+            <button class="btn primary" id="btn-resume" type="button">Resume</button>
+            <button class="btn" id="btn-discard" type="button">Discard</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="cand-name">Candidate name</label>
+          <input id="cand-name" type="text" autocomplete="name" placeholder="Your name" maxlength="60">
+        </div>
+
+        <fieldset class="field">
+          <legend>Mode</legend>
+          <div class="mode-row">
+            <label class="mode"><input type="radio" name="mode" id="mode-exam" value="exam" checked>
+              <span><b>Exam</b><small>Timed. Answers are scored when you end the exam, like the real test.</small></span></label>
+            <label class="mode"><input type="radio" name="mode" id="mode-practice" value="practice">
+              <span><b>Practice</b><small>No time limit. Check each answer and read the working as you go.</small></span></label>
+          </div>
+        </fieldset>
+
+        <h2 class="h-sec">Choose an exam</h2>
+        <div id="exam-list" class="exam-list"></div>
+      </div>
+
+      <aside class="home-side">
+        <h2 class="h-sec">About the CSWA</h2>
+        <dl class="facts">
+          <div><dt>Questions</dt><dd>14</dd></div>
+          <div><dt>Points</dt><dd>240</dd></div>
+          <div><dt>Time</dt><dd>180 min</dd></div>
+          <div><dt>Pass mark</dt><dd>165 <small>academic</small></dd></div>
+        </dl>
+        <table class="breakdown">
+          <thead><tr><th>Section</th><th>Qs</th><th>Pts</th></tr></thead>
+          <tbody>
+            <tr><td>Drafting Competencies</td><td>3</td><td>3 × 5</td></tr>
+            <tr><td>Basic Part</td><td>2</td><td>2 × 15</td></tr>
+            <tr><td>Intermediate Part</td><td>2</td><td>2 × 15</td></tr>
+            <tr><td>Advanced Part</td><td>3</td><td>3 × 15</td></tr>
+            <tr><td>Assembly</td><td>4</td><td>4 × 30</td></tr>
+          </tbody>
+        </table>
+        <p class="small muted">Some sources give 168 (70 %) as the commercial pass mark. Check the current SOLIDWORKS certification page for your exam. Keep SOLIDWORKS open next to this window and build each part as you would on test day.</p>
+
+        <h2 class="h-sec">Your attempts</h2>
+        <div id="history"><p class="small muted">No attempts yet. Finished exams appear here.</p></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===== Rules / welcome ===== -->
+  <section id="intro" class="screen" hidden>
+    <div class="window">
+      <div class="titlebar"><span id="intro-title">Exam</span></div>
+      <div class="intro-body">
+        <h2 id="intro-head">Welcome</h2>
+        <dl class="facts" id="intro-facts"></dl>
+        <ul class="rules">
+          <li>Move between questions with <b>Previous</b> and <b>Next</b>, or click a question in the list. You can change any answer until you end the exam.</li>
+          <li>Tick <b>Mark for review</b> to flag a question. <b>Summary</b> lists answered, unanswered and marked questions.</li>
+          <li>Click a drawing to open it in the image viewer. Zoom with the mouse wheel or the + and − buttons, and drag to pan.</li>
+          <li>Fill-in answers are numbers only, with a period as the decimal separator and no units. An answer within 1 % of the correct value scores full points.</li>
+          <li>Unless a question says otherwise, use MMGS units, 2 decimal places, and the material and density given in the question.</li>
+          <li id="rule-time">The exam ends when the timer reaches zero. Unanswered questions score zero.</li>
+        </ul>
+        <div class="row end">
+          <button class="btn" id="btn-intro-back" type="button">Back</button>
+          <button class="btn primary" id="btn-begin" type="button">Start examination</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Exam window ===== -->
+  <section id="exam" class="screen exam-screen" hidden>
+    <div class="titlebar exam-top">
+      <span class="t-title" id="x-title">Exam</span>
+      <span class="t-cand" id="x-cand"></span>
+      <span class="t-pos" id="x-pos">Question 1 of 14</span>
+      <span class="t-timer" id="x-timer-wrap"><span class="t-lbl" id="x-timer-lbl">Time left</span> <span id="x-timer">3:00:00</span></span>
+    </div>
+
+    <div class="exam-body">
+      <nav class="qlist" aria-label="Questions">
+        <div class="qlist-head">Questions</div>
+        <ol id="qlist"></ol>
+        <div class="legend" id="legend"></div>
+      </nav>
+
+      <main class="qpane" id="qpane">
+        <div class="qhead">
+          <div>
+            <h2 id="q-num">Question 1</h2>
+            <div class="q-sec" id="q-sec"></div>
+          </div>
+          <div class="q-pts" id="q-pts">5 points</div>
+        </div>
+        <div class="q-prompt" id="q-prompt"></div>
+        <div class="thumbs" id="q-thumbs"></div>
+        <div class="answer" id="q-answer"></div>
+        <div class="feedback" id="q-feedback" hidden></div>
+      </main>
+    </div>
+
+    <div class="exam-bottom">
+      <div class="row">
+        <button class="btn" id="btn-prev" type="button">◀ Previous<span class="long"> Question</span></button>
+        <label class="mark"><input type="checkbox" id="chk-mark"> Mark<span class="long"> for review</span></label>
+        <button class="btn" id="btn-next" type="button">Next<span class="long"> Question</span> ▶</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="btn-check" type="button" hidden>Check answer</button>
+        <button class="btn" id="btn-summary" type="button">Summary</button>
+        <button class="btn danger" id="btn-end" type="button">End Examination</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Summary ===== -->
+  <section id="summary" class="screen" hidden>
+    <div class="window">
+      <div class="titlebar"><span>Examination summary</span></div>
+      <div class="intro-body">
+        <p id="sum-counts" class="sum-counts"></p>
+        <div class="table-scroll">
+          <table class="sum-table">
+            <thead><tr><th>#</th><th>Section</th><th>Points</th><th>Status</th><th></th></tr></thead>
+            <tbody id="sum-body"></tbody>
+          </table>
+        </div>
+        <div class="row end">
+          <button class="btn" id="btn-sum-back" type="button">Return to exam</button>
+          <button class="btn danger" id="btn-sum-end" type="button">End Examination</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Results ===== -->
+  <section id="results" class="screen" hidden>
+    <div class="window">
+      <div class="titlebar"><span id="r-title">Results</span></div>
+      <div class="intro-body">
+        <div class="verdict" id="r-verdict"></div>
+        <div class="score-line" id="r-score"></div>
+        <div class="meter" aria-hidden="true"><div class="meter-fill" id="r-meter"></div><div class="meter-pass" id="r-pass"></div></div>
+        <dl class="facts" id="r-facts"></dl>
+        <h3 class="h-sec">Score by section</h3>
+        <div class="table-scroll"><table class="sec-table"><thead><tr><th>Section</th><th>Correct</th><th>Points</th><th class="bar-col"></th></tr></thead><tbody id="r-sections"></tbody></table></div>
+        <div class="row end">
+          <button class="btn" id="btn-home" type="button">Home</button>
+          <button class="btn" id="btn-retake" type="button">Retake</button>
+          <button class="btn primary" id="btn-review" type="button">Review answers</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Confirm dialog ===== -->
+  <div class="modal" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="dialog">
+      <div class="titlebar"><span id="confirm-title">End examination</span></div>
+      <div class="dialog-body">
+        <p id="confirm-text"></p>
+        <div class="row end">
+          <button class="btn" id="confirm-no" type="button">Cancel</button>
+          <button class="btn danger" id="confirm-yes" type="button">End Examination</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Image viewer ===== -->
+  <div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="Image viewer">
+    <div class="viewer-bar">
+      <span id="v-title">Image</span>
+      <div class="row">
+        <button class="btn sm" id="v-prev" type="button" aria-label="Previous image">◀</button>
+        <span id="v-count" class="mono">1 / 1</span>
+        <button class="btn sm" id="v-next" type="button" aria-label="Next image">▶</button>
+        <button class="btn sm" id="v-out" type="button" aria-label="Zoom out">−</button>
+        <button class="btn sm" id="v-fit" type="button">Fit</button>
+        <button class="btn sm" id="v-in" type="button" aria-label="Zoom in">+</button>
+        <button class="btn sm" id="v-close" type="button">Close</button>
+      </div>
+    </div>
+    <div class="viewer-stage" id="v-stage"><img id="v-img" alt="" draggable="false"></div>
+  </div>
+</div>
+
+<script src="data/exams.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
