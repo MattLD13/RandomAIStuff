@@ -408,6 +408,7 @@ async function buildTeam(TEAM) {
     ...advFor(t.teamAbbrev.default),
     odds: playoffOdds[t.teamAbbrev.default], strength: +strength[t.teamAbbrev.default].toFixed(2),
     color: config.teams?.[t.teamAbbrev.default]?.primary || '#555555',
+    color2: config.teams?.[t.teamAbbrev.default]?.accent || '#999999',   // used when two teams' primaries look alike
   }]));
 
   // ---------- conference rank after each of our games ----------

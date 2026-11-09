@@ -718,7 +718,7 @@
     const [r, g, b] = c.map((v) => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), sat = mx ? (mx - mn) / mx : 0;
     const hue = mx === mn ? 0 : mx === r ? (60 * ((g - b) / (mx - mn)) + 360) % 360 : mx === g ? 60 * ((b - r) / (mx - mn)) + 120 : 60 * ((r - g) / (mx - mn)) + 240;
     const goldish = sat > 0.4 && hue >= 28 && hue <= 58;
-    return { hi: `rgb(${c.join(',')})`, d1: goldish ? '#cfd3d6' : '#d4b26a', d2: goldish ? '#8c9196' : '#8a7140' };
+    return { rgb: c, hi: `rgb(${c.join(',')})`, d1: goldish ? '#cfd3d6' : '#d4b26a', d2: goldish ? '#8c9196' : '#8a7140' };
   }
   const cardKey = (d, id) => (id && d.cards && d.cards[id] ? `card:${id}` : null);
 
@@ -801,9 +801,11 @@
   }
 
   let cardEl = null;
-  function openCard(id) {
+  function openCard(id, d = current) {
     closeCard();
-    const html = cardHtml(current, id);
+    // on the league page the card comes from the player's own team file, in that team's colours
+    if (d !== current) { const tc = teamColours(d.team.primaryColor || '#888888'); document.documentElement.style.setProperty('--team-hi', tc.hi); }
+    const html = cardHtml(d, id);
     if (!html) return;
     cardEl = document.createElement('div');
     cardEl.className = 'cardwrap';
@@ -811,7 +813,7 @@
     cardEl.addEventListener('click', (e) => { if (e.target === cardEl || e.target.closest('.px')) closeCard(); });
     document.body.appendChild(cardEl);
   }
-  function closeCard() { cardEl?.remove(); cardEl = null; }
+  function closeCard() { cardEl?.remove(); cardEl = null; if (league) document.documentElement.style.setProperty('--team-hi', '#c8ccd0'); }
 
   function ratingsPanel(d, n, title = 'Player ratings') {
     const list = (d.ratings || []).slice(0, n);
@@ -1963,6 +1965,14 @@
   const NHL_LOGO = 'https://assets.nhle.com/logos/nhl/svg/NHL_light.svg';
   let league = null, leagueDay = 1, leagueLive = {}, leagueTimer = null;
   const bright = (c) => teamColours(c || '#888888').hi;   // team colours lifted so navies show on black
+  // two teams side by side: if their colours look alike, the second one uses its alternate colour
+  function pairColours(a, b) {
+    const T = league.teams, ca = teamColours(T[a]?.color || '#888888'), cb = teamColours(T[b]?.color || '#888888');
+    const near = (x, y) => Math.hypot(...x.rgb.map((v, k) => v - y.rgb[k])) < 110;
+    if (!near(ca, cb)) return [ca.hi, cb.hi];
+    const alt = teamColours(T[b]?.color2 || '#c8ccd0');
+    return [ca.hi, near(ca, alt) ? '#c8ccd0' : alt.hi];
+  }
   const teamLink = (a) => `${esc(league.teams[a]?.slug || String(a).toLowerCase())}/`;
 
   function leagueGame(g) {
@@ -1972,14 +1982,14 @@
     const side = (a, sc, other) => `<a class="lgt${fin && sc > other ? ' win' : ''}" href="${teamLink(a)}">${logo(T[a]?.logo, a)}<b>${esc(a)}</b><small>${esc(T[a]?.record || '')}</small><span class="m">${fin || on ? sc ?? 0 : ''}</span></a>`;
     let foot = fin ? `Final${last && last !== 'REG' ? `/${esc(last)}` : ''}` : on ? `<b class="lv">LIVE</b> ${esc(L.period || '')} ${esc(L.clock || '')}` : `${esc(g.time)} ET`;
     if (!fin && !on && g.winHome != null) {
-      const aw = 100 - g.winHome;
-      foot += `<span class="lgwp"><i style="width:${aw}%;background:${bright(T[g.away]?.color)}"></i><i style="width:${g.winHome}%;background:${bright(T[g.home]?.color)}"></i></span><small class="m">${aw}–${g.winHome}</small>`;
+      const aw = 100 - g.winHome, [cAway, cHome] = pairColours(g.away, g.home);
+      foot += `<span class="lgwp"><i style="width:${aw}%;background:${cAway}"></i><i style="width:${g.winHome}%;background:${cHome}"></i></span><small class="m">${aw}–${g.winHome}</small>`;
     }
     return `<div class="lgc${on ? ' live' : ''}">${side(g.away, as, hs)}${side(g.home, hs, as)}<div class="lgf">${foot}</div></div>`;
   }
   function leagueScores() {
     const day = league.days[leagueDay] || league.days[1];
-    return `<div class="colhead big"><span class="t">Scores</span><span class="lgdays">${league.days.map((x, k) => `<button data-lday="${k}"${k === leagueDay ? ' class="on"' : ''}>${esc(x.label)}</button>`).join('')}</span></div>` +
+    return `<div class="colhead big"><span class="t">Games</span><span class="lgdays">${league.days.map((x, k) => `<button data-lday="${k}"${k === leagueDay ? ' class="on"' : ''}>${esc(x.label)}</button>`).join('')}</span></div>` +
       `<div class="lggames">${day.games.length ? day.games.map(leagueGame).join('') : '<div class="note">No games</div>'}</div>`;
   }
   function leagueStandings() {
@@ -2013,7 +2023,7 @@
     return `<div class="colhead big"><span class="t">Leaders</span><span class="r small">${league.gpw ? `${league.gpw} GOALS PER WIN` : ''}</span></div><div class="lglead">` +
       order.filter((k) => league.leaders[k]?.rows.length).map((k) => {
         const b = league.leaders[k];
-        return `<div class="lgl"><div class="lgsub">${esc(b.label)}</div>${b.rows.slice(0, 5).map((r, i) => `<a class="lglr" href="${teamLink(r.t)}"><span class="m lgk">${i + 1}</span><span class="face"><img src="${esc(r.img)}" alt="" loading="lazy"></span><span class="lgln"><b>${esc(r.n)}</b><small>${esc(r.t)} · ${esc(r.pos)} · ${esc(r.sub)}</small></span><span class="m lgv">${esc(r.v)}</span></a>`).join('')}</div>`;
+        return `<div class="lgl"><div class="lgsub">${esc(b.label)}</div>${b.rows.slice(0, 5).map((r, i) => `<a class="lglr" href="${teamLink(r.t)}" data-lp="${esc(r.t)}:${r.id}"><span class="m lgk">${i + 1}</span><span class="face"><img src="${esc(r.img)}" alt="" loading="lazy"></span><span class="lgln"><b>${esc(r.n)}</b><small>${esc(r.t)} · ${esc(r.pos)} · ${esc(r.sub)}</small></span><span class="m lgv">${esc(r.v)}</span></a>`).join('')}</div>`;
       }).join('') + '</div>';
   }
   function renderLeague(L) {
@@ -2057,7 +2067,18 @@
     poll();
     leagueTimer = setInterval(poll, 30000);
   }
+  // tap a leader: their player card, read from their team's file (the team page if there's no card)
+  const teamFiles = {};
+  async function openLeague(t, id) {
+    try {
+      teamFiles[t] ??= await getJSON(`data/${t}.json`);
+      if (teamFiles[t].cards?.[id]) return openCard(id, teamFiles[t]);
+    } catch {}
+    location.href = new URL(teamLink(t), document.baseURI).href;
+  }
   if (I) board.addEventListener('click', (e) => {
+    const lp = league && e.target.closest('[data-lp]');
+    if (lp) { e.preventDefault(); const [t, id] = lp.dataset.lp.split(':'); return openLeague(t, +id); }
     const b = e.target.closest('[data-lday]');
     if (b) { leagueDay = +b.dataset.lday; redrawScores(); }
     if (e.target.closest('.lgband, .lgfoot .brand')) openPicker();

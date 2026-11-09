@@ -324,12 +324,12 @@ Where WAR shows up:
 
 `hockey.mattdicks.org/nhl/` (also `/league/`, or **NHL · whole league** at the top of the team
 picker) shows the whole league:
-- **Scores:** yesterday, today and the next three days. Live scores update every 30 s once the
+- **Games:** yesterday, today and the next three days. Live scores update every 30 s once the
   relay is set up (`/v1/score/now`); upcoming games show the model's win chances.
 - **Standings:** all four divisions, with playoff odds.
 - **Playoff odds:** by conference, with the Cup wheel.
 - **Power rankings:** by team strength, with xG share and Cup odds.
-- **Leaders:** points, goals, assists, WAR, Rinkside overall, save % and goalie WAR.
+- **Leaders:** points, goals, assists, WAR, Rinkside overall, save % and goalie WAR. Tap a player for their card.
 
 Every team links to its own board. The build writes this to `site/data/league.json`.
 
