@@ -99,7 +99,8 @@ export function digest(pbp, shifts) {
     } else if (type === 'faceoff') { bump(d.winningPlayerId, 'fw'); bump(d.losingPlayerId, 'fl'); }
     else if (type === 'takeaway') bump(d.playerId, 'tk');
     else if (type === 'giveaway') bump(d.playerId, 'gv');
-    else if (type === 'blocked-shot') bump(d.blockingPlayerId, 'bk');
+    else if (type === 'blocked-shot' && d.reason !== 'teammate-blocked') bump(d.blockingPlayerId, 'bk');
+    else if (type === 'hit') bump(d.hittingPlayerId, 'ht');
   }
   return { id: pbp.id, home, away, players, toi, box, shots };
 }
@@ -143,14 +144,27 @@ function rawGame(g, w) {
     if (!P[id]) {
       const p = g.players[id] || {};
       P[id] = { id: +id, t: p.t, pos: p.pos, n: p.n, toi: g.toi[id] || { ev: 0, pp: 0, sh: 0, x: 0 },
-        gc: { ev: 0, pp: 0, sh: 0 }, oio: { ev: 0, pp: 0, sh: 0 }, oid: { ev: 0, pp: 0, sh: 0 }, pen: 0, oth: 0, shots: 0, gsax: 0 };
+        gc: { ev: 0, pp: 0, sh: 0 }, oio: { ev: 0, pp: 0, sh: 0 }, oid: { ev: 0, pp: 0, sh: 0 }, pen: 0, oth: 0, shots: 0, gsax: 0,
+        // the player's own game line: goals, assists, shots, individual xG, on-ice goals and xG for / against
+        x: { g: 0, a: 0, sog: 0, ixg: 0, gf: 0, ga: 0, xgf: 0, xga: 0, gaG: 0, xgaG: 0 } };
     }
     return P[id];
   };
+  const has = (id) => id && g.players[id];
   for (const id of Object.keys(g.toi)) get(id);
   for (const s of g.shots) {
+    if (has(s.shooter)) { const p = get(s.shooter).x; p.sog++; p.g += s.goal; }
+    if (s.goal) {
+      for (const a of [s.a1, s.a2]) if (has(a)) get(a).x.a++;
+      for (const id of s.of) get(id).x.gf++;
+      for (const id of s.df) get(id).x.ga++;
+    }
     if (s.en) continue;
     const x = xg(w, s), v = 0.5 * x + 0.5 * s.goal;
+    if (has(s.shooter)) get(s.shooter).x.ixg += x;
+    for (const id of s.of) get(id).x.xgf += x;
+    for (const id of s.df) get(id).x.xga += x;
+    if (has(s.goalie)) { const k = get(s.goalie).x; k.gaG += s.goal; k.xgaG += x; }
     const st = s.pp ? 'pp' : s.sh ? 'sh' : 'ev', dst = s.pp ? 'sh' : s.sh ? 'pp' : 'ev';
     let pool = v;
     const give = (id, share) => { if (id && g.players[id]) { get(id).gc[st] += share * v; pool -= share * v; } };
@@ -236,9 +250,11 @@ export function computeWar(digests, w) {
   for (const g of games) {
     const rows = [], gl = [];
     for (const p of raw.get(g.id)) {
-      if (p.pos === 'G') { if (p.shots) gl.push({ id: p.id, t: p.t, n: p.n, toi: all(p.toi), shots: p.shots, gsax: p.gsax, gar: gGar(p) }); continue; }
+      if (p.pos === 'G') { if (p.shots) gl.push({ id: p.id, t: p.t, n: p.n, toi: all(p.toi), shots: p.shots, gsax: p.gsax, gar: gGar(p), ga: p.x.gaG, xga: p.x.xgaG }); continue; }
       if (!all(p.toi)) continue;
-      rows.push({ id: p.id, t: p.t, n: p.n, pos: p.pos, toi: all(p.toi), ...parts(p) });
+      const b = g.box[p.id] || {};
+      rows.push({ id: p.id, t: p.t, n: p.n, pos: p.pos, toi: all(p.toi), ...parts(p),
+        line: { ...p.x, ht: b.ht || 0, bk: b.bk || 0, fw: b.fw || 0, fl: b.fl || 0, tk: b.tk || 0, gv: b.gv || 0, pt: b.pt || 0, pd: b.pd || 0, ev: p.toi.ev, pp: p.toi.pp, sh: p.toi.sh } });
     }
     for (const r of rows) if (r.toi >= 300) sk.push(r.gar);
     for (const r of gl) gk.push(r.gar);

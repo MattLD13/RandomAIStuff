@@ -130,7 +130,7 @@ function tableAt(dateStr) {
   return t;
 }
 // ---------- scoring chances + expected goals (league-wide play-by-play) ----------
-const { games: pbpGames, fetched: pbpFetched } = await chances.loadGames(finals.map((g) => g.id), get, join(ROOT, '.cache', 'shots-v2')   /* v2: shooter and goalie on each shot */);
+const { games: pbpGames, fetched: pbpFetched } = await chances.loadGames(finals.map((g) => g.id), get, join(ROOT, '.cache', 'shots-v3')   /* v3: team game stats (hits, faceoffs, power plays ...) */);
 const allShots = [...pbpGames.values()].flatMap((g) => g.shots.filter((s) => !s.en));
 const xgModel = chances.fitModel(allShots);
 const xgTotals = chances.seasonTotals(pbpGames, xgModel);
@@ -146,7 +146,7 @@ const ratedNow = players.rateSkaters(skNow, shooters), ratedLast = players.rateS
 console.log(`player ratings: ${Object.keys(ratedNow).length} skaters, ${Object.keys(ratedGoalies).length} goalies (last season ${Object.keys(ratedLast).length})`);
 
 // ---------- Box WAR (play-by-play + shift charts, see scripts/war.mjs) ----------
-const warDigests = await war.loadDigests(finals.map((g) => g.id), get, getText, join(ROOT, '.cache', 'war-v1'));
+const warDigests = await war.loadDigests(finals.map((g) => g.id), get, getText, join(ROOT, '.cache', 'war-v2'));
 const WAR = war.computeWar(warDigests.digests, xgModel);
 const abbrevOfId = {};
 for (const g of finals) { abbrevOfId[g.homeTeam.id] = g.homeTeam.abbrev; abbrevOfId[g.awayTeam.id] = g.awayTeam.abbrev; }
@@ -638,8 +638,11 @@ async function buildTeam(TEAM) {
     const sum = (a) => a.reduce((x, r) => x + r.gar, 0);
     warOut.games[g.id] = {
       us: R2(sum(mine) + sum(gl)), them: R2(sum(theirs) + sum(gt)),
-      rows: mine.map((r) => [r.id, r.n, r.pos, r.toi, R2(r.gc), R2(r.oio), R2(r.oid), R2(r.pp), R2(r.pen), R2(r.oth), R2(r.gar), r.pct]),
-      g: gl.map((r) => [r.id, r.n, r.shots, R2(r.gsax), R2(r.gar), r.pct]),
+      // the 13th entry is the player's own game line:
+      // [G, A, SOG, ixG, hits, blocks, FO won, FO lost, takeaways, giveaways, minors taken, minors drawn, EV / PP / SH seconds, on-ice GF, GA, xGF, xGA]
+      rows: mine.map((r) => [r.id, r.n, r.pos, r.toi, R2(r.gc), R2(r.oio), R2(r.oid), R2(r.pp), R2(r.pen), R2(r.oth), R2(r.gar), r.pct,
+        ((l) => [l.g, l.a, l.sog, R2(l.ixg), l.ht, l.bk, l.fw, l.fl, l.tk, l.gv, l.pt, l.pd, l.ev, l.pp, l.sh, l.gf, l.ga, R2(l.xgf), R2(l.xga)])(r.line)]),
+      g: gl.map((r) => [r.id, r.n, r.shots, R2(r.gsax), R2(r.gar), r.pct, r.ga, R2(r.xga)]),
     };
     for (const r of [...mine, ...gl]) warIds.add(r.id);
   }
@@ -805,9 +808,59 @@ const teamsIndex = {
 };
 await writeFile(join(outDir, 'teams.json'), JSON.stringify(teamsIndex, null, 1));
 
+// ---------- league page (hockey.mattdicks.org/nhl/): scoreboard, standings, odds, leaders ----------
+{
+  const sample = JSON.parse(await readFile(join(outDir, `${built[0]}.json`), 'utf8'));
+  const slugOf = Object.fromEntries(teamsIndex.teams.map((t) => [t.abbrev, t.slug]));
+  const teams = Object.fromEntries(Object.entries(sample.teams).map(([a, t]) => [a, { ...t, slug: slugOf[a] || a.toLowerCase() }]));
+  const ymd = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(d));
+  const dayMs = 86400000, today = ymd(now);
+  const dayKeys = [-1, 0, 1, 2, 3].map((k) => ymd(now.getTime() + k * dayMs));
+  const games = [...new Map(abbrevs.flatMap((a) => schedules[a]).filter((g) => g.gameType === 2).map((g) => [g.id, g])).values()]
+    .filter((g) => dayKeys.includes(ymd(g.startTimeUTC))).sort((x, y) => x.startTimeUTC.localeCompare(y.startTimeUTC));
+  const days = dayKeys.map((key, k) => ({
+    key, label: ['Yesterday', 'Today', 'Tomorrow'][k] || fmt(new Date(`${key}T12:00:00Z`), { weekday: 'short', month: 'short', day: 'numeric' }),
+    games: games.filter((g) => ymd(g.startTimeUTC) === key).map((g) => {
+      const fin = isFinal(g), h = g.homeTeam.abbrev, a = g.awayTeam.abbrev;
+      return { id: g.id, start: g.startTimeUTC, state: g.gameState, home: h, away: a,
+        hs: g.homeTeam.score ?? null, as: g.awayTeam.score ?? null, last: g.gameOutcome?.lastPeriodType || '',
+        time: fmt(new Date(g.startTimeUTC), { hour: 'numeric', minute: '2-digit' }),
+        winHome: !fin && teams[h] && teams[a] ? winPct(h, a, true) : null };
+    }),
+  }));
+  // leaders across the league
+  const shortName = (full) => { const p = String(full || '').split(' '); return p.length > 1 ? `${p[0][0]}. ${p.slice(1).join(' ')}` : full; };
+  const teamOf = (x) => String(x.teamAbbrevs || '').split(',').pop().trim();
+  const mug = (id, t) => `https://assets.nhle.com/mugs/nhl/${season}/${t}/${id}.png`;
+  const sk = Object.values(skNow).filter((x) => x.gamesPlayed > 0), gk = Object.values(goNow).filter((x) => x.gamesPlayed > 0);
+  const maxGp = Math.max(1, ...sk.map((x) => x.gamesPlayed));
+  const top = (arr, f, row, n = 10) => [...arr].sort((a, b) => f(b) - f(a)).slice(0, n).map(row);
+  const skRow = (v, sub) => (x) => ({ id: x.playerId, n: shortName(x.skaterFullName), t: teamOf(x), pos: x.positionCode, v: v(x), sub: sub(x), img: mug(x.playerId, teamOf(x)) });
+  const leaders = {
+    points: { label: 'Points', rows: top(sk, (x) => x.points + x.goals / 1000, skRow((x) => x.points, (x) => `${x.goals} G · ${x.assists} A`)) },
+    goals: { label: 'Goals', rows: top(sk, (x) => x.goals + x.points / 1000, skRow((x) => x.goals, (x) => `${x.shots} shots`)) },
+    assists: { label: 'Assists', rows: top(sk, (x) => x.assists + x.points / 1000, skRow((x) => x.assists, (x) => `${x.points} points`)) },
+    war: { label: 'Wins above replacement', rows: Object.values(WAR.season).filter((r) => r.pos !== 'G' && r.qualified).sort((a, b) => b.war - a.war).slice(0, 10)
+      .map((r) => ({ id: r.id, n: r.n, t: abbrevOfId[r.t], pos: r.pos, v: r.war.toFixed(1), sub: `${r.gar.toFixed(1)} GAR · ${r.gp} GP`, img: mug(r.id, abbrevOfId[r.t]) })) },
+    overall: { label: 'Rinkside overall', rows: Object.entries(ratedNow).filter(([id]) => skNow[id]).sort((a, b) => b[1].overall - a[1].overall).slice(0, 10)
+      .map(([id, r]) => { const x = skNow[id]; return { id: +id, n: shortName(x.skaterFullName), t: teamOf(x), pos: x.positionCode, v: r.overall, sub: `${x.points} pts in ${x.gamesPlayed}`, img: mug(id, teamOf(x)) }; }) },
+    save: { label: 'Save %', rows: top(gk.filter((x) => x.gamesPlayed >= Math.max(3, maxGp / 4)), (x) => x.savePct, (x) => ({ id: x.playerId, n: shortName(x.goalieFullName), t: teamOf(x), pos: 'G',
+      v: x.savePct.toFixed(3).replace(/^0/, ''), sub: `${x.wins}-${x.losses}-${x.otLosses} · ${x.goalsAgainstAverage.toFixed(2)} GAA`, img: mug(x.playerId, teamOf(x)) })) },
+    gwar: { label: 'Goalie WAR', rows: Object.values(WAR.season).filter((r) => r.pos === 'G' && r.qualified).sort((a, b) => b.war - a.war).slice(0, 10)
+      .map((r) => ({ id: r.id, n: r.n, t: abbrevOfId[r.t], pos: 'G', v: r.war.toFixed(1), sub: `${r.gsax >= 0 ? '+' : ''}${r.gsax.toFixed(1)} saved vs xG`, img: mug(r.id, abbrevOfId[r.t]) })) },
+  };
+  const league = { generatedAt: now.toISOString(), season, date: fmt(now, { weekday: 'long', month: 'long', day: 'numeric' }), today, gpw: WAR.gpw, teams, days, leaders };
+  await writeFile(join(outDir, 'league.json'), JSON.stringify(league));
+  console.log(`league: ${games.length} games around today, ${Object.keys(leaders).length} leader boards`);
+}
+
 // One folder per team name so hockey.mattdicks.org/rangers/ (and /nyr/, /leafs/ ...) work on plain
 // static hosting. Each is the main page with <base href="../"> so it shares app.js, style.css and data/.
 const page = (await readFile(join(ROOT, 'site', 'index.html'), 'utf8')).replace('<head>', '<head>\n  <base href="../">');
+for (const name of ['nhl', 'league']) {   // the league page
+  await mkdir(join(ROOT, 'site', name), { recursive: true });
+  await writeFile(join(ROOT, 'site', name, 'index.html'), page);
+}
 for (const t of teamsIndex.teams) {
   for (const name of new Set([t.slug, t.abbrev.toLowerCase(), ...t.aliases])) {
     await mkdir(join(ROOT, 'site', name), { recursive: true });

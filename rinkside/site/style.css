@@ -712,8 +712,8 @@ body:not(.stack) .tallcol .rbt.mini { display: none; }
 .btr .bc { text-align: center; padding: 3px 0; font-size: 12px; }
 .btr .bc.bg { font-size: 13px; border-left: 2px solid var(--gold); }
 .btr .bp { text-align: right; font-size: 13px; }
-.btr[data-card] { cursor: pointer; }
-.btr[data-card]:hover .bn b { text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 3px; }
+.btr[data-card], .btr[data-pg] { cursor: pointer; }
+.btr[data-pg]:hover .bn b, .btr[data-card]:hover .bn b { text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 3px; }
 @media (max-width: 560px) {
   .btr { grid-template-columns: minmax(62px, 1fr) repeat(6, 1fr) 40px 24px; }
   .btr > :nth-child(2) { display: none; }
@@ -724,3 +724,98 @@ body:not(.stack) .tallcol .rbt.mini { display: none; }
   .ptile small { font-size: 9px; }
   .ptile b { font-size: 15px; }
 }
+
+/* one player's game inside Box WAR */
+.pgv { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); }
+.pgv .face { width: 46px; height: 46px; border-radius: 50%; overflow: hidden; background: #1d1d1b; border: 1.5px solid var(--team-hi); flex: none; }
+.pgv .face img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+.pgn { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.1; }
+.pgn b { font: 700 20px var(--head); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pgn small { color: var(--muted); font-size: 12.5px; }
+.pgc { flex: none; border: 1px solid var(--gold); background: transparent; color: var(--otl); font: 700 11px var(--cond); letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 10px; border-radius: 3px; cursor: pointer; }
+.pgp { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 10px; }
+.pgp div { text-align: center; }
+.pgp small { display: flex; align-items: center; justify-content: center; gap: 4px; color: #cfcfcf; font: 600 10px var(--cond); white-space: nowrap; }
+.pgp small i { width: 7px; height: 7px; border-radius: 1px; flex: none; }
+.pgp b { display: block; margin-top: 3px; padding: 6px 0; border-radius: 3px; font-size: 14px; }
+.gr[data-pg] { cursor: pointer; }
+.gr[data-pg]:hover .grn { text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 3px; }
+@media (max-width: 560px) { .pgp { grid-template-columns: repeat(3, 1fr); } .pcard .pgrid { grid-template-columns: repeat(3, 1fr); } }
+.pcard .pgrid.g3 { grid-template-columns: repeat(3, 1fr); }
+
+/* ---------- league page (/nhl/) ---------- */
+body.leaguepage #stage { min-height: 100vh; }
+body.leaguepage #board { position: relative; width: auto; height: auto; max-width: 1180px; margin: 0 auto; padding: 18px 24px 30px; transform: none !important; }
+.lghdr { display: flex; align-items: center; gap: 18px; padding-bottom: 14px; border-bottom: 2px solid var(--gold); }
+.lgband { width: 78px; height: 78px; flex: none; display: grid; place-items: center; background: #161616; border: 1px solid #2e2e2e; border-radius: 6px; cursor: pointer; }
+.lgband img { width: 58px; height: 58px; }
+.lgtitle { flex: 1; min-width: 0; }
+.lgt1 { font: 400 54px/0.95 var(--mono); letter-spacing: 0.04em; }
+.lgt2 { font-size: 17px; color: #d6d6d6; margin-top: 4px; }
+.lgmeta { text-align: right; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.lgsec { margin-top: 22px; }
+.lggrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 36px; }
+.lgdays { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.lgdays button { border: 1px solid #333; background: transparent; color: var(--muted); font: 700 11px var(--cond); letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 9px; border-radius: 3px; cursor: pointer; }
+.lgdays button.on { color: var(--fg); border-color: var(--gold); }
+.lggames { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 8px; margin-top: 10px; }
+.lgc { background: var(--card); border-radius: 4px; padding: 6px 8px 7px; }
+.lgc.live { box-shadow: inset 0 0 0 1px rgba(255, 77, 94, 0.55); }
+.lgt { display: flex; align-items: center; gap: 8px; height: 28px; color: var(--fg); text-decoration: none; }
+.lgt img.logo { width: 24px; height: 24px; transform: scale(1.3); }
+.lgt b { font: 700 17px var(--head); }
+.lgt small { color: var(--muted); font-size: 11.5px; }
+.lgt .m { margin-left: auto; font-size: 20px; color: #9a9a9a; }
+.lgt.win .m { color: var(--fg); }
+.lgt:hover b { text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 3px; }
+.lgf { display: flex; align-items: center; gap: 8px; margin-top: 4px; padding-top: 5px; border-top: 1.5px dashed #333; color: var(--muted); font: 600 12px var(--cond); letter-spacing: 0.04em; text-transform: uppercase; }
+.lgwp { flex: 1; display: flex; height: 4px; border-radius: 2px; overflow: hidden; background: #333; }
+.lgwp i { display: block; height: 100%; }
+.lgf small { font-size: 11px; color: #bdbdbd; }
+.lgstand { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; margin-top: 8px; }
+.lgrow { display: grid; grid-template-columns: 1fr 26px 30px 34px 44px 32px; align-items: center; gap: 4px; height: 25px; color: var(--fg); text-decoration: none; font-size: 13px; }
+.lgrow > :not(:first-child) { text-align: right; }
+.lgrow.lgh { color: var(--muted); font: 600 10px var(--cond); letter-spacing: 0.1em; text-transform: uppercase; border-bottom: 1px solid var(--rule); }
+.lgrow.lgh > :first-child { color: var(--otl); font-weight: 700; }
+.lgn { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.lgn i { font-style: normal; width: 12px; color: var(--muted); font-size: 11px; }
+.lgn img.logo { width: 18px; height: 18px; transform: scale(1.35); }
+.lgn b { font: 700 15px var(--head); }
+.lgrow .lgp { color: var(--fg); font-size: 15px; }
+a.lgrow:hover { background: rgba(255, 255, 255, 0.04); }
+.lgpow { margin-top: 8px; display: grid; gap: 1px; }
+.lgpr { display: grid; grid-template-columns: 20px 22px 40px 1fr 40px 46px; align-items: center; gap: 8px; height: 27px; color: var(--fg); text-decoration: none; font-size: 13px; }
+.lgpr img.logo { width: 18px; height: 18px; transform: scale(1.35); }
+.lgpr b { font: 700 14.5px var(--head); }
+.lgpr > .m:last-child, .lgpr > .m:nth-last-child(2) { text-align: right; }
+.lgk { color: var(--muted); font-size: 12px; text-align: right; }
+.lgsb { position: relative; height: 9px; }
+.lgsb em { position: absolute; left: 50%; top: -3px; bottom: -3px; border-left: 1.5px dashed #555; }
+.lgsb i { position: absolute; top: 0; bottom: 0; border-radius: 1px; }
+a.lgpr:hover b { text-decoration: underline; text-decoration-color: var(--gold); }
+.lgodds { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; }
+.lgodds .orow { color: var(--fg); text-decoration: none; }
+.lgsub { display: flex; align-items: center; height: 24px; margin-top: 6px; font: 600 10.5px var(--cond); letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+.lgwheel { border: 1px solid var(--gold); background: transparent; color: var(--otl); font: 700 10.5px var(--cond); letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; cursor: pointer; }
+.lglead { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px 22px; }
+@media (max-width: 1000px) { .lglead { grid-template-columns: 1fr 1fr; } }
+.lglr { display: grid; grid-template-columns: 14px 30px 1fr auto; align-items: center; gap: 8px; height: 36px; color: var(--fg); text-decoration: none; }
+.lglr .face { width: 30px; height: 30px; border-radius: 50%; overflow: hidden; background: #1d1d1b; border: 1.5px solid #555; }
+.lglr .face img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+.lgln { display: flex; flex-direction: column; min-width: 0; line-height: 1.1; }
+.lgln b { font: 700 14.5px var(--head); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lgln small { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lgv { font-size: 18px; }
+a.lglr:hover b { text-decoration: underline; text-decoration-color: var(--gold); }
+.lgfoot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 26px; padding-top: 10px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 12.5px; }
+.lgfoot .brand { font: 700 13px var(--cond); letter-spacing: 0.2em; color: #d6d6d6; cursor: pointer; }
+@media (max-width: 760px) {
+  body.leaguepage #board { padding: 12px 14px 24px; }
+  .lggrid, .lgstand, .lgodds, .lglead { grid-template-columns: 1fr; }
+  .lgt1 { font-size: 38px; }
+  .lgband { width: 60px; height: 60px; } .lgband img { width: 44px; height: 44px; }
+  .lgmeta { display: none; }
+  .lggames { grid-template-columns: 1fr 1fr; }
+  .lgsec .colhead { flex-wrap: wrap; height: auto; gap: 6px; padding-bottom: 6px; }
+}
+@media (max-width: 760px) { .lgdays { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; } .lgdays button { flex: none; } }

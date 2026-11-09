@@ -3,11 +3,11 @@
 // The NHL's API doesn't send CORS headers, so a browser page can't read it directly. This worker
 // passes a few live-game endpoints through with CORS headers and a short edge cache, so the board
 // can poll a game in progress every 15 seconds. Only these paths are allowed:
-//   /v1/gamecenter/<gameId>/play-by-play | landing | boxscore
+//   /v1/gamecenter/<gameId>/play-by-play | landing | boxscore | right-rail
 //   /v1/score/now
 // Deploy: Cloudflare dashboard → Workers & Pages → Create → Worker → paste this file → Deploy.
 // Then put the worker's URL in rinkside/config.json as "liveProxy".
-const ALLOWED = [/^\/v1\/gamecenter\/\d{10}\/(play-by-play|landing|boxscore)$/, /^\/v1\/score\/now$/];
+const ALLOWED = [/^\/v1\/gamecenter\/\d{10}\/(play-by-play|landing|boxscore|right-rail)$/, /^\/v1\/score\/now$/];
 const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, OPTIONS',

@@ -313,10 +313,25 @@ from the goalies outside each team's top two, shrunk toward −0.006 a shot. Win
 Season WAR percentiles compare against skaters with 25%+ of games played (goalies with 3+ games).
 
 Where WAR shows up:
-- **Box WAR:** a table of every piece per skater (tinted team colour or red, with a percentile per game), or the same as bars. It opens from the Box WAR panels, or from "Box WAR ›" in any game popup. It shows one bar per player. The ‹ › buttons step through the games, and tapping a player opens their card.
+- **Box WAR:** tap a player for their own game: GAR and its pieces, ice time by strength,
+  points, shots, individual xG, hits, blocks, faceoffs, takeaways / giveaways, penalties and
+  on-ice goals and xG. **Season card ›** opens the full card. Box WAR also has a table of every piece per skater (tinted team colour or red, with a percentile per game), or the same as bars. It opens from the Box WAR panels, or from "Box WAR ›" in any game popup. It shows one bar per player. The ‹ › buttons step through the games, and tapping a player opens their card.
 - **Player cards:** a WAR box with the season percentile.
 - **Panels:** Box WAR (last game) and Wins above replacement (season) for the list, picture and tall-column slots.
 - **Other:** a Team WAR stat box (ranked of 32), and a WAR leader option for the leader rows.
+
+## League page
+
+`hockey.mattdicks.org/nhl/` (also `/league/`, or **NHL · whole league** at the top of the team
+picker) shows the whole league:
+- **Scores:** yesterday, today and the next three days. Live scores update every 30 s once the
+  relay is set up (`/v1/score/now`); upcoming games show the model's win chances.
+- **Standings:** all four divisions, with playoff odds.
+- **Playoff odds:** by conference, with the Cup wheel.
+- **Power rankings:** by team strength, with xG share and Cup odds.
+- **Leaders:** points, goals, assists, WAR, Rinkside overall, save % and goalie WAR.
+
+Every team links to its own board. The build writes this to `site/data/league.json`.
 
 ## Live games
 
@@ -325,13 +340,16 @@ When the team's game is on, the page polls the NHL every 15 seconds and shows it
   Tap it for goals with scorers, assists and PP/SH/EN tags.
 - **Season and xG charts:** a dashed "LIVE" bar.
 - **Next 5:** the game's card shows the score.
+- **Game stats panel and block:** shots, attempts, xG, faceoffs, power play, hits, blocks, takeaways,
+  giveaways and PIM for the game in progress (the last game otherwise). The live popup shows them too.
 - **Scoring-chances panel:** switches to the game in progress. The browser runs the same xG
   model as the build (`site/chances-core.mjs`), so live xG matches the final numbers.
 
 When the game ends, polling stops and the regular 30-minute refresh brings in the final.
 
 The NHL API doesn't send CORS headers, so browsers can't read it directly. A small
-**Cloudflare Worker** (`cloudflare/live-proxy.js`) relays only the live-game endpoints, with
+**Cloudflare Worker** (`cloudflare/live-proxy.js`) relays only the live-game endpoints
+(play-by-play, the NHL's official team stats feed `right-rail`, and the league scoreboard), with
 CORS headers and an 8-second shared cache. The free plan is plenty.
 
 **One-time setup:**

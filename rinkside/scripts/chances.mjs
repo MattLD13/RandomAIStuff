@@ -3,7 +3,7 @@
 // site/chances-core.mjs so the browser can run exactly the same model on live games.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { reduce, features, xg, side } from '../site/chances-core.mjs';
+import { reduce, features, xg, side, officialStats } from '../site/chances-core.mjs';
 
 export { xg, danger, report } from '../site/chances-core.mjs';
 
@@ -18,7 +18,10 @@ export async function loadGames(gameIds, get, cacheDir, { concurrency = 8 } = {}
       const file = join(cacheDir, `${id}.json`);
       try { games.set(id, JSON.parse(await readFile(file, 'utf8'))); continue; } catch {}
       try {
-        const g = reduce(await get(`https://api-web.nhle.com/v1/gamecenter/${id}/play-by-play`));
+        const [pbp, rail] = await Promise.all([get(`https://api-web.nhle.com/v1/gamecenter/${id}/play-by-play`),
+          get(`https://api-web.nhle.com/v1/gamecenter/${id}/right-rail`).catch(() => null)]);
+        const g = reduce(pbp);
+        officialStats(g.stats, g.home, g.away, rail?.teamGameStats);
         await writeFile(file, JSON.stringify(g));
         games.set(id, g); fetched++;
       } catch (err) { console.warn(`play-by-play ${id}: ${err.message}`); }
