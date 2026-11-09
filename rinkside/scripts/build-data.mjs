@@ -384,6 +384,7 @@ async function buildTeam(TEAM) {
     l10: rec(t.l10Wins, t.l10Losses, t.l10OtLosses), streak: t.streakCode ? `${t.streakCode}${t.streakCount}` : '–',
     ...advFor(t.teamAbbrev.default),
     odds: playoffOdds[t.teamAbbrev.default], strength: +strength[t.teamAbbrev.default].toFixed(2),
+    color: config.teams?.[t.teamAbbrev.default]?.primary || '#555555',
   }]));
 
   // ---------- conference rank after each of our games ----------
@@ -458,6 +459,7 @@ async function buildTeam(TEAM) {
     const o = playoffOdds[TEAM];
     stats.playoffOdds = { label: 'Playoff odds', value: o.playoff.toFixed(o.playoff >= 99.5 || o.playoff < 0.5 ? 0 : 1), unit: '%', rank: rankBy((a) => playoffOdds[a].playoff), of: 32, sim: true, avg: '50' };
     stats.projPts = { label: 'Projected points', value: String(o.projPts), unit: '', rank: rankBy((a) => playoffOdds[a].projPts), of: 32, sim: true, avg: '' };
+    stats.cupOdds = { label: 'Stanley Cup odds', value: o.cup.toFixed(1), unit: '%', rank: rankBy((a) => playoffOdds[a].cup), of: 32, sim: true, avg: '3.1' };
     stats.divOdds = { label: 'Division title odds', value: o.division.toFixed(1), unit: '%', rank: rankBy((a) => playoffOdds[a].division), of: 32, sim: true, avg: '' };
     stats.strength = { label: 'Team strength rating', value: (strength[TEAM] > 0 ? '+' : '') + strength[TEAM].toFixed(2), unit: '', rank: rankBy((a) => strength[a]), of: 32, sim: true, avg: '0.00' };
   }

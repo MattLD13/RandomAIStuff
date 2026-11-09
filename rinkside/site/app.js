@@ -71,7 +71,7 @@
     const o = [];
     if (tall) for (const r of (d.ratings || []).slice(0, 5)) o.push([`wideCard:${r.id}`, `Block: player card \u2014 ${r.name}`]);
     if (tall) o.push(['wideOdds', 'Block: playoff odds (conference)'], ['wideRatings', 'Block: player ratings grid']);
-    o.push(['wideMatchup', 'Block: next-game matchup'], ['wideStats', 'Block: team stats wall'], ['wideEdge', 'Block: EDGE + xG stats wall']);
+    o.push(['wideRun', 'Block: playoff run odds (opens the Cup wheel)'], ['wideMatchup', 'Block: next-game matchup'], ['wideStats', 'Block: team stats wall'], ['wideEdge', 'Block: EDGE + xG stats wall']);
     if (lastChances(d) != null) o.push(['wideChances', 'Block: last game scoring chances']);
     o.push(['wideLeaders', 'Block: team leaders strip']);
     return o;
@@ -691,7 +691,7 @@
     let rows = Object.entries(d.teams).filter(([, t]) => t.conf === conf).sort((a, b) => b[1].odds.playoff - a[1].odds.playoff || b[1].odds.projPts - a[1].odds.projPts);
     const mine = rows.findIndex(([a]) => a === me);
     rows = mine < 10 ? rows.slice(0, 10) : [...rows.slice(0, 9), rows[mine]];
-    return `<div class="colhead big"><span class="t">Playoff odds</span><span class="r small">PROJ · ODDS</span></div><div class="olist">` +
+    return `<div class="colhead big"${pop('wheel')}><span class="t">Playoff odds</span><span class="r small">PROJ \u00b7 ODDS \u2192</span></div><div class="olist">` +
       rows.map(([a, t]) => `<div class="orow${a === me ? ' me' : ''}"${pop(`team:${a}`)}>${logo(t.logo, a)}<span class="ab">${esc(a)}</span><span class="opts m">${t.odds.projPts}</span>` +
         `<span class="obar"><i style="width:${t.odds.playoff}%"></i></span><span class="opct m">${t.odds.playoff >= 99.5 ? '>99' : t.odds.playoff < 0.5 ? '<1' : Math.round(t.odds.playoff)}%</span></div>`).join('') + '</div>';
   }
@@ -729,7 +729,7 @@
     const row = ([a, t], i) => `<div class="orow${a === me ? ' me' : ''}"${pop(`team:${a}`)}><span class="on m">${i + 1}</span>${logo(t.logo, a)}<span class="ab">${esc(a)}</span><span class="orec">${esc(t.record)}</span><span class="opts m">${t.odds.projPts}</span>` +
       `<span class="obar"><i style="width:${t.odds.playoff}%"></i></span><span class="opct m">${t.odds.playoff >= 99.5 ? '>99' : t.odds.playoff < 0.5 ? '<1' : Math.round(t.odds.playoff)}%</span><span class="odiv m">${Math.round(t.odds.division)}%</span></div>`;
     const html = `<div class="wodds" style="grid-template-columns:repeat(${cols},1fr)">${Array.from({ length: cols }, (_, c) => `<div class="olist">${rows.slice(c * per, (c + 1) * per).map((r, i) => row(r, c * per + i)).join('')}</div>`).join('')}</div>`;
-    return { title: `<span${pop('stat:playoffOdds')}>Playoff odds<span class="big">${d.teams[me].odds.playoff}%</span></span>`, note: `${conf} conference · projected points, playoff %, division % · 10,000 simulations`, html };
+    return { title: `<span${pop('wheel')}>Playoff odds<span class="big">${d.teams[me].odds.playoff}%</span></span>`, note: `${conf} conference · projected points, playoff %, division % · 10,000 simulations`, html };
   }
 
   function wideRatings(d, w, h) {
@@ -796,6 +796,7 @@
     const [k, arg] = kind.split(':');
     if (k === 'wideCard') return wideCard(d, +arg, w, h);
     if (k === 'wideOdds') return wideOdds(d, w, h);
+    if (k === 'wideRun') return wideRunOdds(d, w, h);
     if (k === 'wideRatings') return wideRatings(d, w, h);
     if (k === 'wideMatchup') return wideMatchup(d, w, h);
     if (k === 'wideStats' || k === 'wideEdge') return wideTiles(d, w, h, k);
@@ -823,6 +824,91 @@
     const periodNo = { '1st': 1, '2nd': 2, '3rd': 3 }[L.period] || 4;
     const left = periodNo >= 4 ? 0.05 : Math.max(0, ((3 - periodNo) * 20 + (L.intermission ? 0 : mm + ss / 60)) / 60);
     return Math.round(100 * winFrom(3 * Math.sqrt(m) * left, (3 / Math.sqrt(m)) * left, L.us - L.them));
+  }
+
+  // ======================= playoff-run wheel =======================
+  const RUN = [['playoff', 'Make playoffs'], ['round2', 'Make 2nd round'], ['round3', 'Make conf. final'], ['final', 'Make Final'], ['cup', 'Win Cup']];
+  const pctLabel = (v) => (v >= 99.5 ? '>99%' : v >= 10 ? `${Math.round(v)}%` : v >= 0.1 ? `${v.toFixed(1)}%` : '');
+
+  function wheelSvg(d) {
+    const me = d.team.abbrev, C = 330, rings = [[205, 262], [162, 205], [121, 162], [82, 121], [44, 82]];
+    const divOrder = ['Atlantic', 'Metropolitan', 'Central', 'Pacific'];
+    const teams = Object.entries(d.teams).filter(([, t]) => t.odds)
+      .sort((a, b) => divOrder.indexOf(a[1].div) - divOrder.indexOf(b[1].div) || b[1].odds.playoff - a[1].odds.playoff);
+    const pt = (r, a) => [C + r * Math.sin(a), C - r * Math.cos(a)];
+    const sector = (r0, r1, a0, a1) => {
+      const large = a1 - a0 > Math.PI ? 1 : 0, [x0, y0] = pt(r1, a0), [x1, y1] = pt(r1, a1), [x2, y2] = pt(r0, a1), [x3, y3] = pt(r0, a0);
+      return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r1} ${r1} 0 ${large} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}A${r0} ${r0} 0 ${large} 0 ${x3.toFixed(1)} ${y3.toFixed(1)}Z`;
+    };
+    let s = '', mine = '', outerMid = {};
+    RUN.forEach(([k, label], ri) => {
+      const [r0, r1] = rings[ri], total = teams.reduce((a, [, t]) => a + t.odds[k], 0) || 1;
+      let a = 0;
+      for (const [abbr, t] of teams) {
+        const v = t.odds[k], span = (v / total) * 2 * Math.PI;
+        if (span <= 0) { if (ri === 0) outerMid[abbr] = a; continue; }   // no slice, but keep its logo in order
+        const path = `<path d="${sector(r0, r1, a, a + span)}" fill="${esc(t.color)}" stroke="#0b0b0b" stroke-width="0.8"><title>${esc(t.name)}: ${label.toLowerCase()} ${v}%</title></path>`;
+        s += path;
+        if (abbr === me) mine += `<path d="${sector(r0, r1, a, a + span)}" fill="none" stroke="#fff" stroke-width="2.4"/>`;
+        const mid = a + span / 2, rm = (r0 + r1) / 2;
+        if (span * rm >= 30) {
+          const [tx, ty] = pt(rm, mid);
+          s += `<text x="${tx.toFixed(1)}" y="${(ty + 3.5).toFixed(1)}" text-anchor="middle" class="wv">${pctLabel(v)}</text>`;
+        }
+        if (ri === 0) outerMid[abbr] = mid;
+        a += span;
+      }
+    });
+    // ring separators and labels at the top
+    for (const [, r1] of rings) s += `<circle cx="${C}" cy="${C}" r="${r1}" fill="none" stroke="#e8e8e8" stroke-width="1.2" opacity=".85"/>`;
+    s += `<circle cx="${C}" cy="${C}" r="42" fill="#141414" stroke="#e8e8e8" stroke-width="1.2"/>`;
+    s += `<text x="${C}" y="${C - 3}" text-anchor="middle" class="wh">STANLEY</text><text x="${C}" y="${C + 11}" text-anchor="middle" class="wh">CUP</text>`;
+    RUN.forEach(([, label], ri) => { s += `<text x="${C}" y="${C - rings[ri][1] + 14}" text-anchor="middle" class="wr2">${label}</text>`; });
+    // logos round the rim, nudged apart so none overlap
+    const placed = teams.filter(([a]) => outerMid[a] != null).map(([a, t]) => ({ a, t, ang: outerMid[a] }));
+    const minGap = (2 * Math.PI) / Math.max(placed.length, 1) * 0.92;
+    for (let pass = 0; pass < 40; pass++) for (let i = 1; i < placed.length; i++) {
+      const gap = placed[i].ang - placed[i - 1].ang;
+      if (gap < minGap) { const push = (minGap - gap) / 2; placed[i - 1].ang -= push; placed[i].ang += push; }
+    }
+    for (const p of placed) {
+      const [lx0, ly0] = pt(263, outerMid[p.a]), [lx1, ly1] = pt(284, p.ang), [cx, cy] = pt(302, p.ang);
+      s += `<line x1="${lx0.toFixed(1)}" y1="${ly0.toFixed(1)}" x2="${lx1.toFixed(1)}" y2="${ly1.toFixed(1)}" stroke="#555" stroke-width="0.8"/>`;
+      s += `<image href="${esc(p.t.logo)}" x="${(cx - 17).toFixed(1)}" y="${(cy - 17).toFixed(1)}" width="34" height="34"${p.a === me ? ' class="wme"' : ''}><title>${esc(p.t.name)}</title></image>`;
+    }
+    return `<svg class="wheel" viewBox="0 0 ${2 * C} ${2 * C}" role="img" aria-label="Playoff run odds wheel">${s}${mine}</svg>`;
+  }
+
+  let wheelEl = null;
+  function openWheel() {
+    closeWheel();
+    const d = current, me = d.team.abbrev, o = d.teams[me].odds;
+    wheelEl = document.createElement('div');
+    wheelEl.className = 'cardwrap';
+    wheelEl.innerHTML = `<div class="pcard wheelcard" role="dialog" aria-label="Playoff run odds"><button class="px" aria-label="Close">×</button>` +
+      `<div class="pc-head">${logo(d.team.logo, me)}<div class="pc-name">Playoff run odds</div></div>` +
+      `<div class="wsum">${RUN.map(([k, label]) => `<div><small>${label}</small><b class="m">${pctLabel(o[k]) || '<0.1%'}</b></div>`).join('')}</div>${wheelSvg(d)}` +
+      note(`${d.team.name} outlined. Outer ring: making the playoffs; inner ring: winning the Cup. Each ring is split by every team’s odds. From 10,000 simulated seasons and playoff brackets (best-of-seven series, home ice to the team with more points).`) + '</div>';
+    wheelEl.addEventListener('click', (e) => { if (e.target === wheelEl || e.target.closest('.px')) closeWheel(); });
+    document.body.appendChild(wheelEl);
+  }
+  function closeWheel() { wheelEl?.remove(); wheelEl = null; }
+
+  // wide block: the same five numbers per team as a heat table
+  function wideRunOdds(d, w, h) {
+    const me = d.team.abbrev, conf = d.teams[me].conf;
+    const cols = w >= 700 ? 2 : 1, per = Math.max(1, Math.floor((h - 16) / 23)), n = cols * per;
+    let rows = Object.entries(d.teams).filter(([, t]) => t.conf === conf && t.odds).sort((a, b) => b[1].odds.cup - a[1].odds.cup || b[1].odds.playoff - a[1].odds.playoff);
+    const mine = rows.findIndex(([a]) => a === me);
+    rows = mine < n ? rows.slice(0, n) : [...rows.slice(0, n - 1), rows[mine]];
+    const max = Object.fromEntries(RUN.map(([k]) => [k, Math.max(...rows.map(([, t]) => t.odds[k]), 1)]));
+    const head = `<div class="rrh"><span></span>${RUN.map(([k]) => `<span>${{ playoff: 'Playoffs', round2: 'Rd 2', round3: 'Conf F', final: 'Final', cup: 'Cup' }[k]}</span>`).join('')}</div>`;
+    const row = ([a, t]) => `<div class="rrr${a === me ? ' me' : ''}"><span class="rrt">${logo(t.logo, a)}<b>${esc(a)}</b></span>${RUN.map(([k]) => {
+      const v = t.odds[k], shade = Math.round(18 + 62 * (v / max[k]));
+      return `<span class="rrc m" style="background:color-mix(in srgb, #2f6fd1 ${shade}%, #1b1b1b)">${pctLabel(v) || '0%'}</span>`;
+    }).join('')}</div>`;
+    const html = `<div class="wrun"${pop('wheel')} style="grid-template-columns:repeat(${cols},1fr)">${Array.from({ length: cols }, (_, c) => `<div>${head}${rows.slice(c * per, (c + 1) * per).map(row).join('')}</div>`).join('')}</div>`;
+    return { title: `<span${pop('wheel')}>Playoff run odds<span class="big">${pctLabel(d.teams[me].odds.cup) || '<0.1%'} Cup</span></span>`, note: `${conf} conference · tap for the league wheel`, html };
   }
 
   // ---------- full board ----------
@@ -1217,6 +1303,7 @@
   function openPop(target) {
     const key = target.dataset.pop;
     if (key.startsWith('card:')) { closePop(); return openCard(+key.slice(5)); }
+    if (key === 'wheel') { closePop(); return openWheel(); }
     if (popKey === key) return closePop();
     closePop();
     const html = popContent(key);
@@ -1383,7 +1470,7 @@
   if (I) {
     board.addEventListener('click', (e) => { if (!editing && e.target.closest('.hdr .band, .foot .brand')) openPicker(); });
     addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { closePicker(); closePop(); closeCard(); }
+      if (e.key === 'Escape') { closePicker(); closePop(); closeCard(); closeWheel(); }
       else if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('.hdr .band')) { e.preventDefault(); openPicker(); }
       else if (e.key.toLowerCase() === 't' && !picker && !editing && !e.metaKey && !e.ctrlKey) openPicker();
       else if (e.key.toLowerCase() === 'c' && !picker && !e.metaKey && !e.ctrlKey) (editing ? stopEditing : startEditing)();

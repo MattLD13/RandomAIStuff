@@ -553,3 +553,27 @@ body.stack .livebox .ls, body.stack .livebox .lsc { justify-content: flex-start;
 .wld .m { font: 400 22px var(--mono); }
 .wld.short .m { font-size: 18px; }
 .wld[data-pop]:hover, .wcard[data-pop]:hover { filter: brightness(1.08); }
+.wmatch .mtop { padding: 0 6px; }
+.wmatch .mtop img.logo { transform: scale(1.1); }
+
+/* ---------- playoff-run wheel ---------- */
+.wheelcard { width: min(640px, 100%); }
+.wheel { display: block; width: 100%; height: auto; margin-top: 6px; }
+.wheel .wv { fill: #fff; font: 600 11px var(--cond); paint-order: stroke; stroke: rgba(0,0,0,.55); stroke-width: 2.4px; pointer-events: none; }
+.wheel .wr2 { fill: #fff; font: 700 12px var(--head); letter-spacing: 0.03em; paint-order: stroke; stroke: rgba(0,0,0,.7); stroke-width: 3px; pointer-events: none; }
+.wheel .wh { fill: var(--otl); font: 700 10px var(--cond); letter-spacing: 0.1em; }
+.wheel .wme { filter: drop-shadow(0 0 4px #fff); }
+.wsum { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 10px; }
+.wsum div { background: var(--card); border-radius: 3px; padding: 6px 4px; text-align: center; }
+.wsum small { display: block; color: var(--muted); font: 600 10px var(--cond); letter-spacing: 0.04em; text-transform: uppercase; }
+.wsum b { display: block; font: 400 18px var(--mono); margin-top: 2px; }
+.wrun { display: grid; gap: 0 22px; cursor: pointer; }
+.rrh, .rrr { display: grid; grid-template-columns: 74px repeat(5, 1fr); gap: 3px; align-items: center; }
+.rrh { height: 16px; }
+.rrh span { color: var(--muted); font: 700 9.5px var(--cond); letter-spacing: 0.06em; text-transform: uppercase; text-align: center; }
+.rrr { height: 23px; }
+.rrr.me .rrt b { color: #fff; text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 3px; }
+.rrt { display: flex; align-items: center; gap: 6px; }
+.rrt img.logo { width: 18px; height: 18px; transform: scale(1.3); }
+.rrt b { font: 700 14px var(--head); color: #cfcfcf; }
+.rrc { height: 20px; display: grid; place-items: center; border-radius: 2px; font-size: 12px; }

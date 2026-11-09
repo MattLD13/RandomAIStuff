@@ -8,7 +8,10 @@
 // average by games played: weight = GP / (GP + 25) (about 40% after 18 games, 77% by the end).
 // Playoff odds play out the rest of the season 10,000 times with those probabilities; about 23%
 // of games reach overtime, where the loser still takes a point. Playoff spots use the NHL format
-// (top three in each division plus two wild cards per conference).
+// (top three in each division plus two wild cards per conference). Each simulated season then plays
+// the bracket: in each division, the division winner meets a wild card (the better division winner
+// gets the second wild card) and 2nd meets 3rd; then the division final, conference final and Cup
+// Final. Series are best of seven with home ice (2-2-1-1-1) to the team with more points.
 
 const z = (vals) => {
   const m = vals.reduce((a, b) => a + b, 0) / vals.length;
@@ -53,6 +56,18 @@ export function simulate(standings, remaining, model, { sims = 10000, otRate = 0
   const games = remaining.filter((g) => idx[g.homeTeam.abbrev] != null && idx[g.awayTeam.abbrev] != null)
     .map((g) => [idx[g.homeTeam.abbrev], idx[g.awayTeam.abbrev], model.prob(g.homeTeam.abbrev, g.awayTeam.abbrev)]);
   const made = new Array(teams.length).fill(0), divWin = new Array(teams.length).fill(0), ptsSum = new Array(teams.length).fill(0);
+  const r2 = new Array(teams.length).fill(0), r3 = new Array(teams.length).fill(0), fin = new Array(teams.length).fill(0), cup = new Array(teams.length).fill(0);
+  const pGame = (h, a) => model.prob(teams[h], teams[a]);
+  // best of seven; `hi` has home ice in games 1, 2, 5 and 7
+  const series = (hi, lo) => {
+    let w1 = 0, w2 = 0;
+    for (let g = 0; w1 < 4 && w2 < 4; g++) {
+      const hiHome = g === 0 || g === 1 || g === 4 || g === 6;
+      const p = hiHome ? pGame(hi, lo) : 1 - pGame(lo, hi);
+      if (rand() < p) w1++; else w2++;
+    }
+    return w1 === 4 ? hi : lo;
+  };
   const confs = [...new Set(conf)], divs = [...new Set(div)];
   for (let s = 0; s < sims; s++) {
     const pts = base.slice(), tie = teams.map(() => rand());
@@ -61,19 +76,36 @@ export function simulate(standings, remaining, model, { sims = 10000, otRate = 0
       if (homeWins) { pts[h] += 2; if (ot) pts[a] += 1; } else { pts[a] += 2; if (ot) pts[h] += 1; }
     }
     const order = (list) => list.sort((x, y) => pts[y] - pts[x] || tie[y] - tie[x]);
+    const better = (a, b) => (pts[a] > pts[b] || (pts[a] === pts[b] && tie[a] > tie[b]) ? [a, b] : [b, a]);
+    const play = (a, b) => series(...better(a, b));
+    const champs = [];
     for (const c of confs) {
-      const top = [];
+      const top = [], byDiv = [];
       for (const d of divs) {
         const ds = order(teams.map((_, i) => i).filter((i) => conf[i] === c && div[i] === d));
         if (!ds.length) continue;
-        divWin[ds[0]]++; top.push(...ds.slice(0, 3));
+        divWin[ds[0]]++; top.push(...ds.slice(0, 3)); byDiv.push(ds.slice(0, 3));
       }
       const rest = order(teams.map((_, i) => i).filter((i) => conf[i] === c && !top.includes(i)));
-      for (const i of [...top, ...rest.slice(0, 2)]) made[i]++;
+      const wc = rest.slice(0, 2);
+      for (const i of [...top, ...wc]) made[i]++;
+      if (byDiv.length !== 2 || wc.length < 2) continue;
+      // the better division winner meets the second wild card
+      const [bestDiv] = better(byDiv[0][0], byDiv[1][0]);
+      const sides = byDiv.map((d3) => {
+        const wcOpp = d3[0] === bestDiv ? wc[1] : wc[0];
+        const a = play(d3[0], wcOpp), b = play(d3[1], d3[2]);
+        r2[a]++; r2[b]++;
+        const w = play(a, b); r3[w]++;
+        return w;
+      });
+      const cc = play(sides[0], sides[1]); fin[cc]++; champs.push(cc);
     }
+    if (champs.length === 2) cup[play(champs[0], champs[1])]++;
     for (let i = 0; i < teams.length; i++) ptsSum[i] += pts[i];
   }
   return Object.fromEntries(teams.map((a, i) => [a, {
     playoff: +((100 * made[i]) / sims).toFixed(1), division: +((100 * divWin[i]) / sims).toFixed(1), projPts: Math.round(ptsSum[i] / sims),
+    round2: +((100 * r2[i]) / sims).toFixed(1), round3: +((100 * r3[i]) / sims).toFixed(1), final: +((100 * fin[i]) / sims).toFixed(1), cup: +((100 * cup[i]) / sims).toFixed(1),
   }]));
 }

@@ -230,6 +230,33 @@ high-danger save % and workload, as percentiles among goalies with 3+ games.
   overtime). This gives playoff %, division title % and projected points, in the Playoff odds
   panel, team popups and four new stat boxes.
 
+## Big blocks and the playoff-run wheel
+
+The top and middle chart slots can also hold big blocks. The shorter middle slot only offers
+the ones that fit.
+- **Player card:** one option for each of the 5 top-rated players.
+- **Playoff odds:** the whole conference.
+- **Player ratings grid**
+- **Playoff run odds:** a heat table of playoffs / round 2 / conference final / Final / Cup.
+- **Next-game matchup:** with a win-probability bar.
+- **Team stats wall**
+- **EDGE + xG wall**
+- **Last game scoring chances**
+- **Team leaders strip**
+
+The playoff simulation also plays out the bracket each time. The division winner meets a wild
+card (the better division winner gets the second one) and 2nd meets 3rd. Then come the
+division final, conference final and Cup Final, all best-of-seven with home ice (2-2-1-1-1)
+to the team with more points. Tap the Playoff run odds or Playoff odds titles for the
+**playoff-run wheel**:
+- five rings, from making the playoffs (outside) to winning the Cup (inside)
+- each ring split by every team's odds, in team colours, with logos around the rim
+- your team outlined
+
+During a live game, the header and live popup also show a **live win chance**. It starts from
+the pregame odds and models the rest of the game as Poisson scoring from the current score and
+time left.
+
 ## Live games
 
 When the team's game is on, the page polls the NHL every 15 seconds and shows it live:
