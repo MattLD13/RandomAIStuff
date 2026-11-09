@@ -140,7 +140,23 @@ no popups.
 Tap the team logo (or RINKSIDE, or press `c`) and choose **Customize board**. Every panel
 gets a ⇄ button; tap a panel to pick what it shows. Choices are saved in your browser.
 **Copy link** shares the layout (`?layout=…`), and that link also works on
-`?wallpaper` pages. **Reset** goes back to the original layout.
+`?wallpaper` pages.
+
+The bar at the bottom has **presets**. Tap one to switch the whole board; any slot can still
+be changed afterwards.
+
+| Preset | What it shows |
+| --- | --- |
+| Classic | The original layout. |
+| Analytics | xG charts, team stats and EDGE columns, scoring chances. |
+| Players | Player comparison, WAR, ratings, Box WAR, top scorers, goalies. |
+| Playoff race | Division race, playoff line, your conference's standings, wild card, odds. |
+| Last game | Game score, form, scoring chances, Box WAR. |
+
+**Player comparison** is a big block for either chart slot. It puts up to four skaters side by
+side (three on phones): overall, WAR, points, goals, ice time and five ratings. The best
+number in each row is gold. In Customize, tap the block to swap players in or out at the top of
+its menu. Tap a player's name to open their card.
 
 | Slot | Options |
 | --- | --- |

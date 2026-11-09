@@ -75,6 +75,7 @@
     if (lastChances(d) != null) o.push(['wideChances', 'Block: last game scoring chances']);
     if (tall && hasWar(d)) o.push(['spanBreakdown', 'Big block over both charts: game score breakdown'], ['wideWar', 'Block: Box WAR (last game)']);
     if (hasWar(d)) o.push(['wideWarSeason', 'Block: WAR by component (season)']);
+    if (Object.values(d.cards || {}).some((c) => c.kind === 'S')) o.push(['wideCompare', 'Block: player comparison (pick players)']);
     o.push(['wideLeaders', 'Block: team leaders strip']);
     return o;
   }
@@ -831,6 +832,38 @@
     return { title: 'Team leaders', note: 'tap a player for the card', html };
   }
 
+  // ---------- player comparison: pick up to four skaters in Customize ----------
+  const cmpMax = () => (MODE === 'stack' ? 3 : 4);   // four fit on the full board, three on phones
+  const cmpSkaters = (d) => Object.values(d.cards || {}).filter((c) => c.kind === 'S' && c.gp > 0)
+    .sort((a, b) => (b.overall ?? -1) - (a.overall ?? -1) || b.gp - a.gp);
+  function compareIds(d) {
+    const ok = (layout.compare || []).filter((id) => d.cards?.[id]?.kind === 'S');
+    return (ok.length ? ok : cmpSkaters(d).slice(0, 3).map((c) => c.id)).slice(-cmpMax());
+  }
+  const secsOf = (t) => { const [m, x] = String(t || '0:0').split(':').map(Number); return m * 60 + (x || 0); };
+  const CMP_ROWS = [
+    ['Overall', (c) => c.overall, 'pct'], ['WAR', (c) => c.war?.war, 'war'],
+    ['Points', (c) => c.stats.find(([k]) => k === 'P')?.[1], 'n'], ['Goals', (c) => c.stats.find(([k]) => k === 'G')?.[1], 'n'],
+    ['Ice time', (c) => c.stats.find(([k]) => k === 'TOI')?.[1], 'toi'],
+    ...['EV offence', 'EV defence', 'Power play', 'Finishing', 'Physical'].map((l) => [l, (c) => c.tiles.find(([k]) => k === l)?.[1], 'pct']),
+  ];
+  function wideCompare(d, w, h) {
+    const ids = compareIds(d), cards = ids.map((id) => d.cards[id]);
+    const headH = h >= 150 ? 46 : 36, rows = CMP_ROWS.slice(0, Math.max(1, Math.floor((h - headH - 2) / 19)));
+    const num = (v, kind) => (v == null ? -Infinity : kind === 'toi' ? secsOf(v) : +v);
+    let html = `<div class="cmp" style="grid-template-columns:${w >= 700 ? 120 : 76}px repeat(${cards.length},1fr);--hh:${headH}px"><div></div>`;
+    html += cards.map((c) => `<div class="cmph"${pop(`card:${c.id}`)}><span class="face"><img src="${esc(c.headshot)}" alt=""></span><span><b>${esc(c.name)}</b><small>${esc(c.pos)}${c.number != null ? ` · #${c.number}` : ''}</small></span></div>`).join('');
+    for (const [label, get, kind] of rows) {
+      const vals = cards.map((c) => get(c)), best = Math.max(...vals.map((v) => num(v, kind)));
+      html += `<div class="cmpl">${esc(label)}</div>` + vals.map((v) => {
+        const top = v != null && num(v, kind) === best && cards.length > 1;
+        const shown = v == null ? '–' : kind === 'war' ? gsign(v, 1) : String(v);
+        return `<div class="cmpv"><b class="m"${top ? ' style="color:var(--gold-hi)"' : ''}>${esc(shown)}</b>${kind === 'pct' ? miniBar(v ?? 0) : ''}</div>`;
+      }).join('');
+    }
+    return { title: 'Player comparison', note: editing ? 'tap to pick players' : 'gold = best of the group', html: html + '</div>' };
+  }
+
   function wideBlock(d, kind, w, h) {
     const [k, arg] = kind.split(':');
     if (k === 'wideCard') return wideCard(d, +arg, w, h);
@@ -841,6 +874,7 @@
     if (k === 'wideStats' || k === 'wideEdge') return wideTiles(d, w, h, k);
     if (k === 'wideChances') return wideChances(d, w, h);
     if (k === 'wideWar') return wideWar(d, w, h);
+    if (k === 'wideCompare') return wideCompare(d, w, h);
     if (k === 'wideWarSeason') return wideWarSeason(d, w, h);
     return wideLeaders(d, w, h);
   }
@@ -1029,7 +1063,7 @@
     board.innerHTML = s;
     lastPieces = Object.fromEntries(Object.entries(pieces).map(([k, f]) => [k, f()]));
     closePop();
-    if (editing) decorateSlots();
+    if (editing) { decorateSlots(); presetButtons(); }
     fit();
     if (I) maybeStartLive(d);
   }
@@ -1206,7 +1240,7 @@
   }
   LIST_PANELS.war = (d, compact) => warGamePanel(d, compact ? 6 : 9);
   LIST_PANELS.warSeason = (d, compact) => warSeasonPanel(d, compact ? 6 : 9);
-  PICTURE_PANELS.war = (d) => warSeasonPanel(d, 10, 'Wins above replacement');
+  PICTURE_PANELS.war = (d) => warSeasonPanel(d, 10);
   PICTURE_PANELS.warGame = (d) => warGamePanel(d, 9);
 
   // wide blocks: the last game's table, and season GAR stacked by component
@@ -1502,6 +1536,35 @@
     placePop(target, html);
   }
 
+  // ---------- preset layouts (Customize mode) ----------
+  const CONF_DIVS = { Eastern: ['Atlantic', 'Metropolitan'], Western: ['Central', 'Pacific'] };
+  const PRESETS = [
+    ['classic', 'Classic', () => clone(DEFAULT_LAYOUT)],
+    ['analytics', 'Analytics', (d) => ({ chart1: 'xg', chart2: 'rollingXg', col1: ['tall:pic:teamStats', 'grid:Atlantic'],
+      col2: [d.stats.topSpeed ? 'tall:pic:edgeStats' : 'tall:pic:league', 'grid:Central'], picture: 'odds', boxes: ['xgPct', 'hdcPct'],
+      leaders: ['points', 'war', 'svpct'], upper: 'seasonChances', lower: 'chances' })],
+    ['players', 'Players', () => ({ chart1: 'wideCompare', chart2: 'wideWarSeason', col1: ['tall:pic:ratings', 'grid:Atlantic'], col2: ['tall:pic:war', 'grid:Central'],
+      picture: 'warGame', boxes: ['teamWar', 'finishing'], leaders: ['points', 'goals', 'war'], upper: 'scorers', lower: 'goalies' })],
+    ['race', 'Playoff race', (d) => {
+      const me = d.teams[d.team.abbrev], divs = CONF_DIVS[me.conf] || ['Atlantic', 'Metropolitan'], own = me.div || divs[0];
+      return { chart1: 'race', chart2: 'playoffLine', col1: [`table:${own}`, `table:${divs.find((x) => x !== own) || divs[1]}`], col2: ['tall:pic:wildcard', 'grid:Central'],
+        picture: 'odds', boxes: ['playoffOdds', 'projPts'], leaders: ['points', 'goals', 'svpct'], upper: 'next5', lower: 'nextOpp' };
+    }],
+    ['lastgame', 'Last game', () => ({ chart1: 'spanBreakdown', chart2: 'xg', col1: ['tall:list:chances', 'grid:Atlantic'], col2: ['tall:list:form', 'grid:Central'],
+      picture: 'results', boxes: ['xgPct', 'finishing'], leaders: ['points', 'goals', 'svpct'], upper: 'last5cards', lower: 'war' })],
+  ];
+  function applyPreset(key) {
+    const p = PRESETS.find(([k]) => k === key);
+    if (!p || !current) return;
+    layout = { ...clone(DEFAULT_LAYOUT), ...p[2](current), compare: layout.compare, preset: key };
+    if (key === 'classic') delete layout.preset;
+    saveLayout(); render(current); presetButtons();
+  }
+  function presetButtons() {
+    const on = layout.preset || (JSON.stringify({ ...layout, compare: undefined, preset: undefined }) === JSON.stringify({ ...DEFAULT_LAYOUT }) ? 'classic' : null);
+    editBar?.querySelectorAll('[data-preset]').forEach((b) => b.classList.toggle('on', b.dataset.preset === on));
+  }
+
   // ---------- customize mode ----------
   let editing = false, editBar = null;
   function decorateSlots() {
@@ -1518,8 +1581,11 @@
     decorateSlots();
     editBar = document.createElement('div');
     editBar.className = 'editbar';
-    editBar.innerHTML = `<span>Tap any panel to change what it shows</span><button data-act="reset">Reset</button><button data-act="share">Copy link</button><button data-act="done" class="on">Done</button>`;
+    editBar.innerHTML = `<div class="ebp">${PRESETS.map(([k, label]) => `<button data-preset="${k}">${esc(label)}</button>`).join('')}</div>` +
+      `<div class="ebr"><span>Pick a preset, or tap any panel to change it</span><button data-act="share">Copy link</button><button data-act="done" class="on">Done</button></div>`;
     editBar.addEventListener('click', (e) => {
+      const pre = e.target.closest('[data-preset]')?.dataset.preset;
+      if (pre) return applyPreset(pre);
       const act = e.target.closest('button')?.dataset.act;
       if (act === 'done') stopEditing();
       if (act === 'reset') { layout = clone(DEFAULT_LAYOUT); saveLayout(); render(current); }
@@ -1530,6 +1596,7 @@
       }
     });
     document.body.appendChild(editBar);
+    presetButtons();
   }
   function stopEditing() {
     editing = false;
@@ -1545,12 +1612,28 @@
     popKey = `slot:${slot}`;
     slotEl.classList.add('is-active');
     const opts = CATALOG[kind](current, slot);
-    placePop(slotEl, `<div class="pk">Change panel</div><div class="opts">${opts.map(([k, label]) =>
+    const picks = cur === 'wideCompare' ? compareIds(current) : null;
+    const players = picks ? `<div class="pk cmpk">Players \u00b7 up to ${cmpMax()}</div><div class="cmpopts">${cmpSkaters(current).map((c) =>
+      `<button class="opt${picks.includes(c.id) ? ' on' : ''}" data-cmp="${c.id}">${esc(c.name)}<small>${esc(c.pos)}${c.overall != null ? ` \u00b7 ${c.overall}` : ''}</small></button>`).join('')}</div>` : '';
+    placePop(slotEl, `${players}<div class="pk${players ? ' cmpk' : ''}">Change panel</div><div class="opts">${opts.map(([k, label]) =>
       `<button class="opt${k === cur ? ' on' : ''}" data-opt="${esc(k)}">${esc(label)}</button>`).join('')}</div>`, 'menu');
     popEl.addEventListener('click', (e) => {
+      const pc = e.target.closest('[data-cmp]');
+      if (pc) {   // swap a player in or out, keeping at least one and at most four
+        e.stopPropagation();
+        const id = +pc.dataset.cmp, now = compareIds(current);
+        let next = now.includes(id) ? now.filter((x) => x !== id) : [...now, id];
+        if (!next.length) return;
+        if (next.length > cmpMax()) next = next.slice(-cmpMax());
+        layout.compare = next; delete layout.preset; saveLayout(); render(current);
+        const el = board.querySelector(`.slot[data-slot="${slot}"]`);
+        if (el) { openSlotMenu(el); popEl.querySelector('.cmpopts').scrollTop = 0; }
+        return;
+      }
       const b = e.target.closest('[data-opt]');
       if (!b) return;
       write(layout, b.dataset.opt);
+      delete layout.preset;
       saveLayout();
       render(current);
     });
