@@ -408,3 +408,65 @@ body.stack .livebox .ls, body.stack .livebox .lsc { justify-content: flex-start;
 .ch .chh .cmid { display: flex; flex-direction: column; align-items: center; color: var(--muted); font: 700 15px var(--head); line-height: 1.05; white-space: nowrap; }
 .ch .chh .cmid small { font: 600 9.5px var(--cond); letter-spacing: 0.06em; text-transform: uppercase; }
 .ch.opp .chh .cf { font-size: 11px; color: #cfcfcf; }
+
+/* ---------- player cards ---------- */
+.cardwrap { position: fixed; inset: 0; z-index: 30; background: rgba(0, 0, 0, 0.72); display: grid; place-items: center; padding: 12px;
+  -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+.pcard { position: relative; width: min(430px, 100%); max-height: calc(100vh - 24px); overflow: auto; background: #141414; border: 1px solid #2e2e2e;
+  border-top: 3px solid var(--primary); border-radius: 6px; padding: 14px 14px 12px; font-family: var(--cond); color: var(--fg); box-shadow: 0 16px 40px rgba(0,0,0,.7); }
+.pcard .px { position: absolute; top: 6px; right: 8px; background: none; border: 0; color: var(--dim); font-size: 24px; cursor: pointer; }
+.pc-head { display: flex; align-items: center; gap: 10px; padding-right: 26px; }
+.pc-head img.logo { width: 34px; height: 34px; transform: scale(1.3); }
+.pc-name { font: 700 24px/1 var(--head); text-transform: uppercase; letter-spacing: 0.02em; border-bottom: 2px solid var(--gold); padding-bottom: 5px; flex: 1; }
+.pc-name .m { font-size: 16px; color: var(--muted); }
+.pc-top { display: grid; grid-template-columns: 84px 108px 1fr; gap: 10px; align-items: center; margin-top: 12px; }
+.pc-face { width: 84px; height: 84px; border-radius: 50%; overflow: hidden; background: #1d1d1b; border: 2px solid color-mix(in srgb, var(--primary) 80%, #fff); }
+.pc-face img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+.pc-ovr { text-align: center; }
+.pc-ovr small { display: block; color: var(--muted); font: 600 11px var(--cond); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+.pc-ovr b { display: block; padding: 14px 0; border-radius: 4px; font: 400 32px var(--mono); }
+.pc-info { margin: 0; display: grid; gap: 3px; }
+.pc-info div { display: flex; gap: 6px; font-size: 14px; }
+.pc-info dt { color: var(--muted); width: 38px; }
+.pc-info dd { margin: 0; font-weight: 700; font-family: var(--head); font-size: 15px; }
+.pc-tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
+.pc-tiles.g { grid-template-columns: repeat(4, 1fr); }
+.pc-tiles .pt2 { text-align: center; }
+.pc-tiles .pt2 small { display: block; color: #cfcfcf; font: 600 10px/1.15 var(--cond); min-height: 23px; display: flex; align-items: flex-end; justify-content: center; }
+.pc-tiles .pt2 b { display: block; margin-top: 3px; padding: 7px 0; border-radius: 3px; font: 400 17px var(--mono); }
+.pc-extra { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; padding: 7px 9px; background: var(--card); border-radius: 3px; font-size: 13px; color: var(--muted); }
+.pc-extra b { color: var(--fg); margin-left: 3px; }
+.pc-trend { margin-top: 10px; background: var(--card); border-radius: 3px; padding: 6px 8px 0; }
+.pc-tt { font: 700 11px var(--cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--otl); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pc-tt i { width: 12px; height: 3px; display: inline-block; margin-left: 6px; }
+.pcard .pgrid { margin-top: 10px; }
+.pcard .pnote { font-size: 11.5px; }
+/* ratings + odds panels */
+.rlist { margin-top: 6px; }
+.rrow { display: flex; align-items: center; gap: 8px; height: 26px; }
+.rrow .rn { width: 20px; text-align: right; color: var(--muted); font-size: 12px; }
+.rrow .rname { display: flex; align-items: baseline; gap: 6px; min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; }
+.rrow .rname b { font: 700 15px var(--head); }
+.rrow .rname small { color: var(--muted); font: 500 11px var(--cond); overflow: hidden; text-overflow: ellipsis; }
+.rrow .rp { width: 38px; text-align: center; border-radius: 3px; padding: 2px 0; font-size: 14px; }
+.rrow[data-pop]:hover { background: rgba(255,255,255,.04); }
+.olist { margin-top: 6px; }
+.orow { display: flex; align-items: center; gap: 7px; height: 26px; padding-right: 2px; }
+.orow.me { background: var(--me-row); }
+.orow img.logo { width: 18px; height: 18px; transform: scale(1.4); margin-left: 3px; }
+.orow .ab { width: 34px; font: 700 14px var(--head); }
+.orow .opts { width: 28px; text-align: right; color: var(--muted); font-size: 13px; }
+.orow .obar { flex: 1; height: 7px; background: #262626; border-radius: 4px; overflow: hidden; }
+.orow .obar i { display: block; height: 100%; background: var(--win); }
+.orow .opct { width: 38px; text-align: right; font-size: 14px; }
+.orow[data-pop]:hover { background: rgba(255,255,255,.05); }
+.ncard .at { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
+.wp { color: var(--otl); font: 700 10.5px var(--cond); letter-spacing: 0.02em; }
+.lgrow .wp { margin-left: 6px; }
+
+.pcard .pgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 10px; }
+.pcard .pgrid div { background: var(--card); border-radius: 3px; padding: 5px 4px 4px; text-align: center; }
+.pcard .pgrid b { display: block; font-size: 17px; line-height: 1.1; font-family: var(--mono); font-weight: 400; }
+.pcard .pgrid span { font: 600 9.5px var(--cond); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pcard .pnote { margin-top: 9px; color: var(--dim); font-size: 11.5px; line-height: 1.35; }
+.pc-trend svg { display: block; }

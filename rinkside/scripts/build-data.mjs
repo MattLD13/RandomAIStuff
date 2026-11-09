@@ -5,6 +5,8 @@ import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as chances from './chances.mjs';
+import * as players from './players.mjs';
+import * as odds from './odds.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const config = JSON.parse(await readFile(join(ROOT, 'config.json'), 'utf8'));
@@ -114,7 +116,7 @@ function tableAt(dateStr) {
   return t;
 }
 // ---------- scoring chances + expected goals (league-wide play-by-play) ----------
-const { games: pbpGames, fetched: pbpFetched } = await chances.loadGames(finals.map((g) => g.id), get, join(ROOT, '.cache', 'shots'));
+const { games: pbpGames, fetched: pbpFetched } = await chances.loadGames(finals.map((g) => g.id), get, join(ROOT, '.cache', 'shots-v2')   /* v2: shooter and goalie on each shot */);
 const allShots = [...pbpGames.values()].flatMap((g) => g.shots.filter((s) => !s.en));
 const xgModel = chances.fitModel(allShots);
 const xgTotals = chances.seasonTotals(pbpGames, xgModel);
@@ -122,6 +124,24 @@ const xgTotals = chances.seasonTotals(pbpGames, xgModel);
   const xgSum = allShots.reduce((a, s) => a + chances.xg(xgModel, s), 0), gSum = allShots.reduce((a, s) => a + s.goal, 0);
   console.log(`xG model: ${pbpGames.size} games (${pbpFetched} new), ${allShots.length} shots on goal, xG ${xgSum.toFixed(1)} vs goals ${gSum}`);
 }
+
+// ---------- player ratings (league-wide percentiles) ----------
+const [skNow, skLast, goNow] = await Promise.all([players.loadSkaters(get, season), players.loadSkaters(get, season - 10001), players.loadGoalies(get, season)]);
+const { shooters, goalies: facedByGoalie } = players.shotTotals(pbpGames, xgModel);
+const ratedNow = players.rateSkaters(skNow, shooters), ratedLast = players.rateSkaters(skLast), ratedGoalies = players.rateGoalies(goNow, facedByGoalie);
+console.log(`player ratings: ${Object.keys(ratedNow).length} skaters, ${Object.keys(ratedGoalies).length} goalies (last season ${Object.keys(ratedLast).length})`);
+
+// ---------- team strength, win probabilities, playoff odds ----------
+const xgPctByAbbrev = Object.fromEntries(abbrevs.map((a) => {
+  const t = xgTotals[myIdFor(a)];
+  return [a, t && t.xgf + t.xga ? (100 * t.xgf) / (t.xgf + t.xga) : 50];
+}));
+const strength = odds.strengths(standings, xgPctByAbbrev);
+const winModel = odds.fitWinModel(finals, strength, odds.shrink(strength, standings));
+const remainingGames = [...new Map(abbrevs.flatMap((a) => schedules[a]).filter((g) => g.gameType === 2 && !isFinal(g)).map((g) => [g.id, g])).values()];
+const playoffOdds = odds.simulate(standings, remainingGames, winModel);
+console.log(`odds: win model on ${winModel.n} games (home team wins ${(100 / (1 + Math.exp(-winModel.a))).toFixed(1)}% between equal teams, slope ${winModel.b.toFixed(2)}), ${remainingGames.length} games simulated 10,000 times`);
+const winPct = (me, opp, home) => Math.round(100 * (home ? winModel.prob(me, opp) : 1 - winModel.prob(opp, me)));
 
 const tableCache = new Map();
 const tableAtCached = (d) => {
@@ -231,6 +251,7 @@ async function buildTeam(TEAM) {
       them: p.them.score ?? null,
       result: p.result,
       tv: [...new Set((g.tvBroadcasts || []).map((b) => b.network))].join(', '),
+      winPct: !isFinal(g) && g.gameType === 2 ? winPct(TEAM, p.opp, p.home) : null,
       gwg: person(g.winningGoalScorer),
       winGoalie: person(g.winningGoalie),
       link: g.gameCenterLink ? `https://www.nhl.com${g.gameCenterLink}` : null,
@@ -362,6 +383,7 @@ async function buildTeam(TEAM) {
     home: rec(t.homeWins, t.homeLosses, t.homeOtLosses), road: rec(t.roadWins, t.roadLosses, t.roadOtLosses),
     l10: rec(t.l10Wins, t.l10Losses, t.l10OtLosses), streak: t.streakCode ? `${t.streakCode}${t.streakCount}` : '–',
     ...advFor(t.teamAbbrev.default),
+    odds: playoffOdds[t.teamAbbrev.default], strength: +strength[t.teamAbbrev.default].toFixed(2),
   }]));
 
   // ---------- conference rank after each of our games ----------
@@ -429,6 +451,16 @@ async function buildTeam(TEAM) {
   xgRank('xgPct', 'Expected goals share', (t) => (100 * t.xgf) / (t.xgf + t.xga), 1, '%');
   xgRank('finishing', 'Finishing (goals minus xG)', (t) => t.gf - t.xgf, 1, '', true);
   xgRank('hdcPct', 'High-danger chance share', (t) => (100 * t.hcf) / (t.hcf + t.hca), 1, '%');
+
+  // Simulation and strength stats, ranked across the league
+  {
+    const rankBy = (f) => abbrevs.map((a) => [a, f(a)]).sort((x, y) => y[1] - x[1]).findIndex(([a]) => a === TEAM) + 1;
+    const o = playoffOdds[TEAM];
+    stats.playoffOdds = { label: 'Playoff odds', value: o.playoff.toFixed(o.playoff >= 99.5 || o.playoff < 0.5 ? 0 : 1), unit: '%', rank: rankBy((a) => playoffOdds[a].playoff), of: 32, sim: true, avg: '50' };
+    stats.projPts = { label: 'Projected points', value: String(o.projPts), unit: '', rank: rankBy((a) => playoffOdds[a].projPts), of: 32, sim: true, avg: '' };
+    stats.divOdds = { label: 'Division title odds', value: o.division.toFixed(1), unit: '%', rank: rankBy((a) => playoffOdds[a].division), of: 32, sim: true, avg: '' };
+    stats.strength = { label: 'Team strength rating', value: (strength[TEAM] > 0 ? '+' : '') + strength[TEAM].toFixed(2), unit: '', rank: rankBy((a) => strength[a]), of: 32, sim: true, avg: '0.00' };
+  }
 
   // NHL EDGE: values arrive with their league rank and average
   const edge = (key, label, node, value, unit, dp, by) => {
@@ -501,7 +533,7 @@ async function buildTeam(TEAM) {
   const leaderBoard = {};
   for (const [key, label, sortV, valueF, subF] of skaterCats) {
     const x = [...skaters].sort((a, b) => sortV(b) - sortV(a) || b.points - a.points)[0];
-    if (x) leaderBoard[key] = { label, name: initialName(x), full: fullName(x), headshot: x.headshot, value: valueF(x), sub: subF(x), stats: skaterLine(x) };
+    if (x) leaderBoard[key] = { id: x.playerId, label, name: initialName(x), full: fullName(x), headshot: x.headshot, value: valueF(x), sub: subF(x), stats: skaterLine(x) };
   }
   const gl = (x) => [
     ['GP', x.gamesPlayed], ['Record', rec(x.wins, x.losses, x.overtimeLosses)],
@@ -517,30 +549,76 @@ async function buildTeam(TEAM) {
   ];
   // full lists for the Top scorers and Goalies panels
   const scorers = [...skaters].sort((a, b) => b.points - a.points || b.goals - a.goals).slice(0, 8).map((x) => ({
-    name: initialName(x), full: fullName(x), headshot: x.headshot, pos: x.positionCode,
+    id: x.playerId, name: initialName(x), full: fullName(x), headshot: x.headshot, pos: x.positionCode,
     gp: x.gamesPlayed, g: x.goals, a: x.assists, p: x.points, stats: skaterLine(x),
   }));
   const goalieList = [...goalies].filter((x) => x.gamesPlayed > 0).sort((a, b) => b.gamesPlayed - a.gamesPlayed).slice(0, 4).map((x) => ({
-    name: initialName(x), full: fullName(x), headshot: x.headshot, gp: x.gamesPlayed, record: rec(x.wins, x.losses, x.overtimeLosses),
+    id: x.playerId, name: initialName(x), full: fullName(x), headshot: x.headshot, gp: x.gamesPlayed, record: rec(x.wins, x.losses, x.overtimeLosses),
     sv: x.savePercentage.toFixed(3).replace(/^0/, ''), gaa: x.goalsAgainstAverage.toFixed(2), so: x.shutouts, stats: gl(x),
   }));
+
+  // ---------- player cards ----------
+  const roster = await get(`${WEB}/roster/${TEAM}/current`).catch(() => ({}));
+  const bio = Object.fromEntries([...(roster.forwards || []), ...(roster.defensemen || []), ...(roster.goalies || [])].map((r) => [r.id, r]));
+  const ageOf = (id) => {
+    const b = bio[id]?.birthDate; if (!b) return null;
+    const d = new Date(b), t = new Date(); let a = t.getUTCFullYear() - d.getUTCFullYear();
+    if (t < new Date(Date.UTC(t.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))) a--;
+    return a;
+  };
+  // usage tier by average ice time among the team's regulars
+  const usage = {};
+  for (const [grp, size, word] of [[(x) => x.positionCode !== 'D', 3, 'line'], [(x) => x.positionCode === 'D', 2, 'pair']]) {
+    [...skaters].filter((x) => grp(x) && x.gamesPlayed >= 3).sort((a, b) => b.avgTimeOnIcePerGame - a.avgTimeOnIcePerGame)
+      .forEach((x, i) => { usage[x.playerId] = `${['1st', '2nd', '3rd', '4th'][Math.min(Math.floor(i / size), 3)]} ${word}`; });
+  }
+  const TILE = [['evOff', 'EV offence'], ['evDef', 'EV defence'], ['possession', 'Possession'], ['pp', 'Power play'], ['pk', 'Penalty kill'],
+    ['finishing', 'Finishing'], ['goals', 'Goals'], ['primary', '1st assists'], ['penalties', 'Penalties'], ['physical', 'Physical']];
+  const cards = {};
+  for (const x of skaters) {
+    const r = ratedNow[x.playerId], last = ratedLast[x.playerId];
+    cards[x.playerId] = {
+      id: x.playerId, kind: 'S', name: initialName(x), full: fullName(x), headshot: x.headshot, pos: x.positionCode,
+      number: bio[x.playerId]?.sweaterNumber ?? null, age: ageOf(x.playerId), usage: usage[x.playerId] || '',
+      gp: x.gamesPlayed, toi: toi(x.avgTimeOnIcePerGame || 0), qualified: !!r, group: r?.group || (x.positionCode === 'D' ? 'D' : 'F'),
+      overall: r?.overall ?? null,
+      tiles: TILE.map(([k, label]) => [label, r ? r[k] : null]).concat(x.positionCode === 'C' ? [['Faceoffs', r ? r.faceoffs : null]] : []),
+      extra: r ? { ixg: shooters[x.playerId] ? +shooters[x.playerId].ixg.toFixed(1) : null, quality: r.quality,
+        finishing: shooters[x.playerId] ? +(shooters[x.playerId].goals - shooters[x.playerId].ixg).toFixed(1) : null } : null,
+      trend: [last ? { season: `${String(season - 10001).slice(2, 4)}-${String(season - 10001).slice(6)}`, overall: last.overall, evOff: last.evOff, evDef: last.evDef } : null,
+        r ? { season: `${String(season).slice(2, 4)}-${String(season).slice(6)}`, overall: r.overall, evOff: r.evOff, evDef: r.evDef } : null].filter(Boolean),
+      stats: skaterLine(x),
+    };
+  }
+  for (const x of goalies) {
+    const r = ratedGoalies[x.playerId];
+    cards[x.playerId] = {
+      id: x.playerId, kind: 'G', name: initialName(x), full: fullName(x), headshot: x.headshot, pos: 'G',
+      number: bio[x.playerId]?.sweaterNumber ?? null, age: ageOf(x.playerId), usage: x.gamesStarted >= meRow.gamesPlayed / 2 ? 'Starter' : 'Backup',
+      gp: x.gamesPlayed, qualified: !!r, group: 'G', overall: r?.overall ?? null,
+      tiles: [['Goals saved above exp.', r?.gsax60 ?? null], ['Save %', r?.sv ?? null], ['High-danger save %', r?.hdSv ?? null], ['Workload', r?.load ?? null]],
+      extra: r ? r.raw : null, trend: [], stats: gl(x),
+    };
+  }
+  const ratings = Object.values(cards).filter((c) => c.qualified && c.overall != null).sort((a, b) => b.overall - a.overall)
+    .map((c) => ({ id: c.id, name: c.name, pos: c.pos, number: c.number, usage: c.usage, overall: c.overall, headshot: c.headshot }));
 
   // NHL EDGE player leaders: fastest skater and hardest shot on the team
   const byId = (id) => skaters.find((x) => x.playerId === id);
   const fast = edgeSpeed?.topSkatingSpeeds?.[0], hard = edgeShot?.hardestShots?.[0];
   if (fast && byId(fast.player.id)) {
     const x = byId(fast.player.id);
-    leaderBoard.fastest = { label: 'Fastest skater (EDGE)', name: initialName(x), full: fullName(x), headshot: x.headshot, value: fast.skatingSpeed.imperial.toFixed(1),
+    leaderBoard.fastest = { id: x.playerId, label: 'Fastest skater (EDGE)', name: initialName(x), full: fullName(x), headshot: x.headshot, value: fast.skatingSpeed.imperial.toFixed(1),
       sub: `mph, ${fast.gameDate}`, stats: skaterLine(x) };
   }
   if (hard && byId(hard.player.id)) {
     const x = byId(hard.player.id);
-    leaderBoard.hardest = { label: 'Hardest shot (EDGE)', name: initialName(x), full: fullName(x), headshot: x.headshot, value: hard.shotSpeed.imperial.toFixed(1),
+    leaderBoard.hardest = { id: x.playerId, label: 'Hardest shot (EDGE)', name: initialName(x), full: fullName(x), headshot: x.headshot, value: hard.shotSpeed.imperial.toFixed(1),
       sub: `mph, ${hard.gameDate}`, stats: skaterLine(x) };
   }
   for (const [key, label, pool, sortV, valueF, subF] of goalieCats) {
     const x = [...pool].sort((a, b) => sortV(b) - sortV(a) || b.gamesPlayed - a.gamesPlayed)[0];
-    if (x) leaderBoard[key] = { label, name: initialName(x), full: fullName(x), headshot: x.headshot, value: valueF(x), sub: subF(x), stats: gl(x) };
+    if (x) leaderBoard[key] = { id: x.playerId, label, name: initialName(x), full: fullName(x), headshot: x.headshot, value: valueF(x), sub: subF(x), stats: gl(x) };
   }
   const sv = [...goalies].filter((g) => g.gamesPlayed >= minGp)
     .sort((x, y) => y.savePercentage - x.savePercentage)[0];
@@ -569,6 +647,7 @@ async function buildTeam(TEAM) {
       return {
         id: g.id,
         startUTC: g.startTimeUTC,
+        winPct: g.gameType === 2 ? winPct(TEAM, p.opp, p.home) : null,
         dow: fmt(d, { weekday: 'short' }).toUpperCase(),
         day: fmt(d, { day: 'numeric' }),
         home: p.home,
@@ -623,6 +702,8 @@ async function buildTeam(TEAM) {
     confSize: confTeams.length,
     scorers,
     goalies: goalieList,
+    cards,
+    ratings,
     xgModel,   // weights for site/chances-core.mjs, so live games get the same xG
     stats,
     leaderBoard,

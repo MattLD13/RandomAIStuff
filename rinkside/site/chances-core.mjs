@@ -37,6 +37,7 @@ export function reduce(pbp) {
       const x = d.xCoord ?? 0, y = d.yCoord ?? 0;
       out.shots.push({
         team, goal: type === 'goal' ? 1 : 0, zone: d.zoneCode || '',
+        shooter: d.shootingPlayerId || d.scoringPlayerId || 0, goalie: d.goalieInNetId || 0,
         fx: 89 - Math.abs(x), ay: Math.abs(y), type: d.shotType || 'other',
         en: oppGoalie === 0 || (type === 'goal' && !d.goalieInNetId) ? 1 : 0,
         pp: own > opp ? 1 : 0, sh: own < opp ? 1 : 0,

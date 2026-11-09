@@ -56,6 +56,8 @@ rinkside/
   site/fonts/RinksideMono.woff2  the numeral font (built by fonts/build-font.py, committed)
   fonts/build-font.py          draws Rinkside Mono (pip install fonttools brotli shapely)
   scripts/chances.mjs          league play-by-play -> xG model + scoring chances (cached in .cache/)
+  scripts/players.mjs          league player percentiles, Rinkside Overall, goalie GSAx
+  scripts/odds.mjs             team strength, win probabilities, 10,000-season playoff simulation
   site/chances-core.mjs        per-shot xG / danger logic, shared by the build and the browser (live games)
   cloudflare/live-proxy.js     Cloudflare Worker that relays live-game data with CORS headers
   SETUP-WITH-CLAUDE.md         a prompt that has Claude (desktop) do the setup below for you
@@ -183,6 +185,50 @@ New options in Customize:
 - **Expected goals by game:** a chart. Tap a game for its full report.
 - **Stat boxes:** xG share, finishing (goals minus xG) and high-danger chance share, each
   ranked across the league.
+
+## Player cards and models
+
+Tap any player (leader rows, Top scorers, Goalies, Player ratings) for a card in the style of
+public analytics cards, built from Rinkside's own numbers.
+
+**Skater percentiles.** Each skater is compared with every NHL forward or every defenceman who
+has played 25%+ of games. Data comes from the NHL stats API's league-wide skater reports plus
+Rinkside's play-by-play xG.
+
+| Tile | Measure |
+| --- | --- |
+| EV offence | 5v5 points / 60 and on-ice even-strength goals for / 60 |
+| EV defence | On-ice even-strength goals against / 60 and 5v5 shot attempts against / 60 (lower is better) |
+| Possession | 5v5 shot-attempt share relative to team (Corsi rel) |
+| Power play | PP points / 60 (needs 15+ PP minutes) |
+| Penalty kill | On-ice goals against / 60 while shorthanded (needs 15+ SH minutes) |
+| Finishing | (goals − individual xG) / 60 |
+| Goals | Goals / 60 |
+| 1st assists | 5v5 primary assists / 60 |
+| Penalties | Penalties drawn − taken / 60 |
+| Physical | Hits + blocked shots / 60 |
+| Faceoffs | Win % (centres, 50+ draws) |
+
+The card also shows:
+- **Rinkside Overall:** the percentile of a weighted blend: EV offence 28%, EV defence 17%,
+  PP 10%, finishing 10%, goals 10%, 1st assists 10%, PK 5%, penalties 5%, possession 5%.
+- **Role:** usage tier from the team's ice-time order.
+- **Individual xG, goals minus xG, shot quality** (xG per shot).
+- **Trend:** last season vs this one.
+
+**Goalie cards.** Goals saved above expected (xG faced minus goals allowed, per 60), save %,
+high-danger save % and workload, as percentiles among goalies with 3+ games.
+
+**Team models** (`scripts/odds.mjs`):
+- **Strength:** 50% xG share + 30% points % + 20% goal differential per game, standardised
+  across the league. For predictions it is shrunk toward average by games played
+  (GP / (GP + 25)).
+- **Win probability:** a logistic curve of the strength difference, fitted on this season's
+  results, so home ice comes from the data. Shown on Next 5, game popups and the
+  next-opponent panel.
+- **Playoff odds:** the rest of the schedule simulated 10,000 times (about 23% of games go to
+  overtime). This gives playoff %, division title % and projected points, in the Playoff odds
+  panel, team popups and four new stat boxes.
 
 ## Live games
 

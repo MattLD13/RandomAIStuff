@@ -67,15 +67,18 @@
       ['table:league', 'League top 8'], ['table:conference', 'Your conference top 8']],
     picture: (d) => [['own', 'Playoff picture (your conference)'], ...(d.pictures.other ? [['other', `Playoff picture (${d.pictures.other.conference})`]] : []),
       ['wildcard', 'Wild card race'], ['league', 'League standings (top 10)'], ['teamStats', 'Team stats with ranks'],
-      ...(d.stats.topSpeed ? [['edgeStats', 'NHL EDGE stats with ranks']] : []), ['results', 'Last 10 results'], ['schedule', 'Next 10 games']],
-    box: (d) => Object.entries(d.stats).map(([k, v]) => [k, v.label + (v.edge ? ' (EDGE)' : v.xg ? ' (xG)' : '')]),
+      ...(d.stats.topSpeed ? [['edgeStats', 'NHL EDGE stats with ranks']] : []), ['results', 'Last 10 results'], ['schedule', 'Next 10 games'],
+      ...(d.ratings?.length ? [['ratings', 'Player ratings (overall %)']] : []), ['odds', 'Playoff odds (simulated)']],
+    box: (d) => Object.entries(d.stats).map(([k, v]) => [k, v.label + (v.edge ? ' (EDGE)' : v.xg ? ' (xG)' : v.sim ? ' (model)' : '')]),
     leader: (d) => Object.entries(d.leaderBoard).map(([k, v]) => [k, v.label]),
     upper: (d) => [['next5', 'Next 5 (cards)'], ['last5cards', 'Last 5 (cards)'], ['next5rows', 'Next 5 (list)'], ['last5', 'Last 5 (list)'],
       ...(lastChances(d) != null ? [['chances', 'Scoring chances (last game)'], ['seasonChances', 'Season scoring chances']] : []),
-      ['nextOpp', 'Next opponent comparison'], ['scorers', 'Top scorers'], ['goalies', 'Goalies'], ['form', 'Recent form (last 10)']],
+      ['nextOpp', 'Next opponent comparison'], ['scorers', 'Top scorers'], ['goalies', 'Goalies'], ['form', 'Recent form (last 10)'],
+      ...(d.ratings?.length ? [['ratings', 'Player ratings (overall %)']] : [])],
     lower: (d) => [['last5', 'Last 5 (list)'], ['next5rows', 'Next 5 (list)'],
       ...(lastChances(d) != null ? [['chances', 'Scoring chances (last game)'], ['seasonChances', 'Season scoring chances']] : []),
-      ['nextOpp', 'Next opponent comparison'], ['scorers', 'Top scorers'], ['goalies', 'Goalies'], ['form', 'Recent form (last 10)']],
+      ['nextOpp', 'Next opponent comparison'], ['scorers', 'Top scorers'], ['goalies', 'Goalies'], ['form', 'Recent form (last 10)'],
+      ...(d.ratings?.length ? [['ratings', 'Player ratings (overall %)']] : [])],
   };
   // slot id -> [kind, read, write]
   const SLOTS = {
@@ -313,7 +316,7 @@
       `<div class="sub"><span>Wild card${p !== d.pictures.own ? ` · ${esc(p.conference)}` : ''}</span></div>${pictureRows(p.wcRows)}<div class="cutline"></div>${pictureRows(p.outRows)}`;
   }
   // short names that fit a stat box on one line (full names stay in the menu and popup)
-  const SHORT = { xgPct: 'xG share', finishing: 'Finishing', hdcPct: 'HD chance %', pp: 'Power play', pk: 'Penalty kill', gfpg: 'Goals for/gm', gapg: 'Goals agst/gm', sfpg: 'Shots for/gm',
+  const SHORT = { playoffOdds: 'Playoff odds', projPts: 'Proj. points', divOdds: 'Division odds', strength: 'Strength', xgPct: 'xG share', finishing: 'Finishing', hdcPct: 'HD chance %', pp: 'Power play', pk: 'Penalty kill', gfpg: 'Goals for/gm', gapg: 'Goals agst/gm', sfpg: 'Shots for/gm',
     sapg: 'Shots agst/gm', fo: 'Faceoffs', shpct: 'Shooting', svpct: 'Team save %', ptspct: 'Points %', gdpg: 'Goal diff/gm',
     topSpeed: 'Top speed', bursts20: '20+ mph bursts', bursts22: '22+ mph bursts', topShot: 'Hardest shot', shots90: '90+ mph shots',
     distance: 'Distance', hdShots: 'HD shots', hdPct: 'HD shooting', ozTime: 'O-zone time', dzTime: 'D-zone time', satDiff: 'Shot att. diff' };
@@ -325,14 +328,14 @@
   function leaderRow(d, slot) {
     const k = pick(d, slot), l = d.leaderBoard[k];
     if (!l) return '<div class="lrow"></div>';
-    return `<div class="lrow"${pop(`leader:${k}`)}><div class="face"><img src="${esc(l.headshot)}" alt=""></div><div class="who"><div class="k">${esc(l.label.replace(' (EDGE)', ''))}</div><div class="n">${esc(l.name)}</div><div class="s">${esc(l.sub)}</div></div><div class="v">${esc(l.value)}</div></div>`;
+    return `<div class="lrow"${pop(cardKey(d, l.id) || `leader:${k}`)}><div class="face"><img src="${esc(l.headshot)}" alt=""></div><div class="who"><div class="k">${esc(l.label.replace(' (EDGE)', ''))}</div><div class="n">${esc(l.name)}</div><div class="s">${esc(l.sub)}</div></div><div class="v">${esc(l.value)}</div></div>`;
   }
 
   // ---------- upper / lower lists ----------
   const nextCards = (d) => `<div class="colhead big"><span class="t">Next 5</span><span class="r small">EASTERN TIME</span></div><div class="nlist">${
     d.nextGames.length ? d.nextGames.map((g, i) => {
       const L = isLiveGame(g.id);
-      return `<div class="ncard${L ? ' live' : ''}"${pop(L ? 'live' : `next:${i}`)}><div class="date"><span class="dow">${esc(g.dow)}</span><span class="day">${esc(g.day)}</span></div><span class="at">${g.home ? 'vs' : '@'}</span>${logo(g.logo, g.opp)}<span class="time">${L ? liveShort() : esc(g.time)}</span></div>`;
+      return `<div class="ncard${L ? ' live' : ''}"${pop(L ? 'live' : `next:${i}`)}><div class="date"><span class="dow">${esc(g.dow)}</span><span class="day">${esc(g.day)}</span></div><span class="at">${g.home ? 'vs' : '@'}${!L && g.winPct != null ? `<small class="wp">${g.winPct}%</small>` : ''}</span>${logo(g.logo, g.opp)}<span class="time">${L ? liveShort() : esc(g.time)}</span></div>`;
     }).join('')
       : '<div class="note" style="margin-top:12px">No games scheduled</div>'}</div>`;
   const lastCards = (d) => `<div class="colhead big"><span class="t">Last 5</span><span class="r small">FINAL SCORES</span></div><div class="nlist"${pop('form')}>${
@@ -342,7 +345,7 @@
   const nextRows = (d) => `<div class="colhead big"><span class="t">Next 5</span><span class="r small">EASTERN TIME</span></div><div class="llist">${
     d.nextGames.map((g, i) => {
       const L = isLiveGame(g.id);
-      return `<div class="lgrow${L ? ' live' : ''}"${pop(L ? 'live' : `next:${i}`)}>${logo(g.logo, g.opp)}<span class="nd">${L ? 'LIVE' : `${esc(g.dow)} ${esc(g.day)}`}</span><span class="sc nt">${L ? liveShort() : `${g.home ? 'vs' : '@'} ${esc(g.time)}`}</span></div>`;
+      return `<div class="lgrow${L ? ' live' : ''}"${pop(L ? 'live' : `next:${i}`)}>${logo(g.logo, g.opp)}<span class="nd">${L ? 'LIVE' : `${esc(g.dow)} ${esc(g.day)}`}</span><span class="sc nt">${L ? liveShort() : `${g.home ? 'vs' : '@'} ${esc(g.time)}`}</span>${!L && g.winPct != null ? `<small class="wp">${g.winPct}%</small>` : ''}</div>`;
     }).join('')}</div>`;
 
   // ---------- geometry: the full board, or a narrower two-column board for phones ----------
@@ -536,6 +539,7 @@
     const series = d.season.games.filter((x) => x.opp === g.opp && x.result);
     const c = (r) => series.filter((x) => x.result === r).length;
     const rows = [
+      ...(g.winPct != null ? [['Win chance', `${g.winPct}%`, `${100 - g.winPct}%`, null, null, g.winPct, 100 - g.winPct]] : []),
       ['Points %', pct3(t.pct), pct3(o.pct ?? 0), 'high'], ['Goal diff', sign(t.diff), sign(o.diff ?? 0), 'high', null, t.diff, o.diff],
       ['Last 10', t.l10, o.l10 || '\u2013'], ['xG share', f1(t.xgPct), f1(o.xgPct), 'high'],
       ['Power play', f1(t.pp), f1(o.pp), 'high'], ['Penalty kill', f1(t.pk), f1(o.pk), 'high'],
@@ -555,12 +559,12 @@
   function topScorers(d, compact) {
     const list = (d.scorers || []).slice(0, compact ? 4 : 6);
     return `<div class="colhead big"><span class="t">Top scorers</span><span class="r small">G · A · P</span></div><div class="plist">` +
-      list.map((x, i) => `<div class="prw"${pop(`scorer:${i}`)}><span class="face"><img src="${esc(x.headshot)}" alt=""></span><span class="pn"><b>${esc(x.name)}</b><small>${esc(x.pos)} · ${x.gp} GP</small></span><span class="pga m">${x.g}·${x.a}</span><span class="pv m">${x.p}</span></div>`).join('') + '</div>';
+      list.map((x, i) => `<div class="prw"${pop(cardKey(d, x.id) || `scorer:${i}`)}><span class="face"><img src="${esc(x.headshot)}" alt=""></span><span class="pn"><b>${esc(x.name)}</b><small>${esc(x.pos)} · ${x.gp} GP</small></span><span class="pga m">${x.g}·${x.a}</span><span class="pv m">${x.p}</span></div>`).join('') + '</div>';
   }
   function goalieList(d, compact) {
     const list = (d.goalies || []).slice(0, compact ? 3 : 4);
     return `<div class="colhead big"><span class="t">Goalies</span><span class="r small">SV% · GAA</span></div><div class="plist">` +
-      list.map((x, i) => `<div class="prw"${pop(`goalie:${i}`)}><span class="face"><img src="${esc(x.headshot)}" alt=""></span><span class="pn"><b>${esc(x.name)}</b><small>${esc(x.record)} · ${x.gp} GP</small></span><span class="pga m">${esc(x.gaa)}</span><span class="pv m">${esc(x.sv)}</span></div>`).join('') + '</div>';
+      list.map((x, i) => `<div class="prw"${pop(cardKey(d, x.id) || `goalie:${i}`)}><span class="face"><img src="${esc(x.headshot)}" alt=""></span><span class="pn"><b>${esc(x.name)}</b><small>${esc(x.record)} · ${x.gp} GP</small></span><span class="pga m">${esc(x.gaa)}</span><span class="pv m">${esc(x.sv)}</span></div>`).join('') + '</div>';
   }
   function seasonChances(d, compact) {
     const gs = withChances(d), n = gs.length || 1;
@@ -600,6 +604,79 @@
     teamStats: (d) => statTiles(d, 'Team stats', ['pp', 'pk', 'gfpg', 'gapg', 'sfpg', 'fo', 'xgPct', 'ptspct']),
     edgeStats: (d) => statTiles(d, 'NHL EDGE', ['topSpeed', 'bursts20', 'topShot', 'shots90', 'distance', 'hdShots', 'ozTime', 'satDiff']),
   };
+
+  // ======================= player cards, ratings, odds =======================
+  // percentile tiles: blue when strong, red when weak
+  const pctColor = (p) => (p == null ? '#2a2a2a' : p >= 80 ? '#2f6fd1' : p >= 60 ? '#3b5d92' : p >= 40 ? '#3a4150' : p >= 20 ? '#6a3341' : '#a3303f');
+  const pctText = (p) => (p == null ? 'NA' : `${p}%`);
+  const cardKey = (d, id) => (id && d.cards && d.cards[id] ? `card:${id}` : null);
+
+  function trendSvg(trend) {
+    if (!trend || !trend.length) return '';
+    const W2 = 390, H2 = 120, x = (i) => (trend.length === 1 ? W2 / 2 : 22 + (i * (W2 - 44)) / (trend.length - 1)), y = (v) => 10 + (1 - v / 100) * (H2 - 34);
+    let s = '';
+    for (const v of [100, 50, 0]) s += `<line x1="18" x2="${W2 - 4}" y1="${y(v)}" y2="${y(v)}" stroke="#262626" stroke-dasharray="1 3"/><text x="14" y="${y(v) + 3}" fill="#7a7a7a" font-size="8" text-anchor="end">${v}</text>`;
+    for (const [k, col] of [['evDef', '#e2475b'], ['evOff', '#5b9cf5'], ['overall', '#ffffff']]) {
+      const pts = trend.map((t, i) => [x(i), t[k] == null ? null : y(t[k])]).filter(([, v]) => v != null);
+      if (pts.length > 1) s += `<path d="${pts.map(([a, b], i) => `${i ? 'L' : 'M'}${a} ${b}`).join('')}" fill="none" stroke="${col}" stroke-width="2"${k === 'evOff' ? ' stroke-dasharray="4 2"' : ''}/>`;
+      for (const [a, b] of pts) s += `<circle cx="${a}" cy="${b}" r="3" fill="${col}"/>`;
+    }
+    trend.forEach((t, i) => { s += `<text x="${x(i)}" y="${H2 - 6}" fill="#9a9a9a" font-size="9" text-anchor="middle">${esc(t.season)}</text>`; });
+    return `<svg viewBox="0 0 ${W2} ${H2}" width="100%" height="${H2}">${s}</svg>`;
+  }
+
+  function cardHtml(d, id) {
+    const c = d.cards[id];
+    if (!c) return '';
+    const isG = c.kind === 'G', group = isG ? 'goalies' : c.group === 'D' ? 'defencemen' : 'forwards';
+    const info = [['Pos', c.pos], ['Age', c.age ?? '–'], ['Role', c.usage || '–'], [isG ? 'GP' : 'TOI', isG ? c.gp : `${c.toi} / gm`]];
+    let h = `<div class="pc-head">${logo(d.team.logo, d.team.abbrev)}<div class="pc-name">${esc(c.full)}${c.number != null ? ` <span class="m">#${c.number}</span>` : ''}</div></div>`;
+    h += `<div class="pc-top"><span class="pc-face"><img src="${esc(c.headshot)}" alt=""></span>` +
+      `<div class="pc-ovr"><small>Rinkside overall</small><b class="m" style="background:${pctColor(c.overall)}">${pctText(c.overall)}</b></div>` +
+      `<dl class="pc-info">${info.map(([k, v]) => `<div><dt>${esc(k)}:</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></div>`;
+    if (!c.qualified) h += note(`Not enough games yet to rate against other ${group}.`);
+    h += `<div class="pc-tiles${isG ? ' g' : ''}">${c.tiles.map(([label, p]) => `<div class="pt2"><small>${esc(label)}</small><b class="m" style="background:${pctColor(p)}">${pctText(p)}</b></div>`).join('')}</div>`;
+    const ex = c.extra;
+    if (ex && !isG) h += `<div class="pc-extra"><span>Individual xG <b class="m">${ex.ixg ?? '–'}</b></span><span>Goals − xG <b class="m">${ex.finishing == null ? '–' : (ex.finishing > 0 ? '+' : '') + ex.finishing}</b></span><span>Shot quality <b class="m">${pctText(ex.quality)}</b></span></div>`;
+    if (ex && isG) h += `<div class="pc-extra"><span>Goals saved above exp. <b class="m">${ex.gsax > 0 ? '+' : ''}${ex.gsax}</b></span><span>xG faced <b class="m">${ex.xga}</b></span><span>HD save % <b class="m">${ex.hdSv == null ? '–' : pct3(ex.hdSv)}</b></span></div>`;
+    if (c.trend && c.trend.length) h += `<div class="pc-trend"><div class="pc-tt">Trend <i style="background:#fff"></i>Overall <i style="background:#5b9cf5"></i>EV off. <i style="background:#e2475b"></i>EV def.</div>${trendSvg(c.trend)}</div>`;
+    h += `<div class="pgrid">${(c.stats || []).map(([k, v]) => `<div><b class="m">${esc(v)}</b><span>${esc(k)}</span></div>`).join('')}</div>`;
+    h += note(isG
+      ? 'Percentiles among NHL goalies with 3+ games. Goals saved above expected uses Rinkside’s xG for every shot faced. Overall: 50% GSAx per 60, 25% save %, 25% high-danger save %.'
+      : `Percentiles among NHL ${group} (25%+ of games played). Rinkside overall blends EV offence 28%, EV defence 17%, power play 10%, finishing 10%, goals 10%, 1st assists 10%, penalty kill 5%, penalties 5%, possession 5%.`);
+    return h;
+  }
+
+  let cardEl = null;
+  function openCard(id) {
+    closeCard();
+    const html = cardHtml(current, id);
+    if (!html) return;
+    cardEl = document.createElement('div');
+    cardEl.className = 'cardwrap';
+    cardEl.innerHTML = `<div class="pcard" role="dialog" aria-label="Player card"><button class="px" aria-label="Close">×</button>${html}</div>`;
+    cardEl.addEventListener('click', (e) => { if (e.target === cardEl || e.target.closest('.px')) closeCard(); });
+    document.body.appendChild(cardEl);
+  }
+  function closeCard() { cardEl?.remove(); cardEl = null; }
+
+  function ratingsPanel(d, n, title = 'Player ratings') {
+    const list = (d.ratings || []).slice(0, n);
+    return `<div class="colhead big"><span class="t">${esc(title)}</span><span class="r small">OVERALL %</span></div><div class="rlist">` +
+      list.map((r) => `<div class="rrow"${pop(`card:${r.id}`)}><span class="rn m">${r.number ?? ''}</span><span class="rname"><b>${esc(r.name)}</b><small>${esc(r.pos)}${r.usage ? ` · ${esc(r.usage)}` : ''}</small></span><span class="rp m" style="background:${pctColor(r.overall)}">${r.overall}</span></div>`).join('') + '</div>';
+  }
+  function oddsPanel(d) {
+    const me = d.team.abbrev, conf = d.teams[me].conf;
+    let rows = Object.entries(d.teams).filter(([, t]) => t.conf === conf).sort((a, b) => b[1].odds.playoff - a[1].odds.playoff || b[1].odds.projPts - a[1].odds.projPts);
+    const mine = rows.findIndex(([a]) => a === me);
+    rows = mine < 10 ? rows.slice(0, 10) : [...rows.slice(0, 9), rows[mine]];
+    return `<div class="colhead big"><span class="t">Playoff odds</span><span class="r small">PROJ · ODDS</span></div><div class="olist">` +
+      rows.map(([a, t]) => `<div class="orow${a === me ? ' me' : ''}"${pop(`team:${a}`)}>${logo(t.logo, a)}<span class="ab">${esc(a)}</span><span class="opts m">${t.odds.projPts}</span>` +
+        `<span class="obar"><i style="width:${t.odds.playoff}%"></i></span><span class="opct m">${t.odds.playoff >= 99.5 ? '>99' : t.odds.playoff < 0.5 ? '<1' : Math.round(t.odds.playoff)}%</span></div>`).join('') + '</div>';
+  }
+  PICTURE_PANELS.ratings = (d) => ratingsPanel(d, 10);
+  PICTURE_PANELS.odds = oddsPanel;
+  LIST_PANELS.ratings = (d, compact) => ratingsPanel(d, compact ? 6 : 9);
 
   // ---------- full board ----------
   let current = null;
@@ -798,7 +875,7 @@
     let h = `<div class="pk">${esc(kicker)}</div><div class="pt">${logo(info.oppLogo, info.oppAbbrev)}<span>${info.home ? 'vs' : '@'} ${esc(info.opp)}</span></div>`;
     if (final) h += `<div class="ps">${resChip(info.result, last)}<span class="psc">${info.us}–${info.them}</span><span class="pst">${esc(info.status)}</span></div>`;
     else if (info.status === 'Live') h += `<div class="ps"><span class="res live">LIVE</span><span class="psc">${info.us ?? 0}–${info.them ?? 0}</span></div>`;
-    h += rowsHtml([['Date', info.date], [final ? 'Started' : 'Puck drop', info.time], ['Arena', info.venue], ['TV', info.tv],
+    h += rowsHtml([!final && info.winPct != null ? ['Win chance (model)', `${info.winPct}%`, true] : null, ['Date', info.date], [final ? 'Started' : 'Puck drop', info.time], ['Arena', info.venue], ['TV', info.tv],
       final && info.gwg ? ['Winning goal', info.gwg] : null, final && info.winGoalie ? ['Winning goalie', info.winGoalie] : null]);
     if (info.link) h += `<a class="plink" href="${esc(info.link)}" target="_blank" rel="noopener">Game Center ↗</a>`;
     return h;
@@ -813,7 +890,9 @@
       return `<div class="pk">${esc(kicker)}</div><div class="pt">${logo(t.logo, a)}<span>${esc(t.name)}</span></div>` +
         rowsHtml([['Record', t.record, true], ['Points', `${t.pts} in ${t.gp} GP`, true], ['Points %', pct3(t.pct), true],
           ['Goals', `${t.gf}–${t.ga} (${sign(t.diff)})`, true], ['Home', t.home, true], ['Road', t.road, true],
-          ['Last 10', t.l10, true], ['Streak', t.streak, true], ['Regulation wins', t.rw, true]]);
+          ['Last 10', t.l10, true], ['Streak', t.streak, true], ['Regulation wins', t.rw, true],
+          t.odds ? ['Playoff odds (model)', `${t.odds.playoff}%`, true] : null, t.odds ? ['Projected points', t.odds.projPts, true] : null,
+          t.odds ? ['Division title odds', `${t.odds.division}%`, true] : null, t.strength != null ? ['Strength rating', (t.strength > 0 ? '+' : '') + t.strength, true] : null]);
     };
     switch (kind) {
       case 'game': return gamePop(d.season.games[+arg].info, `Game ${+arg + 1} of ${d.season.total}`);
@@ -868,6 +947,8 @@
       }
       case 'stat': {
         const v = d.stats[arg];
+        if (v.sim) return `<div class="pk">Rinkside model</div><div class="pt"><span>${esc(v.label)}</span></div><div class="ps"><span class="psc">${esc(v.value)}${esc(v.unit)}</span><span class="pst">${v.rank}${suffix(v.rank)} of ${v.of}</span></div>` +
+          note('Team strength blends expected-goals share (50%), points % (30%) and goal differential (20%), shrunk toward average early in the season. Win chances come from a curve fitted on this season\u2019s results (home ice included); playoff odds play out the rest of the schedule 10,000 times.');
         return `<div class="pk">${v.edge ? 'NHL EDGE tracking' : 'Team stat'}</div><div class="pt"><span>${esc(v.label)}</span></div>` +
           `<div class="ps"><span class="psc">${esc(v.value)}${esc(v.unit)}</span><span class="pst">${v.rank}${suffix(v.rank)} of ${v.of}</span></div>` +
           rowsHtml([['League average', v.avg ? `${v.avg}${v.unit}` : '', true], ['League best', v.best || ''], ['Set by', v.by || '']]);
@@ -890,7 +971,9 @@
         return `<div class="pk">${esc(h0.date)}</div><div class="pt"><span>${esc(d.team.name)}</span></div><div class="ps"><span class="psc">${esc(h0.record)}</span><span class="pst">${h0.points} points</span></div>` +
           rowsHtml([['Points %', t.ptsPct, true], ['On pace for', `${t.pace} points`, true], ['Goals', `${t.gf}–${t.ga} (${sign(t.diff)})`, true],
             ['League rank', `${t.leagueRank}${suffix(t.leagueRank)} of 32`, true], ['Conference rank', `${t.confRank}${suffix(t.confRank)}`, true],
-            ['Regulation wins', t.rw, true], ['Reg. + OT wins', t.row, true]]);
+            ['Regulation wins', t.rw, true], ['Reg. + OT wins', t.row, true],
+            d.teams[d.team.abbrev]?.odds ? ['Playoff odds (model)', `${d.teams[d.team.abbrev].odds.playoff}%`, true] : null,
+            d.teams[d.team.abbrev]?.odds ? ['Projected points', d.teams[d.team.abbrev].odds.projPts, true] : null]);
       }
       case 'splits':
         return `<div class="pk">Splits</div><div class="pt"><span>Home, road and recent form</span></div>` +
@@ -984,6 +1067,7 @@
   }
   function openPop(target) {
     const key = target.dataset.pop;
+    if (key.startsWith('card:')) { closePop(); return openCard(+key.slice(5)); }
     if (popKey === key) return closePop();
     closePop();
     const html = popContent(key);
@@ -1150,7 +1234,7 @@
   if (I) {
     board.addEventListener('click', (e) => { if (!editing && e.target.closest('.hdr .band, .foot .brand')) openPicker(); });
     addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { closePicker(); closePop(); }
+      if (e.key === 'Escape') { closePicker(); closePop(); closeCard(); }
       else if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('.hdr .band')) { e.preventDefault(); openPicker(); }
       else if (e.key.toLowerCase() === 't' && !picker && !editing && !e.metaKey && !e.ctrlKey) openPicker();
       else if (e.key.toLowerCase() === 'c' && !picker && !e.metaKey && !e.ctrlKey) (editing ? stopEditing : startEditing)();
