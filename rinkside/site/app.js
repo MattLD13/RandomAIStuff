@@ -1174,16 +1174,17 @@
   async function liveShiftList(pbp) {
     const id = pbp.id, now = Date.now();
     if (liveShifts.id === id && now - liveShifts.at < 60000) return liveShifts.list;
-    let list = [];
-    try {
-      const r = await fetch(`${index.liveProxy}/shifts/${id}`, { cache: 'no-store' });
-      if (r.ok) list = warCore.apiShifts((await r.json()).data || []);
-    } catch {}
-    if (list.length < 40) try {   // the stats API has nothing yet: the HTML reports often do
-      const [h, v] = await Promise.all(['H', 'V'].map((x) => fetch(`${index.liveProxy}/toi/${id}/${x}`, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : ''))));
-      const html = [...warCore.parseToiReport(h, pbp.homeTeam.id, pbp.rosterSpots || []), ...warCore.parseToiReport(v, pbp.awayTeam.id, pbp.rosterSpots || [])];
-      if (html.length > list.length) list = html;
-    } catch {}
+    // Both sources, and whichever reaches further into the game. Measured on 2026-11-09: the HTML
+    // time-on-ice reports stay within about a minute of the clock; the stats API posts nothing in the
+    // 1st period, then catches up in batches about once a period (5-15 minutes behind).
+    const api = fetch(`${index.liveProxy}/shifts/${id}`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { data: [] })).then((j) => warCore.apiShifts(j.data || [])).catch(() => []);
+    const html = Promise.all(['H', 'V'].map((x) => fetch(`${index.liveProxy}/toi/${id}/${x}`, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : ''))))
+      .then(([h, v]) => [...warCore.parseToiReport(h, pbp.homeTeam.id, pbp.rosterSpots || []), ...warCore.parseToiReport(v, pbp.awayTeam.id, pbp.rosterSpots || [])])
+      .catch(() => []);
+    const reach = (l) => l.reduce((m, x) => Math.max(m, (x.p - 1) * 1200 + x.e), 0);
+    const [la, lh] = await Promise.all([api, html]);
+    const list = reach(lh) > reach(la) || (reach(lh) === reach(la) && lh.length > la.length) ? lh : la;
     liveShifts = { id, at: now, list };
     return list;
   }

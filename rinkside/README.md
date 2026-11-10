@@ -346,9 +346,12 @@ When the team's game is on, the page polls the NHL every 15 seconds and shows it
   table and bars, and the Game score block. The browser runs the build's own WAR code
   (`site/war-core.mjs`) on the play-by-play plus the game's shift chart, refreshed every minute.
   The on-ice pieces (play driving, defence) need to know who was on the ice, so they run up to
-  the last shift the NHL has posted. A note says how far that is. If the stats API has no shifts
-  yet, the NHL's HTML time-on-ice reports are tried. With neither, only the individual pieces
-  move (scoring, power play, penalties, other).
+  the last shift the NHL has posted. A note says how far that is. Both shift sources are fetched
+  and the one that reaches further is used. Measured over two games on 2026-11-09: the HTML
+  time-on-ice reports stay within about 1 game-minute of the clock, while the stats API's shift
+  chart posts nothing during the 1st period, then catches up in batches about once a period and
+  runs 5-15 game-minutes behind. So in practice the on-ice pieces lag by about a minute. With
+  neither source, only the individual pieces move (scoring, power play, penalties, other).
 - **Scoring-chances panel:** switches to the game in progress. The browser runs the same xG
   model as the build (`site/chances-core.mjs`), so live xG matches the final numbers.
 
