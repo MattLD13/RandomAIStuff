@@ -27,6 +27,10 @@
   // ---------- live game state (polled through the Cloudflare relay; see cloudflare/live-proxy.js) ----------
   let live = null;            // parsed state of the team's game in progress
   const inProgress = () => live && (live.state === 'LIVE' || live.state === 'CRIT');
+  // the game we have live data for, in progress or just finished: shown until the regular data has its final
+  const liveDone = () => live && (live.state === 'FINAL' || live.state === 'OFF');
+  const liveShown = () => inProgress() || liveDone();
+  const liveTag = () => (liveDone() ? 'FINAL' : 'LIVE');
   const isLiveGame = (id) => live && live.id === id && live.state !== 'FUT';
 
   // ---------- layout ----------
@@ -177,11 +181,11 @@
       prev = g.month;
     });
     // the game in progress: an outlined bar at the current margin
-    const li = live && inProgress() ? season.games.findIndex((g) => g.id === live.id) : -1;
+    const li = liveShown() ? season.games.findIndex((g) => g.id === live.id) : -1;
     if (li >= 0) {
       const m = Math.max(-cap, Math.min(cap, live.us - live.them)), bh = Math.max(Math.abs(m) * unit, 2);
       s += `<rect class="livebar" x="${(cx(li) - bw / 2).toFixed(2)}" y="${m > 0 ? zero - bh : m < 0 ? zero : zero - 1}" width="${bw.toFixed(2)}" height="${bh}" fill="none" stroke="#fff" stroke-width="1.4" stroke-dasharray="2 1.5"/>`;
-      s += `<text x="${cx(li).toFixed(1)}" y="${zero - 5 * unit - 2}" fill="var(--loss)" font-size="9" font-weight="700" text-anchor="middle">LIVE</text>`;
+      s += `<text x="${cx(li).toFixed(1)}" y="${zero - 5 * unit - 2}" fill="var(--loss)" font-size="9" font-weight="700" text-anchor="middle">${liveTag()}</text>`;
     }
     // one tap target per played game: the only place a game's score opens
     if (I) season.games.forEach((g, i) => {
@@ -288,12 +292,12 @@
       s += `<circle cx="${x.toFixed(2)}" cy="${zero + Math.min(cap, c.them.goals) * unit}" r="2.2" fill="#fff"/>`;
       if (I) s += `<rect class="hit"${pop(`chances:${i}`)} x="${(x - slot / 2).toFixed(2)}" y="2" width="${slot.toFixed(2)}" height="${h - 26}"/>`;
     });
-    const li = live && inProgress() && live.chances ? season.games.findIndex((g) => g.id === live.id) : -1;
+    const li = liveShown() && live.chances ? season.games.findIndex((g) => g.id === live.id) : -1;
     if (li >= 0) {
       const c = live.chances, x = cx(li), up = Math.min(cap, c.us.xg) * unit, dn = Math.min(cap, c.them.xg) * unit;
       s += `<rect x="${(x - bw / 2).toFixed(2)}" y="${zero - up}" width="${bw.toFixed(2)}" height="${up}" fill="none" stroke="#2f8a3a" stroke-width="1.4" stroke-dasharray="2 1.5"/>`;
       s += `<rect x="${(x - bw / 2).toFixed(2)}" y="${zero}" width="${bw.toFixed(2)}" height="${dn}" fill="none" stroke="#c42a3c" stroke-width="1.4" stroke-dasharray="2 1.5"/>`;
-      s += `<text x="${x.toFixed(1)}" y="${zero - 5 * unit - 2}" fill="var(--loss)" font-size="9" font-weight="700" text-anchor="middle">LIVE</text>`;
+      s += `<text x="${x.toFixed(1)}" y="${zero - 5 * unit - 2}" fill="var(--loss)" font-size="9" font-weight="700" text-anchor="middle">${liveTag()}</text>`;
       if (I) s += `<rect class="hit"${pop('live')} x="${(x - slot / 2).toFixed(2)}" y="2" width="${slot.toFixed(2)}" height="${h - 26}"/>`;
     }
     const count = {};
@@ -389,7 +393,7 @@
   const nextRows = (d) => `<div class="colhead big"><span class="t">Next 5</span><span class="r small">EASTERN TIME</span></div><div class="llist">${
     d.nextGames.map((g, i) => {
       const L = isLiveGame(g.id);
-      return `<div class="lgrow${L ? ' live' : ''}"${pop(L ? 'live' : `next:${i}`)}>${logo(g.logo, g.opp)}<span class="nd">${L ? 'LIVE' : `${esc(g.dow)} ${esc(g.day)}`}</span><span class="sc nt">${L ? liveShort() : `${g.home ? 'vs' : '@'} ${esc(g.time)}`}</span>${!L && g.winPct != null ? `<small class="wp">${g.winPct}%</small>` : ''}</div>`;
+      return `<div class="lgrow${L ? ' live' : ''}"${pop(L ? 'live' : `next:${i}`)}>${logo(g.logo, g.opp)}<span class="nd">${L ? liveTag() : `${esc(g.dow)} ${esc(g.day)}`}</span><span class="sc nt">${L ? liveShort() : `${g.home ? 'vs' : '@'} ${esc(g.time)}`}</span>${!L && g.winPct != null ? `<small class="wp">${g.winPct}%</small>` : ''}</div>`;
     }).join('')}</div>`;
 
   // ---------- geometry: the full board, or a narrower two-column board for phones ----------
@@ -435,9 +439,9 @@
     return `<div class="ch${compact ? ' compact' : ''}">${h}</div>`;
   }
   const liveGameObj = (d) => {
-    if (!inProgress() || !live.chances) return null;
+    if (!liveShown() || !live.chances) return null;
     return { opp: live.opp, home: live.home, chances: live.chances, liveLabel: liveStatus(live),
-      info: { us: live.us, them: live.them, date: 'In progress', status: 'Live' } };
+      info: { us: live.us, them: live.them, date: liveDone() ? 'Just finished' : 'In progress', status: 'Live' } };
   };
   // ---------- game stats: the team box score for the game in progress (live) or the last game ----------
   const lastStats = (d) => { for (let i = d.season.games.length - 1; i >= 0; i--) if (d.season.games[i].chances?.stats) return i; return null; };
@@ -472,7 +476,7 @@
     const lg = liveStatsObj(d), i = lastStats(d);
     if (!lg && i == null) return `<div class="colhead big"><span class="t">Game stats</span></div>`;
     const g = lg || d.season.games[i], key = lg ? 'live' : d.war?.games?.[g.id] ? `war:${i}` : `game:${i}`;
-    return `<div class="colhead big"><span class="t">Game stats</span><span class="r small">${lg ? '<b class="lv">LIVE</b>' : 'LAST GAME'}</span></div><div${pop(key)}>${statsTable(d, g, n ?? (compact ? 4 : 7))}</div>`;
+    return `<div class="colhead big"><span class="t">Game stats</span><span class="r small">${lg ? `<b class="lv">${liveTag()}</b>` : 'LAST GAME'}</span></div><div${pop(key)}>${statsTable(d, g, n ?? (compact ? 4 : 7))}</div>`;
   }
   // wide block: the same numbers in two rows, one per team
   function wideGameStats(d, w, h) {
@@ -488,13 +492,13 @@
     const key = lg ? 'live' : d.war?.games?.[g.id] ? `war:${i}` : `game:${i}`;
     const html = `<div class="wch${h >= 150 ? '' : ' short'}"${pop(key)} style="grid-template-columns:70px repeat(${cols.length},1fr)"><div></div>${cols.map(([l]) => `<div class="wl">${esc(short[l] || l)}</div>`).join('')}${line(me, 0)}${line(g.opp, 1)}</div>`;
     return { title: `<span${pop(key)}>Game stats<span class="big">${g.info.us}–${g.info.them}</span></span>`,
-      note: lg ? `live · ${g.home ? 'vs' : '@'} ${g.opp} · ${g.liveLabel}` : `last game: ${g.home ? 'vs' : '@'} ${g.opp}, ${g.info.date}`, html };
+      note: lg ? `${liveDone() ? 'just finished' : 'live'} · ${g.home ? 'vs' : '@'} ${g.opp} · ${g.liveLabel}` : `last game: ${g.home ? 'vs' : '@'} ${g.opp}, ${g.info.date}`, html };
   }
 
   const chancesPanel = (d, compact) => {
     const lg = liveGameObj(d), i = lastChances(d);
     if (!lg && i == null) return '';
-    return `<div class="colhead big"><span class="t">Scoring chances</span><span class="r small">${lg ? '<b class="lv">LIVE</b>' : 'LAST GAME'}</span></div><div${pop(lg ? 'live' : 'xginfo')}>${chancesTable(d, lg || d.season.games[i], compact)}</div>`;
+    return `<div class="colhead big"><span class="t">Scoring chances</span><span class="r small">${lg ? `<b class="lv">${liveTag()}</b>` : 'LAST GAME'}</span></div><div${pop(lg ? 'live' : 'xginfo')}>${chancesTable(d, lg || d.season.games[i], compact)}</div>`;
   };
 
   // ======================= more panels =======================
@@ -914,7 +918,7 @@
       `<div></div>${cols.map(([l]) => `<div class="wl">${l}</div>`).join('')}` +
       `<div class="wtm">${logo(d.teams[me]?.logo, me)}<b>${esc(me)}</b></div>${cols.map(([, k, t]) => cell(c.us, c.them, k, t)).join('')}` +
       `<div class="wtm">${logo(d.teams[g.opp]?.logo, g.opp)}<b>${esc(g.opp)}</b></div>${cols.map(([, k, t]) => cell(c.them, c.us, k, t)).join('')}</div>`;
-    return { title: `<span${pop('xginfo')}>Scoring chances<span class="big">${g.info.us}–${g.info.them}</span></span>`, note: lg ? `live · ${g.home ? 'vs' : '@'} ${g.opp} · ${g.liveLabel}` : `last game: ${g.home ? 'vs' : '@'} ${g.opp}, ${g.info.date}`, html };
+    return { title: `<span${pop('xginfo')}>Scoring chances<span class="big">${g.info.us}–${g.info.them}</span></span>`, note: lg ? `${liveDone() ? 'just finished' : 'live'} · ${g.home ? 'vs' : '@'} ${g.opp} · ${g.liveLabel}` : `last game: ${g.home ? 'vs' : '@'} ${g.opp}, ${g.info.date}`, html };
   }
 
   function wideLeaders(d, w, h) {
@@ -1395,8 +1399,8 @@
     const nav = (j, label, ch) => `<button class="wnav" ${j == null ? 'disabled' : `data-warnav="${j}"`} aria-label="${label}">${ch}</button>`;
     return `<button class="px" aria-label="Close">×</button><div class="pk">Box WAR · game ${i + 1}</div>` +
       `<div class="pt">${logo(d.teams[g.opp]?.logo, g.opp)}<span>${g.home ? 'vs' : '@'} ${esc(d.teams[g.opp]?.name || g.opp)}</span><span class="wnavs">${nav(prev, 'Previous game', '‹')}${nav(next, 'Next game', '›')}</span></div>` +
-      (liveWarGame(g) ? `<div class="ps"><span class="res live">LIVE</span><span class="psc">${live.us}–${live.them}</span><span class="pst">${esc(liveStatus(live))} · GAR <b class="m">${gsign(w.us, 1)}</b> to <b class="m">${gsign(w.them, 1)}</b></span></div>` +
-        `<div class="gfoot wlive">${w.partial ? 'Live: the NHL hasn\u2019t posted shifts yet, so only the individual pieces move for now' : `Live: on-ice pieces through ${esc(clockOf(w.through))} (when the NHL last posted shifts)`}</div>`
+      (liveWarGame(g) ? `<div class="ps"><span class="res live">${liveTag()}</span><span class="psc">${live.us}–${live.them}</span><span class="pst">${esc(liveStatus(live))} · GAR <b class="m">${gsign(w.us, 1)}</b> to <b class="m">${gsign(w.them, 1)}</b></span></div>` +
+        `<div class="gfoot wlive">${liveDone() ? 'Final, from the live feed. The site\u2019s next update replaces it with the full numbers' : w.partial ? 'Live: the NHL hasn\u2019t posted shifts yet, so only the individual pieces move for now' : `Live: on-ice pieces through ${esc(clockOf(w.through))} (when the NHL last posted shifts)`}</div>`
         : `<div class="ps">${resChip(g.result, last)}<span class="psc">${g.info.us}–${g.info.them}</span><span class="pst">${esc(g.info.date)} · GAR <b class="m">${gsign(w.us, 1)}</b> to <b class="m">${gsign(w.them, 1)}</b></span></div>`) +
       (warPlayer != null ? warPlayerView(d, i, warPlayer)
         : `<div class="wtog"><button data-warview="table"${warView === 'table' ? ' class="on"' : ''}>Table</button><button data-warview="bars"${warView === 'bars' ? ' class="on"' : ''}>Bars</button></div>` +
@@ -1441,7 +1445,7 @@
     if (i == null) return `<div class="colhead big"><span class="t">Box WAR</span></div>`;
     const g = d.season.games[i], rows = d.war.games[g.id].rows.map(warRow);
     const pickRows = rows.length > n ? [...rows.slice(0, n - 1), rows[rows.length - 1]] : rows;
-    return `<div class="colhead big"><span class="t">Box WAR</span><span class="r small">${liveWarGame(g) ? '<b class="lv">LIVE</b> ' : ''}${g.home ? 'VS' : '@'} ${esc(g.opp)}</span></div><div class="rlist wgl"${pop(`war:${i}`)}>` +
+    return `<div class="colhead big"><span class="t">Box WAR</span><span class="r small">${liveWarGame(g) ? `<b class="lv">${liveTag()}</b> ` : ''}${g.home ? 'VS' : '@'} ${esc(g.opp)}</span></div><div class="rlist wgl"${pop(`war:${i}`)}>` +
       pickRows.map((r, k) => `${k === n - 1 && rows.length > n ? '<div class="cutline wgap"></div>' : ''}<div class="rrow"><span class="rname"><b>${esc(r.n)}</b><small>${esc(r.pos)}</small></span><span class="rv m" style="color:${garTone(r.gar)}">${gsign(r.gar)}</span></div>`).join('') + '</div>';
   }
   LIST_PANELS.war = (d, compact) => warGamePanel(d, compact ? 6 : 9);
@@ -1515,10 +1519,10 @@
     const i = lastWar(d);
     if (i == null) return slotBox('chart1', x, top, w, h, '');
     const g = d.season.games[i], last = g.info.status.split('/')[1], L = liveWarGame(g);
-    const res = L ? 'LIVE' : g.result === 'W' ? 'W' : g.result === 'O' ? (last || 'OT') : 'L';
+    const res = L ? liveTag() : g.result === 'W' ? 'W' : g.result === 'O' ? (last || 'OT') : 'L';
     const sc = L ? `${L.us}\u2013${L.them}` : `${g.info.us}\u2013${g.info.them}`;
     return slotBox('chart1', x, top, w, h,
-      `<div class="abs title" style="left:0;top:0"><span${pop(`war:${i}`)}>Game score<span class="big">${L ? '<b class="lv">LIVE</b>' : res} ${sc} ${g.home ? 'vs' : '@'} ${esc(g.opp)}</span></span></div>` +
+      `<div class="abs title" style="left:0;top:0"><span${pop(`war:${i}`)}>Game score<span class="big">${L ? `<b class="lv">${liveTag()}</b>` : res} ${sc} ${g.home ? 'vs' : '@'} ${esc(g.opp)}</span></span></div>` +
       `<div class="abs note" style="${MODE === 'stack' ? 'left:0;top:28px' : 'right:0;top:6px'}">${garLegend()}</div>` +
       `<div class="abs bdblock" style="left:0;top:${svgTop}px;width:${w}px"${pop(`war:${i}`)}>${garList(d, i, { cols: w >= 700 ? 2 : 1, height: h - svgTop - 4 })}</div>`, 'span');
   }
