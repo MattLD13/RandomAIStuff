@@ -20,7 +20,7 @@ of the way down an iPhone lock screen. Each element's font was identified by ren
 - **Headings, names, times, scores:** Barlow Condensed Bold (0.98 correlation).
 - **Small text:** Barlow Semi Condensed.
 - **Numbers:** a sporty chamfered numeral. No public font matched, so
-  `fonts/build-font.py` draws one, **Rinkside Mono**. Every glyph is a centre line widened
+  `fonts/build-font.py` draws one, **Rinkside Mono**. Every glyph is a center line widened
   by a single stroke width (4px at the reference's 30px digit height), with 45° chamfered
   corners, flat-cut terminals, no serifs and no curves. Run it with `--stroke` or
   `--chamfer` to tune.
@@ -33,7 +33,7 @@ The home/away icons are Material-style house and plane shapes.
 | Schedule left: Nth-toughest of 32 | `club-schedule-season/{team}` for all 32 teams + standings | average current points % of each team's remaining opponents, ranked (1 = toughest) |
 | The season, game by game | team schedule | one slot per regular-season game; bar = goal margin (capped at ±5), green W / red L / tan OT-SO loss; dot row = filled home / ring away |
 | Playoff line | all 32 schedules | standings rebuilt after each game; margin = our points − first team out (or − last team in when out) under the wildcard format. Today's value uses the official standings |
-| Division grids | team schedule + standings | each opponent in standings order; house = home, plane = away, coloured by result |
+| Division grids | team schedule + standings | each opponent in standings order; house = home, plane = away, colored by result |
 | Playoff picture | standings (`divisionSequence`, `wildcardSequence`) | top 3 in our division, WC1/WC2, then the next 3 teams |
 | Power play / Penalty kill rank | `api.nhle.com/stats/rest/en/team/summary` | ranked across the league |
 | Team leaders | `club-stats/{team}/{season}/2` | most points, most shots, best save % (min. games = team GP / 6) |
@@ -48,7 +48,7 @@ lock-screen PNG per team, and deploys the static site.
 
 ```
 rinkside/
-  config.json                  default team; per-team colours, logo variant, URL name + aliases
+  config.json                  default team; per-team colors, logo variant, URL name + aliases
   scripts/build-data.mjs       NHL API -> site/data/*.json + one site/<name>/ page per team name (Node 18+, no deps)
   scripts/render-wallpaper.mjs site -> site/<name>/wallpaper.png (1179x2556) via Playwright
   site/                        the board (index.html, style.css, app.js) and the team picker
@@ -75,8 +75,8 @@ Chrome or computer use) to do all of this in your browser. Doing it by hand:
 3. **Actions → Rinkside → Run workflow.** When it finishes,
    https://mattld13.github.io/RandomAIStuff/rangers/ should load.
 4. **DNS** (Cloudflare dashboard → mattdicks.org → DNS → Records → Add record): type
-   `CNAME`, name `hockey`, target `mattld13.github.io`, proxy status **DNS only** (grey
-   cloud). GitHub needs the grey cloud to issue the HTTPS certificate.
+   `CNAME`, name `hockey`, target `mattld13.github.io`, proxy status **DNS only** (gray
+   cloud). GitHub needs the gray cloud to issue the HTTPS certificate.
 5. **GitHub → repo Settings → Pages → Custom domain:** `hockey.mattdicks.org` → Save. Once
    the DNS check passes and the certificate is issued (minutes to an hour), tick
    **Enforce HTTPS**.
@@ -143,7 +143,7 @@ gets a ⇄ button; tap a panel to pick what it shows. Choices are saved in your 
 `?wallpaper` pages.
 
 The bar at the bottom has **presets**. Tap one to switch the whole board; any slot can still
-be changed afterwards.
+be changed afterward.
 
 | Preset | What it shows |
 | --- | --- |
@@ -187,7 +187,7 @@ also between GitHub Action runs, so each build only downloads new games):
   team's last attempt), rush (within 4 s of play at the other end) and power play /
   shorthanded. Across the league, xG adds up to actual goals.
 - **Scoring chances:** shots on goal from the offensive zone with the goalie in net.
-  - **High danger:** within 20 ft of the goal line and 19 ft of centre.
+  - **High danger:** within 20 ft of the goal line and 19 ft of center.
   - **Mid danger:** within 30 ft out and 30 ft wide.
   - **Low danger:** the rest of the zone.
   - **Dumps:** shots from more than 58 ft out, or from outside the zone.
@@ -206,20 +206,20 @@ New options in Customize:
 
 Tap any player (leader rows, Top scorers, Goalies, Player ratings) for a card:
 - **Headline boxes:** Rinkside overall (big, with a percentile bar), WAR and Points (Save % for goalies).
-- **Percentile tiles:** shaded by the team colour, with elite ones (90+) underlined in gold.
+- **Percentile tiles:** shaded by the team color, with elite ones (90+) underlined in gold.
 - **Extras strip:** individual xG, goals − xG and shot quality.
-- **Season so far:** a game-to-game line graph of running GAR, split into offence and defence.
+- **Season so far:** a game-to-game line graph of running GAR, split into offense and defense.
 - **Game by game:** a bar chart of GAR in each game.
 - **Season stat line**
 
-**Skater percentiles.** Each skater is compared with every NHL forward or every defenceman who
+**Skater percentiles.** Each skater is compared with every NHL forward or every defenseman who
 has played 25%+ of games. Data comes from the NHL stats API's league-wide skater reports plus
 Rinkside's play-by-play xG.
 
 | Rating | Measure |
 | --- | --- |
-| EV offence | 5v5 points / 60 and on-ice even-strength goals for / 60 |
-| EV defence | On-ice even-strength goals against / 60 and 5v5 shot attempts against / 60 (lower is better) |
+| EV offense | 5v5 points / 60 and on-ice even-strength goals for / 60 |
+| EV defense | On-ice even-strength goals against / 60 and 5v5 shot attempts against / 60 (lower is better) |
 | Possession | 5v5 shot-attempt share relative to team (Corsi rel) |
 | Power play | PP points / 60 (needs 15+ PP minutes) |
 | Penalty kill | On-ice goals against / 60 while shorthanded (needs 15+ SH minutes) |
@@ -228,10 +228,10 @@ Rinkside's play-by-play xG.
 | 1st assists | 5v5 primary assists / 60 |
 | Penalties | Penalties drawn − taken / 60 |
 | Physical | Hits + blocked shots / 60 |
-| Faceoffs | Win % (centres, 50+ draws) |
+| Faceoffs | Win % (centers, 50+ draws) |
 
 The card also shows:
-- **Rinkside Overall:** the percentile of a weighted blend: EV offence 28%, EV defence 17%,
+- **Rinkside Overall:** the percentile of a weighted blend: EV offense 28%, EV defense 17%,
   PP 10%, finishing 10%, goals 10%, 1st assists 10%, PK 5%, penalties 5%, possession 5%.
 - **Role:** usage tier from the team's ice-time order.
 - **Individual xG, goals minus xG, shot quality** (xG per shot).
@@ -241,7 +241,7 @@ The card also shows:
 high-danger save % and workload, as percentiles among goalies with 3+ games.
 
 **Team models** (`scripts/odds.mjs`):
-- **Strength:** 50% xG share + 30% points % + 20% goal differential per game, standardised
+- **Strength:** 50% xG share + 30% points % + 20% goal differential per game, standardized
   across the league. For predictions it is shrunk toward average by games played
   (GP / (GP + 25)).
 - **Win probability:** a logistic curve of the strength difference, fitted on this season's
@@ -264,10 +264,10 @@ the ones that fit.
 - **EDGE + xG wall**
 - **Last game scoring chances**
 - **Game score:** takes over both chart slots. Every player in the last game gets one bar of
-  their goals above replacement, split into its pieces: blues for offence (scoring, play
-  driving, power play) and golds for defence (defence, penalties, other). Pieces above
+  their goals above replacement, split into its pieces: blues for offense (scoring, play
+  driving, power play) and golds for defense (defense, penalties, other). Pieces above
   replacement stack right of the dashed zero line and pieces below it stack left. Forwards,
-  defence and goalies are grouped. Tap it for Box WAR.
+  defense and goalies are grouped. Tap it for Box WAR.
 - **Box WAR (last game):** the same bars in a compact block (top slot only).
 - **WAR by component (season):** each player's goals above replacement as a stacked bar.
 - **Team leaders strip**
@@ -278,7 +278,7 @@ division final, conference final and Cup Final, all best-of-seven with home ice 
 to the team with more points. Tap the Playoff run odds or Playoff odds titles for the
 **playoff-run wheel**:
 - five rings, from making the playoffs (outside) to winning the Cup (inside)
-- each ring split by every team's odds, in team colours, with logos around the rim
+- each ring split by every team's odds, in team colors, with logos around the rim
 - your team outlined
 
 During a live game, the header and live popup also show a **live win chance**. It starts from
@@ -304,8 +304,8 @@ The value is split into six pieces:
 | Piece | What goes in it |
 | --- | --- |
 | Goal creation | The shooter's 35%. On a goal, 15% to the first assist and 5% to the second. |
-| On-ice offence | The rest of the shot, shared by the attacking skaters on the ice. |
-| On-ice defence | Minus the shot's xG, shared by the defending skaters. Goals beyond xG are the goalie's. |
+| On-ice offense | The rest of the shot, shared by the attacking skaters on the ice. |
+| On-ice defense | Minus the shot's xG, shared by the defending skaters. Goals beyond xG are the goalie's. |
 | Power play | The three pieces above, while on the power play. |
 | Penalties | Per minor drawn, the season's net power-play goals per minor (about 0.19); minus the same per minor taken. A major counts as 2.5 minors; penalties called together that offset count for neither side. |
 | Other | Faceoffs ±0.008, takeaways +0.015, giveaways −0.01, blocked shots +0.012. |
@@ -319,7 +319,7 @@ became twice as repeatable); the score adjustment and the 60/40 split each added
 measured penalty value costs a little repeatability but is what power plays actually produced.
 
 Each piece is measured against **replacement level**: the per-60 rate, at the same strength,
-of the skaters outside each team's top 13 forwards and top 7 defencemen by ice time.
+of the skaters outside each team's top 13 forwards and top 7 defensemen by ice time.
 
 Goalies get goals saved above expected, minus the replacement rate per shot. That rate comes
 from the goalies outside each team's top two, shrunk toward −0.006 a shot. Wins = goals ÷
@@ -330,7 +330,7 @@ Season WAR percentiles compare against skaters with 25%+ of games played (goalie
 Where WAR shows up:
 - **Box WAR:** tap a player for their own game: GAR and its pieces, ice time by strength,
   points, shots, individual xG, hits, blocks, faceoffs, takeaways / giveaways, penalties and
-  on-ice goals and xG. **Season card ›** opens the full card. Box WAR also has a table of every piece per skater (tinted team colour or red, with a percentile per game), or the same as bars. It opens from the Box WAR panels, or from "Box WAR ›" in any game popup. It shows one bar per player. The ‹ › buttons step through the games, and tapping a player opens their card.
+  on-ice goals and xG. **Season card ›** opens the full card. Box WAR also has a table of every piece per skater (tinted team color or red, with a percentile per game), or the same as bars. It opens from the Box WAR panels, or from "Box WAR ›" in any game popup. It shows one bar per player. The ‹ › buttons step through the games, and tapping a player opens their card.
 - **Player cards:** a WAR box with the season percentile.
 - **Panels:** Box WAR (last game) and Wins above replacement (season) for the list, picture and tall-column slots.
 - **Other:** a Team WAR stat box (ranked of 32), and a WAR leader option for the leader rows.
@@ -360,7 +360,7 @@ When the team's game is on, the page polls the NHL every 15 seconds and shows it
 - **Box WAR and Game score:** the live game becomes the "last game" in the Box WAR panels,
   table and bars, and the Game score block. The browser runs the build's own WAR code
   (`site/war-core.mjs`) on the play-by-play plus the game's shift chart, refreshed every minute.
-  The on-ice pieces (play driving, defence) need to know who was on the ice, so they run up to
+  The on-ice pieces (play driving, defense) need to know who was on the ice, so they run up to
   the last shift the NHL has posted. A note says how far that is. Both shift sources are fetched
   and the one that reaches further is used. Measured over two games on 2026-11-09: the HTML
   time-on-ice reports stay within about 1 game-minute of the clock, while the stats API's shift
@@ -414,7 +414,7 @@ reverse-retro jerseys. The logo is set by `"altLogo"` in `config.json`, and it c
 - any image URL.
 
 The defaults are the official current alternates where the NHL publishes one (Tampa Bay,
-Toronto, Calgary, Nashville, Utah, Dallas) and a fan-favourite throwback for the rest, such as
+Toronto, Calgary, Nashville, Utah, Dallas) and a fan-favorite throwback for the rest, such as
 the Islanders fisherman, the Canucks flying skate and the Penguins 1967 roundel. Seattle,
 Vegas and Winnipeg have only ever had one logo, so they use it.
 

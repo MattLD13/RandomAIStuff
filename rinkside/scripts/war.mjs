@@ -8,15 +8,15 @@
 // xG here is the unblocked-shot model, adjusted for the score: a trailing team's shots are worth a
 // little less, a leading team's a little more (weights measured each season, see seasonModel).
 //   Goal creation   the shooter's 35% of v; on a goal, 15% to the first assist, 5% to the second
-//   On-ice offence  the rest of v, split evenly between the attacking skaters on the ice
-//   On-ice defence  minus the shot's xG, split evenly between the defending skaters on the ice
+//   On-ice offense  the rest of v, split evenly between the attacking skaters on the ice
+//   On-ice defense  minus the shot's xG, split evenly between the defending skaters on the ice
 //                   (goals against beyond xG are the goalie's, not the skaters')
 //   Power play      the three above while on the power play
 //   Penalties       per minor drawn, plus the season's net power-play goals per minor (~0.19);
 //                   minus the same per minor taken (majors 2.5 minors; offsetting calls cancel)
 //   Other           faceoffs (±0.008 a draw), takeaways (+0.015), giveaways (−0.01), blocks (+0.012)
 // Each piece is measured against a replacement-level player: the per-60 rate, at the same
-// strength, of the skaters outside each team's top 13 forwards and top 7 defencemen by ice time.
+// strength, of the skaters outside each team's top 13 forwards and top 7 defensemen by ice time.
 // Goalies (shots on goal, the shot-on-goal xG model): goals saved above expected, minus the replacement goalies' rate per shot (goalies
 // outside each team's top two by shots faced, shrunk toward −0.006 a shot). Wins = goals ÷ (2 × league goals per team-game).
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -118,7 +118,7 @@ export function computeWar(digests, w, opts) {
   const gpw = r2((2 * goals) / Math.max(1, 2 * games.length));
   const all = (t) => t.ev + t.pp + t.sh + t.x;
 
-  // replacement pool: outside each team's top 13 forwards / top 7 defencemen / top 2 goalies
+  // replacement pool: outside each team's top 13 forwards / top 7 defensemen / top 2 goalies
   const byTeam = {};
   for (const s of Object.values(season)) (byTeam[s.t] ??= []).push(s);
   const pool = { F: [], D: [], G: [] };

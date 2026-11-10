@@ -1,6 +1,6 @@
 // Team strength, game win probabilities and playoff odds.
 //
-// Strength blends three things for every team, each standardised across the league:
+// Strength blends three things for every team, each standardized across the league:
 //   50% expected-goals share (Rinkside's xG model), 30% points %, 20% goal differential per game.
 // Win probability for a game is a logistic curve of (home strength - away strength), fitted on
 // this season's finished games (wins include OT/SO), so home ice is learned from the data.

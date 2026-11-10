@@ -707,7 +707,7 @@
   };
 
   // ======================= player cards, ratings, odds =======================
-  // numbers: gold when elite, red when poor; bars in the team's colour (lifted so it shows on black)
+  // numbers: gold when elite, red when poor; bars in the team's color (lifted so it shows on black)
   const tone = (p) => (p == null ? 'var(--dim)' : p >= 80 ? 'var(--gold-hi)' : p <= 20 ? 'var(--loss)' : 'var(--fg)');
   const garTone = (v, s = 0.1) => (v >= s ? 'var(--gold-hi)' : v <= -s ? 'var(--loss)' : 'var(--fg)');
   const rbar = (label, p) => `<div class="rb"><span class="rbl">${esc(label)}</span><span class="rbt"><i style="width:${p ?? 0}%"></i></span><b class="m" style="color:${tone(p)}">${p ?? '\u2013'}</b></div>`;
@@ -716,7 +716,7 @@
   const miniBar = (pct) => `<span class="rbt mini"><i style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></i></span>`;
   const rgbOf = (hex) => { const n = parseInt(String(hex).replace('#', ''), 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
   const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
-  function teamColours(hex) {
+  function teamColors(hex) {
     let c = rgbOf(hex);
     for (let i = 0; i < 20 && lum(c) < 0.12; i++) c = c.map((v) => Math.round(v + (255 - v) * 0.12));
     const [r, g, b] = c.map((v) => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), sat = mx ? (mx - mn) / mx : 0;
@@ -727,7 +727,7 @@
   const cardKey = (d, id) => (id && d.cards && d.cards[id] ? `card:${id}` : null);
 
 
-  // running totals game to game: total GAR (white), offence (team colour), defence (gold); goalies: GAR and saved above xG
+  // running totals game to game: total GAR (white), offense (team color), defense (gold); goalies: GAR and saved above xG
   function playerLineChart(d, id, isG) {
     if (!d.war) return '';
     let tot = 0, off = 0, def = 0, n = 0;
@@ -741,7 +741,7 @@
     });
     if (n < 2) return '';
     const series = isG ? [['tot', 'GAR', '#f4f4f4'], ['off', 'Saved above xG', 'var(--team-hi)']]
-      : [['tot', 'GAR', '#f4f4f4'], ['off', 'Offence', 'var(--team-hi)'], ['def', 'Defence', 'var(--df1)']];
+      : [['tot', 'GAR', '#f4f4f4'], ['off', 'Offense', 'var(--team-hi)'], ['def', 'Defense', 'var(--df1)']];
     const W = 400, H = 112, PW = W - 40, vals = pts.flatMap((p) => series.map(([k]) => p[k]));
     let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
     if (hi - lo < 0.5) { hi += 0.25; lo -= 0.25; }
@@ -757,7 +757,7 @@
     return `<div class="pc-chart"><div class="pc-ch"><span class="k">Season so far</span><span class="pleg">${series.map(([, l, col]) => `<i style="background:${col}"></i>${l}`).join('')}</span></div>` +
       `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="height:${H}px">${s}</svg></div>`;
   }
-  // the player's goals above replacement in every game, like the season chart: team colour up, red down
+  // the player's goals above replacement in every game, like the season chart: team color up, red down
   function playerGameChart(d, id, isG) {
     if (!d.war) return '';
     const pts = warGames(d).map(([g]) => {
@@ -785,8 +785,8 @@
     const c = d.cards[id];
     if (!c) return '';
     const isG = c.kind === 'G', w = c.war, ex = c.extra, stat = (k) => (c.stats || []).find(([x]) => x === k)?.[1];
-    const pos = { C: 'Centre', L: 'Left wing', R: 'Right wing', D: 'Defence', G: 'Goalie' }[c.pos] || c.pos;
-    const group = isG ? 'goalies' : c.group === 'D' ? 'defencemen' : 'forwards';
+    const pos = { C: 'Center', L: 'Left wing', R: 'Right wing', D: 'Defense', G: 'Goalie' }[c.pos] || c.pos;
+    const group = isG ? 'goalies' : c.group === 'D' ? 'defensemen' : 'forwards';
     let h = `<div class="pk">${esc(d.team.abbrev)}${c.number != null ? ` \u00b7 #${c.number}` : ''} \u00b7 ${esc(pos)}</div>`;
     h += `<div class="pc-id"><span class="face"><img src="${esc(c.headshot)}" alt=""></span><div><div class="pc-n">${esc(c.full)}</div>` +
       `<div class="pc-s">${[c.age ? `Age ${c.age}` : '', c.usage, isG ? `${c.gp} GP` : `${c.toi} a game`].filter(Boolean).map(esc).join(' \u00b7 ')}</div></div></div>`;
@@ -807,8 +807,8 @@
   let cardEl = null;
   function openCard(id, d = current) {
     closeCard();
-    // on the league page the card comes from the player's own team file, in that team's colours
-    if (d !== current) { const tc = teamColours(d.team.primaryColor || '#888888'); document.documentElement.style.setProperty('--team-hi', tc.hi); }
+    // on the league page the card comes from the player's own team file, in that team's colors
+    if (d !== current) { const tc = teamColors(d.team.primaryColor || '#888888'); document.documentElement.style.setProperty('--team-hi', tc.hi); }
     const html = cardHtml(d, id);
     if (!html) return;
     cardEl = document.createElement('div');
@@ -943,7 +943,7 @@
     ['Overall', (c) => c.overall, 'pct'], ['WAR', (c) => c.war?.war, 'war'],
     ['Points', (c) => c.stats.find(([k]) => k === 'P')?.[1], 'n'], ['Goals', (c) => c.stats.find(([k]) => k === 'G')?.[1], 'n'],
     ['Ice time', (c) => c.stats.find(([k]) => k === 'TOI')?.[1], 'toi'],
-    ...['EV offence', 'EV defence', 'Power play', 'Finishing', 'Physical'].map((l) => [l, (c) => c.tiles.find(([k]) => k === l)?.[1], 'pct']),
+    ...['EV offense', 'EV defense', 'Power play', 'Finishing', 'Physical'].map((l) => [l, (c) => c.tiles.find(([k]) => k === l)?.[1], 'pct']),
   ];
   function wideCompare(d, w, h) {
     const ids = compareIds(d), cards = ids.map((id) => d.cards[id]);
@@ -1096,7 +1096,7 @@
     const root = document.documentElement.style;
     if (d.team.primaryColor) root.setProperty('--primary', d.team.primaryColor);
     if (d.team.accentColor) root.setProperty('--accent', d.team.accentColor);
-    { const tc = teamColours(d.team.primaryColor || '#888888'); root.setProperty('--team-hi', tc.hi); root.setProperty('--df1', tc.d1); root.setProperty('--df2', tc.d2); }
+    { const tc = teamColors(d.team.primaryColor || '#888888'); root.setProperty('--team-hi', tc.hi); root.setProperty('--df1', tc.d1); root.setProperty('--df2', tc.d2); }
     document.title = `${d.team.name} · Rinkside`;
 
     const remix = document.getElementById('remix');
@@ -1352,7 +1352,7 @@
 
 
   let warEl = null, warAt = null, warView = 'table', warPlayer = null;
-  // the table: every piece per skater, tinted in team colour (above replacement) or red (below)
+  // the table: every piece per skater, tinted in team color (above replacement) or red (below)
   const cellBg = (v, sc) => (v >= 0 ? `color-mix(in srgb, var(--team-hi) ${Math.round(Math.min(1, v / sc) * 70)}%, #1b1b1b)` : `color-mix(in srgb, var(--loss) ${Math.round(Math.min(1, -v / sc) * 60)}%, #1b1b1b)`);
   const pctTone = (p) => (p == null ? 'var(--dim)' : p >= 90 ? 'var(--gold-hi)' : p <= 10 ? 'var(--loss)' : 'var(--fg)');
   const WAR_HEAD = [['gc', 'Scor&shy;ing'], ['oio', 'Play'], ['pp', 'PP'], ['oid', 'Def'], ['pen', 'Pen'], ['oth', 'Other']];
@@ -1369,7 +1369,7 @@
     return h;
   }
   // one player's own game: their pieces, ice time and box score; the full season card is one tap further
-  const POS_WORD = { C: 'Centre', L: 'Left wing', R: 'Right wing', D: 'Defence', G: 'Goalie' };
+  const POS_WORD = { C: 'Center', L: 'Left wing', R: 'Right wing', D: 'Defense', G: 'Goalie' };
   function warPlayerView(d, i, id) {
     const w = d.war.games[d.season.games[i].id], c = d.cards?.[id];
     const sk = w.rows.find((r) => r[0] === id), gk = w.g.find((r) => r[0] === id);
@@ -1474,10 +1474,10 @@
   }
 
   // ---------- game score breakdown: every player's GAR as one bar, split into its pieces ----------
-  // blues are offence, golds are defence; pieces above replacement stack right of zero, below it left
-  // offence in the team's colour (full, tint, shade); defence in gold (silver for gold teams)
+  // blues are offense, golds are defense; pieces above replacement stack right of zero, below it left
+  // offense in the team's color (full, tint, shade); defense in gold (silver for gold teams)
   const WAR_PARTS = [['gc', 'Scoring', 'var(--team-hi)'], ['oio', 'Play driving', 'color-mix(in srgb, var(--team-hi) 62%, #fff)'], ['pp', 'Power play', 'color-mix(in srgb, var(--team-hi) 28%, #fff)'],
-    ['oid', 'Defence', 'var(--df1)'], ['pen', 'Penalties', 'var(--df2)'], ['oth', 'Other', '#5f5f5f']];
+    ['oid', 'Defense', 'var(--df1)'], ['pen', 'Penalties', 'var(--df2)'], ['oth', 'Other', '#5f5f5f']];
   const garLegend = () => `<span class="gleg">${WAR_PARTS.map(([, l, c]) => `<i style="background:${c}"></i>${esc(l)}`).join('')}</span>`;
   function garScale(rows) {
     let lo = -0.05, hi = 0.05;
@@ -1503,10 +1503,10 @@
     }
     return `<div class="gr"${attrs}><span class="grn">${esc(r.n)}</span><span class="grb"><em style="left:${X(0).toFixed(2)}%"></em>${s}</span><b class="m grv" style="color:${color}">${value}</b></div>`;
   }
-  // forwards, defence and goalies with a subhead each; in two columns the forwards fill the first
+  // forwards, defense and goalies with a subhead each; in two columns the forwards fill the first
   function garList(d, i, { attrs = () => '', cols = 1, height = 0 } = {}) {
     const wg = d.war.games[d.season.games[i].id], rows = wg.rows.map(warRow);
-    const groups = [['Forwards', rows.filter((r) => r.pos !== 'D')], ['Defence', rows.filter((r) => r.pos === 'D')],
+    const groups = [['Forwards', rows.filter((r) => r.pos !== 'D')], ['Defense', rows.filter((r) => r.pos === 'D')],
       ['Goalies', wg.g.map(([id, n, , , gar]) => ({ id, n, gar, goalie: true }))]].filter(([, l]) => l.length);
     const [lo, hi] = garScale(groups.flatMap(([, l]) => l));
     const colOf = cols === 2 ? [[groups[0]], groups.slice(1)] : [groups];
@@ -1681,7 +1681,7 @@
         const g = d.season.games[+arg], c = g.chances;
         return `<div class="pk">High danger · ${g.home ? 'vs' : '@'} ${esc(g.opp)} · ${esc(g.info.date)}</div><div class="pt"><span class="big m">${c.us.hi.n}–${c.them.hi.n}</span><span>high-danger chances</span></div>` +
           rowsHtml([['High-danger xG', `${c.us.hi.xg.toFixed(2)}–${c.them.hi.xg.toFixed(2)}`, true], ['High-danger goals', `${c.us.hi.g}–${c.them.hi.g}`, true]]) +
-          note('Within 20 ft of the goal line and 19 ft of centre.');
+          note('Within 20 ft of the goal line and 19 ft of center.');
       }
       case 'pace': {
         const k = +arg, { out, perGame } = paceSeries(d), g = playedGame(d, k);
@@ -1972,13 +1972,13 @@
   };
   const NHL_LOGO = 'https://assets.nhle.com/logos/nhl/svg/NHL_light.svg';
   let league = null, leagueDay = 1, leagueLive = {}, leagueTimer = null;
-  const bright = (c) => teamColours(c || '#888888').hi;   // team colours lifted so navies show on black
-  // two teams side by side: if their colours look alike, the second one uses its alternate colour
-  function pairColours(a, b) {
-    const T = league.teams, ca = teamColours(T[a]?.color || '#888888'), cb = teamColours(T[b]?.color || '#888888');
+  const bright = (c) => teamColors(c || '#888888').hi;   // team colors lifted so navies show on black
+  // two teams side by side: if their colors look alike, the second one uses its alternate color
+  function pairColors(a, b) {
+    const T = league.teams, ca = teamColors(T[a]?.color || '#888888'), cb = teamColors(T[b]?.color || '#888888');
     const near = (x, y) => Math.hypot(...x.rgb.map((v, k) => v - y.rgb[k])) < 110;
     if (!near(ca, cb)) return [ca.hi, cb.hi];
-    const alt = teamColours(T[b]?.color2 || '#c8ccd0');
+    const alt = teamColors(T[b]?.color2 || '#c8ccd0');
     return [ca.hi, near(ca, alt) ? '#c8ccd0' : alt.hi];
   }
   const teamLink = (a) => `${esc(league.teams[a]?.slug || String(a).toLowerCase())}/`;
@@ -1990,7 +1990,7 @@
     const side = (a, sc, other) => `<a class="lgt${fin && sc > other ? ' win' : ''}" href="${teamLink(a)}">${logo(T[a]?.logo, a)}<b>${esc(a)}</b><small>${esc(T[a]?.record || '')}</small><span class="m">${fin || on ? sc ?? 0 : ''}</span></a>`;
     let foot = fin ? `Final${last && last !== 'REG' ? `/${esc(last)}` : ''}` : on ? `<b class="lv">LIVE</b> ${esc(L.period || '')} ${esc(L.clock || '')}` : `${esc(g.time)} ET`;
     if (!fin && !on && g.winHome != null) {
-      const aw = 100 - g.winHome, [cAway, cHome] = pairColours(g.away, g.home);
+      const aw = 100 - g.winHome, [cAway, cHome] = pairColors(g.away, g.home);
       foot += `<span class="lgwp"><i style="width:${aw}%;background:${cAway}"></i><i style="width:${g.winHome}%;background:${cHome}"></i></span><small class="m">${aw}–${g.winHome}</small>`;
     }
     return `<div class="lgc${on ? ' live' : ''}">${side(g.away, as, hs)}${side(g.home, hs, as)}<div class="lgf">${foot}</div></div>`;

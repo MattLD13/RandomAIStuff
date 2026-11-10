@@ -2,8 +2,8 @@
 //
 // Sources: the NHL stats API (every skater's season reports) and Rinkside's own xG model
 // (individual expected goals per shooter, goals saved above expected per goalie).
-// Percentiles compare forwards with forwards and defencemen with defencemen (minimum games
-// played), so a 90% EV Offence means better than 90% of qualified NHL players at that position.
+// Percentiles compare forwards with forwards and defensemen with defensemen (minimum games
+// played), so a 90% EV Offense means better than 90% of qualified NHL players at that position.
 import { xg as xgOf, danger } from './chances.mjs';
 
 const STATS = 'https://api.nhle.com/stats/rest/en';
