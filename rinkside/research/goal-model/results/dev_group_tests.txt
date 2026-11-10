@@ -1,0 +1,73 @@
+standard 1294
+all 916
+-context 916
+-shooter 1006
+-speed 1006
+-goalie 1125
+-linemates 1098
+-momentum 918
+-travel 973
+-arena 760
+-streaks 1070
+-revenge 998
+-placebo 851
+
+== 2024-25 validation
+  rinkside       logloss 0.21957  skill 0.0993  pred 7428 / 7370
+  standard       logloss 0.21220  skill 0.1296  pred 7421 / 7370
+  all            logloss 0.21062  skill 0.1360  pred 7624 / 7370
+  -context       logloss 0.21078  skill 0.1354  pred 7663 / 7370
+  -shooter       logloss 0.21084  skill 0.1351  pred 7540 / 7370
+  -speed         logloss 0.21100  skill 0.1345  pred 7733 / 7370
+  -goalie        logloss 0.21100  skill 0.1345  pred 7699 / 7370
+  -linemates     logloss 0.21060  skill 0.1361  pred 7732 / 7370
+  -momentum      logloss 0.21054  skill 0.1364  pred 7643 / 7370
+  -travel        logloss 0.21053  skill 0.1364  pred 7651 / 7370
+  -arena         logloss 0.21070  skill 0.1357  pred 7478 / 7370
+  -streaks       logloss 0.21057  skill 0.1363  pred 7698 / 7370
+  -revenge       logloss 0.21073  skill 0.1356  pred 7663 / 7370
+  -placebo       logloss 0.21066  skill 0.1359  pred 7622 / 7370
+  group value (log-loss x1e4 lost when removed; + = helps)
+  context            +1.59  [  -0.38,   +3.44]  p=0.1080  holm=0.8640
+  shooter            +2.25  [  +0.28,   +4.09]  p=0.0220  holm=0.1980
+  speed              +3.80  [  +2.18,   +5.42]  p=0.0005  holm=0.0055
+  goalie             +3.83  [  +2.05,   +5.59]  p=0.0005  holm=0.0055
+  linemates          -0.15  [  -1.79,   +1.53]  p=0.8430  holm=1.0000
+  momentum           -0.81  [  -2.20,   +0.51]  p=0.2050  holm=1.0000
+  travel             -0.85  [  -2.25,   +0.50]  p=0.2210  holm=1.0000
+  arena              +0.81  [  -0.55,   +2.13]  p=0.2530  holm=1.0000
+  streaks            -0.53  [  -2.18,   +1.00]  p=0.4930  holm=1.0000
+  revenge            +1.15  [  -0.33,   +2.50]  p=0.1180  holm=0.8640
+  placebo            +0.36  [  -1.00,   +1.69]  p=0.5990  holm=1.0000
+  ALL vs standard   +15.78  [ +11.79,  +19.75]  p=0.0005  holm=nan
+  ALL vs rinkside   +89.51  [ +82.74,  +96.44]  p=0.0005  holm=nan
+
+== 2026-27 dev
+  rinkside       logloss 0.23580  skill 0.0884  pred 1756 / 1699
+  standard       logloss 0.22794  skill 0.1188  pred 1777 / 1699
+  all            logloss 0.22608  skill 0.1260  pred 1847 / 1699
+  -context       logloss 0.22656  skill 0.1241  pred 1852 / 1699
+  -shooter       logloss 0.22642  skill 0.1246  pred 1796 / 1699
+  -speed         logloss 0.22693  skill 0.1227  pred 1884 / 1699
+  -goalie        logloss 0.22656  skill 0.1241  pred 1887 / 1699
+  -linemates     logloss 0.22624  skill 0.1254  pred 1859 / 1699
+  -momentum      logloss 0.22626  skill 0.1252  pred 1848 / 1699
+  -travel        logloss 0.22601  skill 0.1262  pred 1867 / 1699
+  -arena         logloss 0.22609  skill 0.1259  pred 1831 / 1699
+  -streaks       logloss 0.22652  skill 0.1243  pred 1883 / 1699
+  -revenge       logloss 0.22638  skill 0.1248  pred 1869 / 1699
+  -placebo       logloss 0.22625  skill 0.1253  pred 1846 / 1699
+  group value (log-loss x1e4 lost when removed; + = helps)
+  context            +4.81  [  +0.21,   +8.93]  p=0.0390  holm=0.3510
+  shooter            +3.46  [  -1.75,   +8.73]  p=0.2040  holm=1.0000
+  speed              +8.51  [  +4.64,  +12.77]  p=0.0005  holm=0.0055
+  goalie             +4.85  [  +0.02,   +9.52]  p=0.0490  holm=0.3920
+  linemates          +1.60  [  -2.29,   +5.30]  p=0.4140  holm=1.0000
+  momentum           +1.88  [  -1.32,   +5.13]  p=0.2290  holm=1.0000
+  travel             -0.70  [  -3.94,   +2.83]  p=0.7260  holm=1.0000
+  arena              +0.16  [  -3.36,   +3.78]  p=0.9360  holm=1.0000
+  streaks            +4.41  [  +0.35,   +8.53]  p=0.0350  holm=0.3500
+  revenge            +3.04  [  -0.24,   +6.50]  p=0.0730  holm=0.5110
+  placebo            +1.78  [  -1.59,   +4.86]  p=0.2780  holm=1.0000
+  ALL vs standard   +18.67  [  +9.07,  +28.31]  p=0.0005  holm=nan
+  ALL vs rinkside   +97.28  [ +79.63, +114.15]  p=0.0005  holm=nan

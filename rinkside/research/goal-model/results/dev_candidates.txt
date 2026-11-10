@@ -1,0 +1,48 @@
+standard 1294
+strict(+speed) 1099
+skill 1128
+skill+context 1132
+all 922
+
+== 2024-25 validation
+  standard               logloss 0.21220  pred    7421 / 7370   vs standard|cal  +0.06 [ -0.37,  +0.49]
+  strict(+speed)         logloss 0.21099  pred    7366 / 7370   vs standard|cal +12.17 [ +9.86, +14.68]
+  skill                  logloss 0.21038  pred    7640 / 7370   vs standard|cal +18.19 [+14.58, +22.09]
+  skill+context          logloss 0.21026  pred    7637 / 7370   vs standard|cal +19.41 [+15.53, +23.80]
+  all                    logloss 0.21059  pred    7615 / 7370   vs standard|cal +16.18 [+12.07, +20.57]
+  rinkside               logloss 0.21957  pred    7428 / 7370   vs standard|cal -73.67 [-80.41, -67.12]
+  standard|cal           logloss 0.21220  pred    7389 / 7370
+  strict(+speed)|cal     logloss 0.21099  pred    7377 / 7370   vs standard|cal +12.11 [ +9.81, +14.54]
+  skill|cal              logloss 0.21034  pred    7426 / 7370   vs standard|cal +18.66 [+15.15, +22.44]
+  skill+context|cal      logloss 0.21021  pred    7461 / 7370   vs standard|cal +19.98 [+16.14, +24.15]
+  all|cal                logloss 0.21054  pred    7443 / 7370   vs standard|cal +16.60 [+12.58, +20.85]
+  rinkside|cal           logloss 0.21957  pred    7383 / 7370   vs standard|cal -73.68 [-80.46, -67.11]
+
+== 2026-27 dev
+  standard               logloss 0.22794  pred    1777 / 1699   vs standard|cal  -0.45 [ -1.75,  +0.90]
+  strict(+speed)         logloss 0.22611  pred    1753 / 1699   vs standard|cal +17.92 [+12.28, +23.49]
+  skill                  logloss 0.22659  pred    1871 / 1699   vs standard|cal +13.06 [ +2.58, +23.39]
+  skill+context          logloss 0.22612  pred    1913 / 1699   vs standard|cal +17.80 [ +6.58, +28.38]
+  all                    logloss 0.22619  pred    1858 / 1699   vs standard|cal +17.05 [ +7.16, +26.88]
+  rinkside               logloss 0.23580  pred    1756 / 1699   vs standard|cal -79.07 [-95.07, -63.59]
+  standard|cal           logloss 0.22790  pred    1715 / 1699
+  strict(+speed)|cal     logloss 0.22610  pred    1692 / 1699   vs standard|cal +17.97 [+12.54, +23.30]
+  skill|cal              logloss 0.22623  pred    1718 / 1699   vs standard|cal +16.69 [ +7.49, +25.89]
+  skill+context|cal      logloss 0.22556  pred    1726 / 1699   vs standard|cal +23.40 [+13.69, +32.53]
+  all|cal                logloss 0.22589  pred    1711 / 1699   vs standard|cal +20.06 [+10.68, +28.69]
+  rinkside|cal           logloss 0.23580  pred    1704 / 1699   vs standard|cal -79.00 [-94.91, -63.56]
+
+== 2024-25 with MoneyPuck
+  standard               logloss 0.21235  pred    7332 / 7350   vs standard|cal  +0.09 [ -0.35,  +0.52]
+  strict(+speed)         logloss 0.21119  pred    7285 / 7350   vs standard|cal +11.66 [ +9.32, +14.10]
+  skill                  logloss 0.21064  pred    7564 / 7350   vs standard|cal +17.17 [+13.54, +20.97]
+  skill+context          logloss 0.21050  pred    7560 / 7350   vs standard|cal +18.59 [+14.63, +22.87]
+  all                    logloss 0.21082  pred    7538 / 7350   vs standard|cal +15.33 [+11.29, +19.71]
+  rinkside               logloss 0.21970  pred    7336 / 7350   vs standard|cal -73.42 [-80.17, -66.79]
+  standard|cal           logloss 0.21236  pred    7301 / 7350
+  strict(+speed)|cal     logloss 0.21120  pred    7296 / 7350   vs standard|cal +11.60 [ +9.29, +13.98]
+  skill|cal              logloss 0.21061  pred    7353 / 7350   vs standard|cal +17.48 [+14.02, +21.20]
+  skill+context|cal      logloss 0.21046  pred    7386 / 7350   vs standard|cal +19.02 [+15.15, +23.19]
+  all|cal                logloss 0.21080  pred    7368 / 7350   vs standard|cal +15.61 [+11.65, +19.80]
+  rinkside|cal           logloss 0.21971  pred    7292 / 7350   vs standard|cal -73.49 [-80.19, -66.87]
+  moneypuck              logloss 0.21341  pred    7475 / 7350   vs standard|cal -10.55 [-22.19,  +1.48]
