@@ -1,0 +1,59 @@
+
+PRE-REGISTERED CRITERIA
+  PASS 1. beats MoneyPuck (95% CI above 0)
+  PASS 2. beats standard xG (95% CI above 0)
+  PASS 3. beats current Rinkside xG (95% CI above 0)
+  PASS 4. season total within 3% of actual goals
+  PASS 5. split-half prediction >= MoneyPuck and standard
+
+== all unblocked shots MoneyPuck also has
+  new_stat                   {'n': 110317, 'goals': 7559, 'predicted': 7644.7, 'logloss': 0.21506430342323937, 'brier': 0.05853263099850704, 'auc': 0.7789452377692329, 'skill': 0.13903881319649658, 'calib_err': 0.0022549523753923133}
+  strict                     {'n': 110317, 'goals': 7559, 'predicted': 7628.9, 'logloss': 0.2159174278963397, 'brier': 0.05864167460630154, 'auc': 0.7751153469105379, 'skill': 0.13562352275935652, 'calib_err': 0.0027268396777503506}
+  standard                   {'n': 110317, 'goals': 7559, 'predicted': 7584.8, 'logloss': 0.2168067719207205, 'brier': 0.05878588364254744, 'auc': 0.7711677151207661, 'skill': 0.13206323555911081, 'calib_err': 0.003221814165075742}
+  rinkside                   {'n': 110317, 'goals': 7559, 'predicted': 7563.0, 'logloss': 0.22698156057145724, 'brier': 0.061194302648154134, 'auc': 0.7386340284625901, 'skill': 0.09133077567257386, 'calib_err': 0.009391874490955696}
+  moneypuck                  {'n': 110317, 'goals': 7559, 'predicted': 7528.7, 'logloss': 0.21783582567131438, 'brier': 0.05864318848739559, 'auc': 0.7694145538800821, 'skill': 0.12794365214013537, 'calib_err': 0.014753175953580389}
+
+== shots on goal only
+  new_stat                   {'n': 72056, 'goals': 7559, 'predicted': 5283.5, 'logloss': 0.29413616819545657, 'brier': 0.08553460776304028, 'auc': 0.7748058042032588, 'skill': 0.12388436020788507, 'calib_err': 0.031626748190185586}
+  strict                     {'n': 72056, 'goals': 7559, 'predicted': 5273.5, 'logloss': 0.2955551621462434, 'brier': 0.08575947210480339, 'auc': 0.7705918356188297, 'skill': 0.11965773686985137, 'calib_err': 0.031751761924572804}
+  standard                   {'n': 72056, 'goals': 7559, 'predicted': 5235.7, 'logloss': 0.29703246566441655, 'brier': 0.08602257976155693, 'auc': 0.7669252230018573, 'skill': 0.11525743232746222, 'calib_err': 0.0322446051716144}
+  rinkside                   {'n': 72056, 'goals': 7559, 'predicted': 5144.3, 'logloss': 0.31192157994239406, 'brier': 0.0900791161744996, 'auc': 0.7336420772637907, 'skill': 0.07090863305664308, 'calib_err': 0.034668510500607416}
+  moneypuck                  {'n': 72056, 'goals': 7559, 'predicted': 5274.4, 'logloss': 0.299421130712613, 'brier': 0.08532186104135649, 'auc': 0.7656998921691064, 'skill': 0.10814254122179223, 'calib_err': 0.03380669824786805}
+
+== 5v5 only
+  new_stat                   {'n': 86964, 'goals': 5360, 'predicted': 5259.3, 'logloss': 0.19676108095972428, 'brier': 0.05288643391890517, 'auc': 0.7922916329825799, 'skill': 0.14984699697240944, 'calib_err': 0.0023477018924053274}
+  strict                     {'n': 86964, 'goals': 5360, 'predicted': 5288.3, 'logloss': 0.1978147565566873, 'brier': 0.05304691229942771, 'auc': 0.787856945390444, 'skill': 0.14529434119004792, 'calib_err': 0.0019448896953738449}
+  standard                   {'n': 86964, 'goals': 5360, 'predicted': 5248.9, 'logloss': 0.19871949897992497, 'brier': 0.053185241040261774, 'auc': 0.7839301048492647, 'skill': 0.141385186573036, 'calib_err': 0.0031823984635314943}
+  rinkside                   {'n': 86964, 'goals': 5360, 'predicted': 5313.6, 'logloss': 0.2080138942284118, 'brier': 0.05521617602347119, 'auc': 0.7524087943907491, 'skill': 0.10122654344460214, 'calib_err': 0.008765997694735747}
+  moneypuck                  {'n': 86964, 'goals': 5360, 'predicted': 5305.2, 'logloss': 0.21308350652675448, 'brier': 0.05640591980799337, 'auc': 0.7418881784036049, 'skill': 0.07932207891025733, 'calib_err': 0.016961303621511336}
+
+== paired bootstrap (log-loss x1e4, + = new stat better)
+  new_stat vs strict         {'delta_x1e4': 8.53124473100274, 'lo': 4.722903555472116, 'hi': 12.091988788070932, 'share_of_resamples_new_better': 1.0}
+  new_stat vs standard       {'delta_x1e4': 17.424684974811164, 'lo': 12.941692214948544, 'hi': 21.887702530204894, 'share_of_resamples_new_better': 1.0}
+  new_stat vs rinkside       {'delta_x1e4': 119.17257148217857, 'lo': 110.76396126497283, 'hi': 127.49466234884787, 'share_of_resamples_new_better': 1.0}
+  new_stat vs moneypuck      {'delta_x1e4': 27.71522248074978, 'lo': 14.960790647298555, 'hi': 40.21074589539977, 'share_of_resamples_new_better': 0.99975}
+
+== shooters 60+ shots: season goals vs predicted
+  new_stat                   {'rmse': 3.3207456822274115, 'corr': 0.9339064650141282}
+  strict                     {'rmse': 3.6172059290818215, 'corr': 0.9209322869420282}
+  standard                   {'rmse': 3.7243589886542514, 'corr': 0.9167129627524941}
+  rinkside                   {'rmse': 4.021846957732602, 'corr': 0.9025711302880627}
+  moneypuck                  {'rmse': 4.006706070756064, 'corr': 0.904600519682765}
+  players                    611
+
+== goalies 400+ shots: goals against vs predicted
+  new_stat                   {'rmse': 11.7214197014615, 'corr': 0.9498802088371966}
+  strict                     {'rmse': 12.054994476365927, 'corr': 0.952065422171492}
+  standard                   {'rmse': 12.200441085789931, 'corr': 0.9501364543242321}
+  rinkside                   {'rmse': 12.74893231631176, 'corr': 0.9448743405665081}
+  moneypuck                  {'rmse': 11.460366750430957, 'corr': 0.9537103551476747}
+  players                    71
+
+== split-half: odd-game prediction vs even-game goals/shot (shooters 40+ each half)
+  actual goals/shot (odd games) 0.45168267069454676
+  new_stat                   0.6391866234431777
+  strict                     0.6149987054636439
+  standard                   0.6076260365727117
+  rinkside                   0.5846096594238407
+  moneypuck                  0.5635405375898676
+  players                    519

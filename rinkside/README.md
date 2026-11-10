@@ -196,6 +196,11 @@ also between GitHub Action runs, so each build only downloads new games):
   2026-11-07 (the Rangers' 24 chances, 8 high-danger and 2 dumps match exactly). xG values
   differ from that report's, since every xG model is different.
 
+A stronger shot model, **Shot Goal Probability (SGP)**, is in
+[`research/goal-model/`](research/goal-model/README.md). It adds shooter and goalie skill, shot
+speed and shift context, and was tested on a sealed season against MoneyPuck. It is not wired
+into the site yet; the xG above is what the panels use.
+
 New options in Customize:
 - **Scoring chances (last game):** a report panel for the upper or lower list slot.
 - **Expected goals by game:** a chart. Tap a game for its full report.
