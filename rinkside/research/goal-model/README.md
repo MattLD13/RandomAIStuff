@@ -37,6 +37,24 @@ v2 came out of an independent review of v1 (section 11) and a rolling-origin re-
 
 **The clean test is still to come:** frozen v2 models scored on games played on or after **2026-11-11**, with a verdict at the end of the regular season (section 9). The rest of this README documents v1 and how we got here.
 
+## v3 candidates (tested after the v2 freeze; none adopted)
+
+Tested the same way (`scripts/context4.py`, `scripts/eval7.py`; results in `results/v3_*.txt`). The keep rule, fixed before running: the pooled 2025-26 + 2026-27 gain over v2 must have a 95% interval above 0, be positive on 2024-25, and beat the placebo.
+
+| Candidate | 2024-25 | 2025-26 | 2026-27 | Pooled | Verdict |
+|---|---|---|---|---|---|
+| **Zone entry / rush timing:** time since the puck was last outside the zone and last in the shooter's end; events since entry; the event two back | −0.1 | −0.2 | +0.5 | −0.0 [−1.6, +1.5] | No |
+| **Line-change detail:** fresh players per team in the last 5 s; the shortest defenseman shift and the shortest forward shift | −0.4 | +0.2 | −2.1 | −0.2 [−1.5, +1.1] | No |
+| Both | −0.3 | +0.3 | −0.3 | +0.2 [−1.3, +1.9] | No |
+| Tree settings: 31 or 7 leaves, 1,000 shots per leaf, 1,600 rounds | ≤ +0.1 | ≤ −0.5 | ≤ −0.8 | −0.6 to −2.2 | No; v2's settings are best |
+| **Monthly refit** on the previous 730 days | **+15.7** [+12.8, +18.5] | +1.8 | +0.8 | +1.6 [−0.6, +3.8] | Not confirmed (positive in all three) |
+| *Placebo (random noise)* | *−0.7* | *−1.7* | *−0.9* | *−1.5* | — |
+
+**What this says:**
+- v2's play-before and line-change inputs already capture what the play-by-play and shift charts can tell us.
+- Richer zone-entry timing is mostly redundant. The Chmelar-type rush that's missing would need tracking data for non-goals, which isn't public.
+- Monthly refitting is the one idea that might still help: it caught an in-season scorekeeping shift in 2024-25. It didn't clear the bar on the other two seasons.
+
 ## 0. v2 tests (rolling origin)
 
 `scripts/eval6.py`:

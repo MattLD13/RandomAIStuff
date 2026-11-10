@@ -1,0 +1,29 @@
+
+== 2024-25 (fold used for tuning choices) (111274 shots)
+  v2               logloss 0.20711
+  v2+change2       logloss 0.20715   gain vs v2:  -0.38 [ -1.79,  +0.98]
+  v2+entry         logloss 0.20712   gain vs v2:  -0.10 [ -1.80,  +1.75]
+  v2+placebo       logloss 0.20719   gain vs v2:  -0.74 [ -2.20,  +0.71]
+  v3               logloss 0.20714   gain vs v2:  -0.26 [ -2.09,  +1.67]
+
+== 2025-26 (111066 shots)
+  v2               logloss 0.21109
+  v2+change2       logloss 0.21108   gain vs v2:  +0.17 [ -1.37,  +1.70]
+  v2+entry         logloss 0.21111   gain vs v2:  -0.15 [ -1.86,  +1.60]
+  v2+placebo       logloss 0.21126   gain vs v2:  -1.68 [ -3.20,  -0.06]
+  v3               logloss 0.21107   gain vs v2:  +0.28 [ -1.59,  +2.05]
+
+== 2026-27 (23613 shots)
+  v2               logloss 0.21812
+  v2+change2       logloss 0.21834   gain vs v2:  -2.14 [ -5.62,  +1.36]
+  v2+entry         logloss 0.21807   gain vs v2:  +0.51 [ -3.29,  +4.25]
+  v2+placebo       logloss 0.21821   gain vs v2:  -0.87 [ -4.14,  +2.27]
+  v3               logloss 0.21815   gain vs v2:  -0.28 [ -4.35,  +3.49]
+
+== pooled 2025-26 + 2026-27 (134679 shots)
+  v2               logloss 0.21233
+  v2+change2       logloss 0.21235   gain vs v2:  -0.24 [ -1.50,  +1.09]
+  v2+entry         logloss 0.21233   gain vs v2:  -0.04 [ -1.55,  +1.49]
+  v2+placebo       logloss 0.21248   gain vs v2:  -1.54 [ -2.86,  -0.01]
+  v3               logloss 0.21231   gain vs v2:  +0.18 [ -1.33,  +1.86]
+exit 0

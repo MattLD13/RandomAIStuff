@@ -1,0 +1,17 @@
+
+== 2024-25 (fold used for tuning choices) (111274 shots)
+  monthly          logloss 0.20555   gain vs season_fit: +15.68 [+12.76, +18.51]
+  season_fit       logloss 0.20711
+
+== 2025-26 (111066 shots)
+  monthly          logloss 0.21091   gain vs season_fit:  +1.81 [ -0.73,  +4.49]
+  season_fit       logloss 0.21109
+
+== 2026-27 (23613 shots)
+  monthly          logloss 0.21805   gain vs season_fit:  +0.76 [ -2.26,  +3.52]
+  season_fit       logloss 0.21812
+
+== pooled 2025-26 + 2026-27 (134679 shots)
+  monthly          logloss 0.21216   gain vs season_fit:  +1.62 [ -0.62,  +3.81]
+  season_fit       logloss 0.21233
+exit 0
