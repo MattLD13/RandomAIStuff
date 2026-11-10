@@ -431,7 +431,7 @@
       return [parts.length ? `incl. ${parts.join(', ')}` : '', so && won ? 'won shootout' : ''].filter(Boolean).join(' \u00b7 ');
     };
     h += row('Goals', c.us.goals, c.them.goals, null, extra(c.us, fu > ft), extra(c.them, ft > fu));
-    if (!compact) h += `<div class="chf"><span>Empty net <b class="m">${c.us.en}–${c.them.en}</b></span><span>Dumps <b class="m">${c.us.dumps}–${c.them.dumps}</b></span><span>Blocked <b class="m">${c.us.blocked}–${c.them.blocked}</b></span></div>`;
+    if (!compact) h += `<div class="chf"><span>Empty net <b class="m">${c.us.en}–${c.them.en}</b></span><span>Dumps <b class="m">${c.us.dumps}–${c.them.dumps}</b></span><span>Shots blocked <b class="m">${c.us.blocked}–${c.them.blocked}</b></span></div>`;
     return `<div class="ch${compact ? ' compact' : ''}">${h}</div>`;
   }
   const liveGameObj = (d) => {

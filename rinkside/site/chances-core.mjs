@@ -47,9 +47,10 @@ export function reduce(pbp) {
       else if (type === 'missed-shot' || type === 'shot-on-goal' || type === 'goal') st[owner].att++;
     }
     if (type === 'blocked-shot') {
-      // the API files a blocked shot under the shooting team (the blocker is on the other team)
+      // the API files a blocked shot under the shooting team (the blocker is on the other team,
+      // unless it hit a teammate, which doesn't count as a block)
       const shooter = d.eventOwnerTeamId;
-      out.blocked[shooter] = (out.blocked[shooter] || 0) + 1;
+      if (d.reason !== 'teammate-blocked') out.blocked[shooter] = (out.blocked[shooter] || 0) + 1;
     }
     if (type === 'shot-on-goal' || type === 'goal') {
       const team = d.eventOwnerTeamId, isHome = team === home;
@@ -124,7 +125,9 @@ export function side(g, team, w) {
   }
   const r2 = (v) => Math.round(v * 100) / 100;
   for (const k of Object.keys(b)) b[k].xg = r2(b[k].xg);
-  return { chances: b.hi.n + b.mid.n + b.low.n, hi: b.hi, mid: b.mid, low: b.low, xg: r2(b.hi.xg + b.mid.xg + b.low.xg), goals, sog, en, dumps, dumpGoals, blocked: g.blocked[team] || 0 };
+  return { chances: b.hi.n + b.mid.n + b.low.n, hi: b.hi, mid: b.mid, low: b.low, xg: r2(b.hi.xg + b.mid.xg + b.low.xg), goals, sog, en, dumps, dumpGoals,
+    // shots of ours that were blocked = the other team's official blocks (the play-by-play count otherwise)
+    blocked: g.stats?.[g.home === team ? g.away : g.home]?.blk ?? g.blocked[team] ?? 0 };
 }
 export function report(g, teamId, w) {
   const opp = g.home === teamId ? g.away : g.home;
