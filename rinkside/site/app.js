@@ -436,7 +436,7 @@
   }
   const liveGameObj = (d) => {
     if (!inProgress() || !live.chances) return null;
-    return { opp: live.opp, home: live.home, chances: live.chances, liveLabel: `${live.period} ${live.clock}`.trim(),
+    return { opp: live.opp, home: live.home, chances: live.chances, liveLabel: liveStatus(live),
       info: { us: live.us, them: live.them, date: 'In progress', status: 'Live' } };
   };
   // ---------- game stats: the team box score for the game in progress (live) or the last game ----------
@@ -1214,10 +1214,11 @@
   const ordinalPeriod = (n, type) => (type === 'OT' ? (n > 4 ? `${n - 3}OT` : 'OT') : type === 'SO' ? 'SO' : ['1st', '2nd', '3rd'][n - 1] || `${n}th`);
   const liveShort = () => `<b class="lv">${live.us}–${live.them}</b> <small>${esc(live.period)}</small>`;
   const isOver = (L) => L.state === 'FINAL' || L.state === 'OFF';
+  const liveStatus = (L) => isOver(L) ? 'Final' : L.state === 'PRE' ? 'Pregame' : L.intermission ? `${L.period} intermission` : [L.period, L.clock].filter(Boolean).join(' · ');
 
   function liveMeta(d) {
     const L = live, me = d.team.abbrev;
-    const status = isOver(L) ? 'Final' : L.state === 'PRE' ? 'Pregame' : L.intermission ? `${L.period} intermission` : `${L.period} · ${L.clock}`;
+    const status = liveStatus(L);
     const wp = liveWinPct(L, d.nextGames.find((g) => g.id === L.id)?.winPct);
     const extra = [wp != null && !isOver(L) ? `Win ${wp}%` : '', `Shots ${L.sogUs}\u2013${L.sogThem}`, L.chances ? `xG ${L.chances.us.xg.toFixed(2)}\u2013${L.chances.them.xg.toFixed(2)}` : '', L.pp].filter(Boolean).join(' \u00b7 ');
     return `<div class="meta livebox"${pop('live')}><div class="ls"><i class="dot${isOver(L) ? ' off' : ''}"></i>${esc(status)}</div>` +
@@ -1230,7 +1231,7 @@
     if (!L) return '';
     const me = d.team.abbrev;
     let h = `<div class="pk">${isOver(L) ? 'Final' : '<b class="lv">Live</b>'} · ${L.home ? 'vs' : '@'} ${esc(L.opp)}</div>`;
-    h += `<div class="pt">${logo(d.teams[me]?.logo, me)}<span class="big m">${L.us}–${L.them}</span>${logo(d.teams[L.opp]?.logo || L.oppLogo, L.opp)}<span class="pst">${esc(isOver(L) ? 'Final' : L.intermission ? `${L.period} int.` : `${L.period} ${L.clock}`)}</span></div>`;
+    h += `<div class="pt">${logo(d.teams[me]?.logo, me)}<span class="big m">${L.us}–${L.them}</span>${logo(d.teams[L.opp]?.logo || L.oppLogo, L.opp)}<span class="pst">${esc(liveStatus(L))}</span></div>`;
     const wp = liveWinPct(L, d.nextGames.find((g) => g.id === L.id)?.winPct);
     h += rowsHtml([!isOver(L) && wp != null ? ['Win chance (live)', `${wp}%`, true] : null, ['Shots on goal', `${L.sogUs}\u2013${L.sogThem}`, true], L.chances ? ['Expected goals', `${L.chances.us.xg.toFixed(2)}–${L.chances.them.xg.toFixed(2)}`, true] : null,
       L.chances ? ['High-danger chances', `${L.chances.us.hi.n}–${L.chances.them.hi.n}`, true] : null,
@@ -1393,7 +1394,7 @@
     const nav = (j, label, ch) => `<button class="wnav" ${j == null ? 'disabled' : `data-warnav="${j}"`} aria-label="${label}">${ch}</button>`;
     return `<button class="px" aria-label="Close">×</button><div class="pk">Box WAR · game ${i + 1}</div>` +
       `<div class="pt">${logo(d.teams[g.opp]?.logo, g.opp)}<span>${g.home ? 'vs' : '@'} ${esc(d.teams[g.opp]?.name || g.opp)}</span><span class="wnavs">${nav(prev, 'Previous game', '‹')}${nav(next, 'Next game', '›')}</span></div>` +
-      (liveWarGame(g) ? `<div class="ps"><span class="res live">LIVE</span><span class="psc">${live.us}–${live.them}</span><span class="pst">${esc(live.intermission ? `${live.period} int.` : `${live.period} ${live.clock}`)} · GAR <b class="m">${gsign(w.us, 1)}</b> to <b class="m">${gsign(w.them, 1)}</b></span></div>` +
+      (liveWarGame(g) ? `<div class="ps"><span class="res live">LIVE</span><span class="psc">${live.us}–${live.them}</span><span class="pst">${esc(liveStatus(live))} · GAR <b class="m">${gsign(w.us, 1)}</b> to <b class="m">${gsign(w.them, 1)}</b></span></div>` +
         `<div class="gfoot wlive">${w.partial ? 'Live: the NHL hasn\u2019t posted shifts yet, so only the individual pieces move for now' : `Live: on-ice pieces through ${esc(clockOf(w.through))} (when the NHL last posted shifts)`}</div>`
         : `<div class="ps">${resChip(g.result, last)}<span class="psc">${g.info.us}–${g.info.them}</span><span class="pst">${esc(g.info.date)} · GAR <b class="m">${gsign(w.us, 1)}</b> to <b class="m">${gsign(w.them, 1)}</b></span></div>`) +
       (warPlayer != null ? warPlayerView(d, i, warPlayer)
