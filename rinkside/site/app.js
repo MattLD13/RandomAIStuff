@@ -902,18 +902,19 @@
   }
 
   function wideChances(d, w, h) {
-    const i = lastChances(d);
-    if (i == null) return { title: 'Scoring chances', note: '', html: '' };
-    const g = d.season.games[i], c = g.chances, me = d.team.abbrev;
+    const lg = liveGameObj(d), i = lastChances(d);
+    if (!lg && i == null) return { title: 'Scoring chances', note: '', html: '' };
+    const g = lg || d.season.games[i], c = g.chances, me = d.team.abbrev;
+    const key = lg ? 'live' : `chances:${i}`;
     const cols = [['Chances', 'chances', null], ['High', 'hi', 'var(--win)'], ['Mid', 'mid', '#e0b23a'], ['Low', 'low', 'var(--loss)'], ['xG', 'xg', '#5b8fd6'], ['Goals', 'goals', null]];
     const val = (x, k) => (k === 'hi' || k === 'mid' || k === 'low' ? x[k].n : k === 'xg' ? x.xg.toFixed(2) : x[k]);
     const sub = (x, k) => (k === 'hi' || k === 'mid' || k === 'low' ? `xG ${x[k].xg.toFixed(2)}` : '');
     const cell = (x, y, k, tint) => `<div class="cv${+val(x, k) > +val(y, k) ? ' win' : ''}"${tint ? ` style="--tint:${tint}"` : ''}><b class="m">${val(x, k)}</b>${h >= 150 && sub(x, k) ? `<small>${sub(x, k)}</small>` : ''}</div>`;
-    const html = `<div class="wch${h >= 150 ? '' : ' short'}"${pop(`chances:${i}`)} style="grid-template-columns:70px repeat(${cols.length},1fr)">` +
+    const html = `<div class="wch${h >= 150 ? '' : ' short'}"${pop(key)} style="grid-template-columns:70px repeat(${cols.length},1fr)">` +
       `<div></div>${cols.map(([l]) => `<div class="wl">${l}</div>`).join('')}` +
       `<div class="wtm">${logo(d.teams[me]?.logo, me)}<b>${esc(me)}</b></div>${cols.map(([, k, t]) => cell(c.us, c.them, k, t)).join('')}` +
       `<div class="wtm">${logo(d.teams[g.opp]?.logo, g.opp)}<b>${esc(g.opp)}</b></div>${cols.map(([, k, t]) => cell(c.them, c.us, k, t)).join('')}</div>`;
-    return { title: `<span${pop('xginfo')}>Scoring chances<span class="big">${c.us.goals}–${c.them.goals}</span></span>`, note: `last game: ${g.home ? 'vs' : '@'} ${g.opp}, ${g.info.date}`, html };
+    return { title: `<span${pop('xginfo')}>Scoring chances<span class="big">${g.info.us}–${g.info.them}</span></span>`, note: lg ? `live · ${g.home ? 'vs' : '@'} ${g.opp} · ${g.liveLabel}` : `last game: ${g.home ? 'vs' : '@'} ${g.opp}, ${g.info.date}`, html };
   }
 
   function wideLeaders(d, w, h) {
@@ -1113,6 +1114,13 @@
       upper: () => slotBox('upper', ...G.upper, (LIST_PANELS[pick(d, 'upper')] || LIST_PANELS.next5)(d, false)),
       lower: () => slotBox('lower', ...G.lower, (LIST_PANELS[pick(d, 'lower')] || LIST_PANELS.last5)(d, true)),
     };
+    for (const c of ['col1', 'col2']) {
+      const top = pick(d, `${c}.0`);
+      if (top.startsWith('tall:')) {
+        const [x, y, w] = G[`${c}.0`], b = G[`${c}.1`];
+        pieces[`${c}.0`] = () => slotBox(`${c}.0`, x, y, w, b[1] + b[3] - y, tallPanel(d, top), `tallcol${top.includes(':pic:') ? ' ppic' : ''}`);
+      }
+    }
     let s = `<header class="abs hdr">
       <svg class="band" viewBox="0 0 210 95" width="210" height="95" preserveAspectRatio="none">
         <polygon points="0,0 196,0 171,95 0,95" fill="var(--primary)"/>
@@ -1130,9 +1138,7 @@
     for (const c of ['col1', 'col2']) {
       const top = pick(d, `${c}.0`);
       if (top.startsWith('tall:')) {
-        // a tall block fills the whole column (both standings slots)
-        const [x, y, w] = G[`${c}.0`], b = G[`${c}.1`];
-        s += slotBox(`${c}.0`, x, y, w, b[1] + b[3] - y, tallPanel(d, top), `tallcol${top.includes(':pic:') ? ' ppic' : ''}`);
+        s += pieces[`${c}.0`]();
       } else {
         s += slotBox(`${c}.0`, ...G[`${c}.0`], section(d, `${c}.0`));
         s += slotBox(`${c}.1`, ...G[`${c}.1`], section(d, `${c}.1`));
