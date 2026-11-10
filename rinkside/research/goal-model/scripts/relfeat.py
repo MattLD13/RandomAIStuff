@@ -2,7 +2,7 @@
 # (earlier dates only), so drift in the base xG cancels out.
 import pandas as pd, numpy as np
 df = pd.read_parquet('shots_feat2.parquet')
-REL = ['sh_fin_d', 'sh_fin_area', 'sh_fin_type', 'sh_fin_season', 'g_sv_d', 'g_sv_area', 'g_sv_season']
+REL = ['sh_fin_d', 'sh_fin_area', 'sh_fin_type', 'sh_fin_season', 'g_sv_d', 'g_sv_area', 'g_sv_season', 'g_sv_side', 'g_sv_type2']
 day = df[df.en == 0].groupby('dnum')[REL].agg(['sum', 'count'])
 for c in REL:
     s = day[(c, 'sum')].rolling(30, min_periods=5).sum().shift(1); n = day[(c, 'count')].rolling(30, min_periods=5).sum().shift(1)

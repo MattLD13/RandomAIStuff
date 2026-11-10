@@ -1,7 +1,8 @@
 // Career team history per player (NHL regular seasons): {playerId: [[season, teamAbbrev], ...]}
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const ids = readFileSync('shooters.txt', 'utf8').trim().split('\n'); const out = {}; let k = 0;
+const out = existsSync('careers.json') ? JSON.parse(readFileSync('careers.json', 'utf8')) : {};
+const ids = readFileSync('shooters.txt', 'utf8').trim().split('\n').filter((id) => !(id in out)); let k = 0;   // incremental
 async function w() { while (k < ids.length) { const id = ids[k++];
   for (let a = 0; a < 6; a++) { const r = await fetch(`https://api-web.nhle.com/v1/player/${id}/landing`).catch(() => null);
     if (r?.status === 404) break;

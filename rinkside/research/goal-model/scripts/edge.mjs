@@ -1,8 +1,9 @@
 // Season shot-speed numbers (NHL EDGE) for each shooter-season: avg and top speed, share of 80+ / 90+ mph attempts.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const pairs = readFileSync('edge_pairs.csv', 'utf8').trim().split('\n').slice(1).map((l) => l.split(',').map(Number));
-const out = {}; let k = 0, n = 0;
+const out = existsSync('edge.json') ? JSON.parse(readFileSync('edge.json', 'utf8')) : {}; let k = 0, n = 0;
+const todo = pairs.filter(([s, id]) => !(`${s}:${id}` in out)); pairs.length = 0; pairs.push(...todo);   // incremental
 async function w() { while (k < pairs.length) { const [s, id] = pairs[k++];
   for (let a = 0; a < 6; a++) {
     const r = await fetch(`https://api-web.nhle.com/v1/edge/skater-shot-speed-detail/${id}/${s}${s + 1}/2`).catch(() => null);

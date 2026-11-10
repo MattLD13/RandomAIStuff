@@ -5,7 +5,7 @@ on:
     - cron: "13,43 * * * *"   # every 30 minutes (UTC), off the busy :00/:30 marks GitHub often skips
   push:
     branches: [main]
-    paths: ["rinkside/**", ".github/workflows/rinkside.yml"]
+    paths: ["rinkside/**", "!rinkside/research/**", ".github/workflows/rinkside.yml"]
   workflow_dispatch:
 
 permissions:
