@@ -2,7 +2,7 @@ name: Rinkside
 
 on:
   schedule:
-    - cron: "*/30 * * * *"   # every 30 minutes (UTC)
+    - cron: "13,43 * * * *"   # every 30 minutes (UTC), off the busy :00/:30 marks GitHub often skips
   push:
     branches: [main]
     paths: ["rinkside/**", ".github/workflows/rinkside.yml"]
