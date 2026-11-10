@@ -3,7 +3,7 @@
   'use strict';
   const DATA = window.CSWA_DATA;
   const SECTIONS = DATA.sections;
-  const SHORT = { draft: 'Drafting', basic: 'Basic Part', inter: 'Intermediate Part', adv: 'Advanced Part', asm: 'Assembly' };
+  const SHORT = { draft: 'Drafting', basic: 'Basic Part', inter: 'Intermediate Part', adv: 'Advanced Part', asm: 'Assembly', concept: 'Concepts' };
   const KEY = 'cswa-practice-v1';
   const $ = (id) => document.getElementById(id);
   const examById = (id) => DATA.exams.find((e) => e.id === id);
@@ -86,7 +86,7 @@
       const best = tries.length ? Math.max(...tries.map((h) => h.score)) : null;
       const counts = {};
       ex.questions.forEach((q) => (counts[q.section] = (counts[q.section] || 0) + 1));
-      const tier = ex.id === 'exam3' ? ' tier-hard' : ex.id === 'drill' ? ' tier-drill' : '';
+      const tier = ex.id === 'exam3' ? ' tier-hard' : ex.id.startsWith('drill') ? ' tier-drill' : '';
       list.append(el('button', { class: 'exam-card' + tier, type: 'button', onclick: () => openIntro(ex.id) },
         el('div', null,
           el('h3', null, ex.title),
@@ -264,7 +264,7 @@
         el('div', { class: 'parts-row' },
           el('button', { class: 'btn primary', type: 'button', onclick: () => downloadParts(q.parts, name) }, 'Download parts (zip)'),
           el('span', { class: 'mono small' }, name)),
-        el('p', { class: 'small muted' }, 'Open each .step file in SOLIDWORKS (answer No if it offers feature recognition) and save it as a part. Apply the materials listed in the question. Insert the Base first and leave it fixed at the assembly origin: its part origin is already on the origin shown in the image.'));
+        el('p', { class: 'small muted' }, 'Open the .SLDPRT files in SOLIDWORKS 2025 or later and apply the materials listed in the question. Insert the Base first and leave it fixed at the assembly origin: its part origin is already on the origin shown in the image. STEP copies are also included.'));
     }
 
     const box = $('q-answer');

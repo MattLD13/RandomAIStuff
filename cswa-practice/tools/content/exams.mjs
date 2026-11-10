@@ -3,6 +3,7 @@
 // Exam 3 is a little harder. Prompts are deliberately terse: the drawings carry the geometry,
 // and the working is only shown after answering (practice mode / review).
 // Answers for model questions are not typed in here; build.mjs measures them from the models.
+import { CONCEPT_DRILLS } from './concept-drills.mjs';
 
 export const MATERIALS = {
   'AISI 1020': 7900,
@@ -22,6 +23,7 @@ export const SECTIONS = {
   inter: 'Intermediate Part Creation and Modification',
   adv: 'Advanced Part Creation and Modification',
   asm: 'Assembly Creation and Modification',
+  concept: 'Concepts',
 };
 const PTS = { draft: 5, basic: 15, inter: 15, adv: 15, asm: 30 };
 const g = (mat) => (MATERIALS[mat] / 1e6).toFixed(4);
@@ -69,7 +71,7 @@ const exam1 = {
     },
     {
       id: 'e1q5', section: 'basic', points: PTS.basic, kind: 'num',
-      model: { fn: 'lBracket', params: { A: 110, B: 72 } }, material: 'AISI 1020', reuseImagesOf: 'e1q4',
+      model: { fn: 'lBracket', params: { A: 110, B: 72 } }, material: 'AISI 1020',
       prompt: modify('AISI 1020', 'A = 110, B = 72'),
       explain: 'The slot is dimensioned from the right end and the hole from the top face, so both follow the new A and B.',
     },
@@ -82,7 +84,7 @@ const exam1 = {
     },
     {
       id: 'e1q7', section: 'inter', points: PTS.inter, kind: 'num',
-      model: { fn: 'archBracket', params: { A: 120, B: 30, C: 70 } }, material: '6061 Alloy', reuseImagesOf: 'e1q6',
+      model: { fn: 'archBracket', params: { A: 120, B: 30, C: 70 } }, material: '6061 Alloy',
       prompt: modify('6061 Alloy', 'A = 120, B = 30, C = 70', 'The wall, boss, rib and notch stay centred on the length of the plate.'),
       explain: 'The holes and notch are dimensioned from the front edge, so they move with C.',
     },
@@ -94,7 +96,7 @@ const exam1 = {
     },
     {
       id: 'e1q9', section: 'adv', points: PTS.adv, kind: 'num',
-      model: { fn: 'flangedHub', params: { A: 130, B: 55 } }, material: 'Alloy Steel', reuseImagesOf: 'e1q8',
+      model: { fn: 'flangedHub', params: { A: 130, B: 55 } }, material: 'Alloy Steel',
       prompt: modify('Alloy Steel', 'A = 130, B = 55', '', 'centre of the bottom face'),
       explain: 'Only the flange diameter and the hub height change; the side boss stays 35 above the bottom.',
     },
@@ -122,7 +124,7 @@ ${asmNotes(E1_MATS, [
     },
     {
       id: 'e1q12', section: 'asm', points: PTS.asm, kind: 'mc-com',
-      assembly: { fn: 'hingeAssembly', params: { A: 50 } }, reuseImagesOf: 'e1q11', materials: E1_MAP,
+      assembly: { fn: 'hingeAssembly', params: { A: 50 } }, materials: E1_MAP,
       distract: [{ params: { A: 40 } }, { params: { A: 30 } }, { shift: [-3.8, 2.6, 0] }],
       prompt: '<p>Modify the assembly from the previous question: <b>A = 50°</b>.</p><p>What is the centre of mass of the assembly (millimeters)?</p>',
       explain: 'Edit the angle mate and rebuild before opening Mass Properties. The Hanger stays vertical, so it moves only with the free-end pin.',
@@ -136,7 +138,7 @@ ${asmNotes(E1_MATS, [
     },
     {
       id: 'e1q14', section: 'asm', points: PTS.asm, kind: 'num',
-      assembly: { fn: 'hingeAssembly', params: { A: 40 } }, reuseImagesOf: 'e1q11',
+      assembly: { fn: 'hingeAssembly', params: { A: 40 } },
       materials: { ...E1_MAP, Arm: 'Brass' },
       prompt: `<p>Modify the assembly (A = 40°): change the material of the Arm to <b>Brass</b> (density = ${g('Brass')} g/mm³). All other parts keep their materials.</p><p>What is the total mass of the assembly (grams)?</p>`,
       explain: 'Edit the Arm part and apply Brass, then read the assembly mass. The angle does not change the mass.',
@@ -173,7 +175,7 @@ const exam2 = {
     },
     {
       id: 'e2q5', section: 'basic', points: PTS.basic, kind: 'num',
-      model: { fn: 'guideBlock', params: { A: 140, B: 36 } }, material: '6061 Alloy', reuseImagesOf: 'e2q4',
+      model: { fn: 'guideBlock', params: { A: 140, B: 36 } }, material: '6061 Alloy',
       prompt: modify('6061 Alloy', 'A = 140, B = 36'),
       explain: 'Only the length and height change; the channel depth (12) and the counterbore depth (5 from the channel floor) stay.',
     },
@@ -185,7 +187,7 @@ const exam2 = {
     },
     {
       id: 'e2q7', section: 'inter', points: PTS.inter, kind: 'mc-mass',
-      model: { fn: 'shaftSupport', params: { A: 130, B: 70, C: 24 } }, material: 'Cast Alloy Steel', reuseImagesOf: 'e2q6',
+      model: { fn: 'shaftSupport', params: { A: 130, B: 70, C: 24 } }, material: 'Cast Alloy Steel',
       distract: [{ params: { A: 130, B: 60, C: 24 } }, { factor: 1.047 }, { factor: 0.938 }],
       prompt: modify('Cast Alloy Steel', 'A = 130, B = 70, C = 24'),
       explain: 'A taller B makes the web taller; the boss, gussets and slots keep their size.',
@@ -198,7 +200,7 @@ const exam2 = {
     },
     {
       id: 'e2q9', section: 'adv', points: PTS.adv, kind: 'num',
-      model: { fn: 'housing', params: { A: 150, B: 60 } }, material: '1060 Alloy', reuseImagesOf: 'e2q8',
+      model: { fn: 'housing', params: { A: 150, B: 60 } }, material: '1060 Alloy',
       prompt: modify('1060 Alloy', 'A = 150, B = 60', '', 'as shown'),
       explain: 'The tab holes are dimensioned from the tab edges, so they move with A.',
     },
@@ -226,7 +228,7 @@ ${asmNotes(E2_MATS, [
     },
     {
       id: 'e2q12', section: 'asm', points: PTS.asm, kind: 'mc-com',
-      assembly: { fn: 'slideAssembly', params: { A: 120, B: 60 } }, reuseImagesOf: 'e2q11', materials: E2_MAP,
+      assembly: { fn: 'slideAssembly', params: { A: 120, B: 60 } }, materials: E2_MAP,
       distract: [{ params: { A: 120, B: 30 } }, { params: { A: 100, B: 60 } }, { shift: [0, -6.4, 2.5] }],
       prompt: '<p>Modify the assembly: <b>A = 120, B = 60°</b>.</p><p>What is the centre of mass of the assembly (millimeters)?</p>',
       explain: 'The Handle swing changes X and Z; the Slider position changes X only.',
@@ -240,7 +242,7 @@ ${asmNotes(E2_MATS, [
     },
     {
       id: 'e2q14', section: 'asm', points: PTS.asm, kind: 'num',
-      assembly: { fn: 'slideAssembly', params: { A: 80, B: 90 } }, reuseImagesOf: 'e2q11',
+      assembly: { fn: 'slideAssembly', params: { A: 80, B: 90 } },
       materials: { ...E2_MAP, Slider: 'Brass' },
       prompt: `<p>Modify the assembly (A = 80, B = 90°): change the Slider material to <b>Brass</b> (density = ${g('Brass')} g/mm³).</p><p>What is the total mass of the assembly (grams)?</p>`,
       explain: 'Only the Slider mass changes.',
@@ -276,7 +278,7 @@ const exam3 = {
     },
     {
       id: 'e3q5', section: 'basic', points: PTS.basic, kind: 'mc-mass',
-      model: { fn: 'angleSupport', params: { A: 100, B: 60 } }, material: 'Plain Carbon Steel', reuseImagesOf: 'e3q4',
+      model: { fn: 'angleSupport', params: { A: 100, B: 60 } }, material: 'Plain Carbon Steel',
       distract: [{ params: { A: 100, B: 70 } }, { factor: 1.052 }, { factor: 0.966 }],
       prompt: modify('Plain Carbon Steel', 'A = 100, B = 60'),
       explain: 'The taper of the upright changes because its top width (18) and bottom width (30) stay while the height changes.',
@@ -289,7 +291,7 @@ const exam3 = {
     },
     {
       id: 'e3q7', section: 'inter', points: PTS.inter, kind: 'num',
-      model: { fn: 'steppedSpindle', params: { A: 55, B: 70 } }, material: 'Brass', reuseImagesOf: 'e3q6',
+      model: { fn: 'steppedSpindle', params: { A: 55, B: 70 } }, material: 'Brass',
       prompt: modify('Brass', 'A = 55, B = 70'),
       explain: 'A is the length of the Ø30 section; the groove and the flat stay referenced to the top end.',
     },
@@ -301,13 +303,13 @@ const exam3 = {
     },
     {
       id: 'e3q9', section: 'adv', points: PTS.adv, kind: 'num',
-      model: { fn: 'toolBlock', params: { A: 140, B: 20, C: 30 } }, material: '6061 Alloy', reuseImagesOf: 'e3q8',
+      model: { fn: 'toolBlock', params: { A: 140, B: 20, C: 30 } }, material: '6061 Alloy',
       prompt: modify('6061 Alloy', 'A = 140, B = 20, C = 30', 'The angled hole stays at the midpoint of the sloped face.', 'as shown'),
       explain: 'Changing C changes the slope angle, so the angled hole changes direction too.',
     },
     {
       id: 'e3q10', section: 'adv', points: PTS.adv, kind: 'mc-com',
-      model: { fn: 'toolBlock', params: { A: 140, B: 20, C: 30 } }, material: '6061 Alloy', reuseImagesOf: 'e3q8',
+      model: { fn: 'toolBlock', params: { A: 140, B: 20, C: 30 } }, material: '6061 Alloy',
       distract: [{ params: { A: 120, B: 15, C: 25 } }, { swap: [0, 2] }, { shift: [0, -2.4, 1.7] }],
       prompt: `<p>Use the part from the previous question (A = 140, B = 20, C = 30).</p>${partNotes('6061 Alloy', 'as shown')}<p>What is the centre of mass of the part (millimeters)?</p>`,
       explain: 'Evaluate → Mass Properties. The origin is at the bottom front-left corner and the part extends toward −Z, so Z is negative.',
@@ -328,7 +330,7 @@ ${asmNotes(E3_MATS, [
     },
     {
       id: 'e3q12', section: 'asm', points: PTS.asm, kind: 'mc-com',
-      assembly: { fn: 'chainAssembly', params: { A: 60, B: 120, C: 150 } }, reuseImagesOf: 'e3q11', materials: E3_MAP,
+      assembly: { fn: 'chainAssembly', params: { A: 60, B: 120, C: 150 } }, materials: E3_MAP,
       distract: [{ params: { A: 60, B: 150, C: 120 } }, { params: { A: 60, B: 120, C: 210 } }, { shift: [4.9, -2.2, 0] }],
       prompt: '<p>Modify the assembly: <b>A = 60°, B = 120°, C = 150°</b>.</p><p>What is the centre of mass of the assembly (millimeters)?</p>',
       explain: 'Absolute directions: Link 1 at 60°, Link 2 at 60 − (180 − 120) = 0°, Link 3 at 0 + (180 − 150) = 30°.',
@@ -342,7 +344,7 @@ ${asmNotes(E3_MATS, [
     },
     {
       id: 'e3q14', section: 'asm', points: PTS.asm, kind: 'mc-com',
-      assembly: { fn: 'chainAssembly', params: { A: 75, B: 110, C: 140 } }, reuseImagesOf: 'e3q11', materials: E3_MAP,
+      assembly: { fn: 'chainAssembly', params: { A: 75, B: 110, C: 140 } }, materials: E3_MAP,
       distract: [{ params: { A: 75, B: 140, C: 110 } }, { params: { A: 105, B: 110, C: 140 } }, { shift: [-4.1, 0, 2.4] }],
       prompt: '<p>Modify the assembly: <b>A = 75°, B = 110°, C = 140°</b>.</p><p>What is the centre of mass of the assembly (millimeters)?</p>',
       explain: 'Absolute directions: Link 1 at 75°, Link 2 at 5°, Link 3 at 45°.',
@@ -353,7 +355,7 @@ ${asmNotes(E3_MATS, [
 // ======================================================================================
 const drill = {
   id: 'drill',
-  title: 'Concepts Drill',
+  title: 'Concepts Exam 1: Core Skills',
   blurb: '16 quick questions on sketching, features, mates and drawings. No models to build.',
   timeMinutes: 30,
   passPercent: 70,
@@ -378,5 +380,51 @@ const drill = {
     text('d16', '<p>Which feature adds a thin support from an open sketch line between two walls?</p>', ['Rib', 'Shell', 'Wrap', 'Dome'], 0, '<b>Rib</b> extrudes an open contour to a set thickness until it meets the existing geometry.'),
   ],
 };
+drill.questions.forEach((q) => { q.section = 'concept'; });
 
-export const EXAMS = [exam1, exam2, exam3, drill];
+// Additional mock exams recombine established model families and vary their driving A
+// dimension. The four-step assembly sequences are kept intact with their native parts.
+// They are additional practice sets, not seven entirely new model families.
+const families = [exam1, exam2, exam3];
+const combinations = [
+  [0, 0, 1, 2, 0], [1, 1, 2, 0, 1], [2, 2, 0, 1, 2],
+  [0, 1, 0, 2, 1], [1, 2, 1, 0, 2], [2, 0, 2, 1, 0], [0, 2, 1, 2, 2],
+];
+const variants = combinations.map(([draftFamily, basicFamily, interFamily, advFamily, asmFamily], index) => {
+  const number = index + 4;
+  const groups = [[draftFamily, 0, 3], [basicFamily, 3, 5], [interFamily, 5, 7],
+    [advFamily, 7, 10], [asmFamily, 10, 14]];
+  const questions = groups.flatMap(([family, start, end]) =>
+    structuredClone(families[family].questions.slice(start, end)));
+  const delta = 4 * (index + 1);
+  questions.forEach((q, i) => {
+    q.id = `e${number}q${i + 1}`;
+    if (q.assembly && typeof q.assembly.params.A === 'number') {
+      // Keep all four assembly modifications coherent, including the final material step.
+      const assemblyDelta = 2 * (index + 1);
+      q.assembly.params.A += assemblyDelta;
+      q.prompt = q.prompt.replace(/\bA\s*=\s*(\d+)/g, (_, n) => `A = ${Number(n) + assemblyDelta}`);
+      for (const alt of q.distract || []) {
+        if (alt.params && typeof alt.params.A === 'number') alt.params.A += assemblyDelta;
+      }
+      if (q.assembly.fn === 'chainAssembly' && i !== 12) {
+        q.explain = 'Set the specified mates and compare the bend direction with the drawing. B and C are angles between neighbouring links; rebuild and check Mass Properties.';
+      }
+      return;
+    }
+    if (!q.model || typeof q.model.params.A !== 'number') return;
+    q.model.params.A += delta;
+    q.prompt = q.prompt.replace(/\bA\s*=\s*(\d+)/g, (_, n) => `A = ${Number(n) + delta}`);
+    for (const alt of q.distract || []) {
+      if (alt.params && typeof alt.params.A === 'number') alt.params.A += delta;
+    }
+  });
+  return {
+    id: `exam${number}`,
+    title: `CSWA Practice Exam ${number}`,
+    blurb: 'A mixed practice set with changed dimensions and assembly positions, combining familiar model families.',
+    questions,
+  };
+});
+
+export const EXAMS = [exam1, exam2, exam3, ...variants, drill, ...CONCEPT_DRILLS];

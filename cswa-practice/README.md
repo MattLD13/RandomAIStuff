@@ -16,13 +16,13 @@ only gives you the drawings and checks your answers.
 
 | | |
 |---|---|
-| **Practice Exams 1–3** | 14 questions, 240 points, 180 minutes, pass mark 165: 3 drafting (5 pts), 2 basic part (15), 2 intermediate part (15), 3 advanced part (15), 4 assembly (30). Exams 1–2 aim at real-exam difficulty; Exam 3 is a little harder (angled hole, revolve with groove, three-link chain with relative angles). |
-| **Concepts Drill** | 16 quick multiple-choice questions on sketch relations, features, mates and drawing views. |
+| **Practice Exams 1–10** | 14 questions, 240 points, 180 minutes, pass mark 168 (70%): 3 drafting (5 pts), 2 basic part (15), 2 intermediate part (15), 3 advanced part (15), 4 assembly (30). Exams 4–10 recombine the original model families and vary part dimensions and assembly positions; they are not seven entirely new designs. |
+| **Concepts Exams 1–5** | Five text-only multiple-choice exams covering sketch relations, features, mates, drawings, units and mass properties. |
 | **Exam mode** | Timed. Answers are scored only when you click End Test (or time runs out). |
 | **Practice mode** | Untimed. **Check answer** shows right/wrong, the correct value and the working (volume × density, or a mass table for assemblies). |
 
 - Click a drawing to open the image viewer. Zoom with the mouse wheel or + / −, drag to pan, and use ◀ ▶ to switch views.
-- **Assembly questions come with the parts**, like the real exam: **Download parts (zip)** gives exact STEP files (true planes and cylinders, so mates work). Open each one in SOLIDWORKS, answer No to feature recognition, apply the materials from the question, then insert the Base first, fixed at the origin. Its part origin is already on the assembly origin shown in the images.
+- **Assembly questions come with the parts**, like the real exam: **Download parts (zip)** includes standalone SOLIDWORKS 2025 `.SLDPRT` parts and exact STEP copies. Open the parts, apply the materials from the question, then insert the Base first, fixed at the origin. Its part origin is already on the assembly origin shown in the images. The native files contain imported solid geometry, rather than editable feature histories.
 - Fill-in answers are grams, numbers only. Answers within **1 %** of the correct value score full points.
 - Progress saves in the browser, so you can close the tab and resume. Past attempts are listed on the home screen with a Review button.
 - Keyboard: PageUp / PageDown move between questions; Esc closes the viewer.
@@ -48,16 +48,20 @@ Coordinates follow SOLIDWORKS: Y up, Front plane = XY, Top plane = XZ.
 ```bash
 cd cswa-practice/tools
 npm install
+npx playwright install chromium
 node build.mjs              # renders site/img/*.png and writes site/data/exams.js
 node build.mjs --no-images  # answers only, keeps the existing images
+node check-bank.mjs         # validate exam structure and referenced files
 python3 -m venv .venv && .venv/bin/pip install cadquery
 .venv/bin/python parts.py            # exact STEP parts -> site/parts/*.zip (checks volumes)
 .venv/bin/python check_assemblies.py # recomputes assembly answers with the exact parts
+# On Windows, with pywin32 and SOLIDWORKS 2025 or 2026 running:
+python solidworks_parts.py  # add verified native 2025 parts to the STEP archives
 ```
 
 - `tools/content/models.mjs`: part and assembly models, with their dimensioned views
 - `tools/content/exams.mjs`: question text, parameters, materials and multiple-choice distractors
-- `tools/content/drafting.mjs`: the drawing-sheet SVGs for the drafting questions
+- `tools/content/drafting.mjs`: the drawing-sheet SVGs for the drafting questions; `tools/content/concept-drills.mjs`: the new text-only questions
 - `tools/lib/geom.mjs`: modelling helpers and mass properties; `tools/lib/render.mjs` and `tools/render/`: the image renderer
 - `site/`: the deployed app (`index.html`, `app.css`, `app.js`, `data/`, `img/`, `parts/`)
 
@@ -90,7 +94,7 @@ Cloudflare and run the workflow again. If the token lacks DNS rights, add the do
 ## Difficulty
 
 The exams were calibrated against the official SOLIDWORKS CSWA exam guide and sample test.
-That calibration set the format (14 questions, 240 points, 180 minutes, 165 to pass, 1 % answer
+That calibration set the format (14 questions, 240 points, 180 minutes, 70% to pass, 1 % answer
 tolerance), the terse question style ("Part (Name) – Step n", variables A/B/C, everything else
 read from the drawing) and the feature mix. Basic and intermediate parts have about 6–9 features
 each, including fillets, chamfers, counterbores, slots and revolves. Advanced parts build on
@@ -101,7 +105,18 @@ setup on the exam.
 Multiple-choice distractors here are deliberately closer to the right answer than on the
 official sample, so a careless model is less likely to match a wrong option by luck.
 
-A good readiness check: finish an exam in Exam mode within the time and score 165 or more.
+A good readiness check: finish an exam in Exam mode within the time and score 168 or more.
+
+## Sources and scope
+
+- [SOLIDWORKS CSWA certification page](https://www.solidworks.com/certifications/cswa-design-associate): current 3-hour length, 70% pass mark and topic list.
+- [SOLIDWORKS CSWA practice-problem database](https://www.solidworks.com/solution/education/practice-problems?exam=cswa): additional modeling exercises, including exam-level multi-step problems.
+- [SOLIDWORKS practice-exam walkthrough](https://www.solidworks.com/media/solidworks-cswa-practice-exam-walk-through): official walkthrough of the sample test.
+- [Historical official exam sample](https://files.solidworks.com/education/EDU_CSWA_Sample_Exam_ENG.pdf): the 14-question/240-point breakdown used for these mock exams. It lists a 165-point threshold; this app uses the current certification page's 70% instead. Actual exam content and weighting may change.
+- [3D Engineering practice questions](https://www.3dengr.com/cswa-practice-questions.html): an independent free set with worked solutions.
+- [University of Alberta CSWA resources](https://sites.ualberta.ca/~dnobes/Teaching_Section/NOBES_CSWA.html): a collection of study notes, practice questions and an exam.
+
+The app's exercises are original. Additional mocks reuse and recombine three assembly sets and nine part families with changed dimensions. Refer to the official database for more independent geometry and extra practice.
 
 ## Notes
 

@@ -13,6 +13,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.resolve(HERE, '..', 'site');
 const IMG = path.join(OUT, 'img');
 const NO_IMAGES = process.argv.includes('--no-images');
+const ASSEMBLY_IMAGES_ONLY = process.argv.includes('--assembly-images');
 fs.mkdirSync(IMG, { recursive: true });
 fs.mkdirSync(path.join(OUT, 'data'), { recursive: true });
 
@@ -74,7 +75,7 @@ async function renderPart(fn, params, prefix) {
   for (let i = 0; i < m.views.length; i++) {
     const view = m.views[i];
     const file = `${prefix}-${i + 1}.png`;
-    if (!NO_IMAGES) await renderer.render({ bodies: [mesh], annotations: view.ann, view }, path.join(IMG, file));
+    if (!NO_IMAGES && !ASSEMBLY_IMAGES_ONLY) await renderer.render({ bodies: [mesh], annotations: view.ann, view }, path.join(IMG, file));
     out.push({ src: 'img/' + file, title: view.title });
   }
   rendered.set(key, out);
@@ -132,9 +133,9 @@ const NAMES = {
 };
 // Component part files for the assembly questions (made by tools/parts.py).
 const PARTS = {
-  exam1: 'parts/exam1-hinged-arm-parts.zip',
-  exam2: 'parts/exam2-slide-parts.zip',
-  exam3: 'parts/exam3-link-chain-parts.zip',
+  hingeAssembly: 'parts/exam1-hinged-arm-parts.zip',
+  slideAssembly: 'parts/exam2-slide-parts.zip',
+  chainAssembly: 'parts/exam3-link-chain-parts.zip',
 };
 const f2 = (x) => (Math.abs(x) < 0.005 ? 0 : x).toFixed(2);
 const fmtCom = (c) => `X = ${f2(c[0])} mm, Y = ${f2(c[1])} mm, Z = ${f2(c[2])} mm`;
@@ -158,7 +159,6 @@ async function main() {
 
   const out = { generated: new Date().toISOString().slice(0, 10), sections: SECTIONS, exams: [] };
   for (const exam of EXAMS) {
-    const byId = {};
     const steps = {};
     const qs = [];
     for (const [qi, q] of exam.questions.entries()) {
@@ -172,11 +172,10 @@ async function main() {
       if (q.kind === 'mc-mass' || q.kind === 'mc-com') o.prompt += '<p class="hint-line">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>';
       let images = [];
       if (q.svg) images = [{ src: `img/draft-${q.svg}.svg`, title: 'Drawing' }];
-      if (q.reuseImagesOf) images = byId[q.reuseImagesOf].images;
-      else if (q.model) images = await renderPart(q.model.fn, q.model.params, q.id);
+      if (q.model) images = await renderPart(q.model.fn, q.model.params, q.id);
       else if (q.assembly) images = await renderAssembly(q.assembly.fn, q.assembly.params, q.id, exam.id);
       o.images = images;
-      if (q.assembly && PARTS[exam.id]) o.parts = PARTS[exam.id];
+      if (q.assembly && PARTS[q.assembly.fn]) o.parts = PARTS[q.assembly.fn];
 
       if (q.kind === 'mc') {
         // shuffle fixed options too, so the right letter isn't predictable
@@ -237,7 +236,6 @@ async function main() {
           o.explain += `<p class="calc">Centre of mass${res.cs ? ' relative to Coordinate System1' : ''}: ${fmtCom(res.rel)}${res.cs ? `<br>(relative to the assembly origin: ${fmtCom(res.comOrigin)})` : ''}</p>` + table;
         }
       }
-      byId[q.id] = o;
       qs.push(o);
       console.log(`${exam.id} Q${o.n} ${o.type}`, o.type === 'num' ? o.answer.value : o.options?.[o.answer]);
     }
@@ -246,7 +244,7 @@ async function main() {
       id: exam.id, title: exam.title, blurb: exam.blurb,
       timeMinutes: exam.timeMinutes || 180,
       total,
-      passScore: exam.passPercent ? Math.ceil((total * exam.passPercent) / 100) : 165,
+      passScore: Math.ceil((total * (exam.passPercent || 70)) / 100),
       questions: qs,
     });
   }
