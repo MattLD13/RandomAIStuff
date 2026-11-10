@@ -19,13 +19,14 @@ df['skdiff'] = df.own - df.opp
 df['pp'] = (df.own > df.opp).astype(int); df['sh'] = (df.own < df.opp).astype(int)
 
 
+P1 = dict(P, num_leaves=31, feature_fraction=0.8)   # the settings the stored / frozen base xG was fitted with
 def fit(X, y, Xv=None, yv=None, rounds=3000):
     dtr = lgb.Dataset(X, y, categorical_feature=[c for c in X.columns if c in CAT])
     if Xv is not None:
         dv = lgb.Dataset(Xv, yv, reference=dtr)
-        m = lgb.train(P, dtr, rounds, valid_sets=[dv], callbacks=[lgb.early_stopping(100, verbose=False)])
+        m = lgb.train(P1, dtr, rounds, valid_sets=[dv], callbacks=[lgb.early_stopping(100, verbose=False)])
     else:
-        m = lgb.train(P, dtr, rounds)
+        m = lgb.train(P1, dtr, rounds)
     return m
 
 ne = df[df.en == 0]   # empty-net shots are modelled separately (nearly every on-target one scores)

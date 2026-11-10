@@ -2,7 +2,13 @@
 
 A model of the chance that a shot becomes a goal. It starts from the usual expected-goals inputs (where the shot came from, what happened just before it) and then adds what is known about **who is shooting, who is in net, and the state of the shift**. It was built and tested on 7,700 NHL regular-season games (2020-21 to 2026-27, 661,682 unblocked shots).
 
-On a season it never saw during development (2025-26, sealed until the end), it beat MoneyPuck's expected goals, a conventional expected-goals model built the same way, and the xG Rinkside uses today. All five pass/fail tests that were written down before that season was opened came out as passes.
+On the sealed test season (2025-26), it beat MoneyPuck's expected goals, a conventional expected-goals model built the same way, and the xG Rinkside uses today. All five pass/fail tests written down before that test came out as passes.
+
+**An independent review (section 11) corrected two things.**
+- **Most of SGP's gain over standard xG comes from training on recent data.** A standard xG trained on only the last two seasons does about as well as SGP. Player skill adds a real but smaller amount: about +3 to +8 × 10⁻⁴ log loss, not +17.
+- **MoneyPuck is not a clean benchmark.** Its published xG uses fields that partly reveal the result on some shots.
+
+Read section 11 before quoting any headline number.
 
 Two follow-ups are documented here too:
 - **A pre-game "chances tonight" model** (section 8). It passed its own sealed test and found that the dressed lineup matters for how many chances a team creates.
@@ -19,7 +25,8 @@ Two follow-ups are documented here too:
 8. [Chances tonight: a team-game model](#8-chances-tonight-a-team-game-model)
 9. [The weekly prospective scoreboard](#9-the-weekly-prospective-scoreboard)
 10. [Files and how to reproduce](#10-files-and-how-to-reproduce)
-11. [Sources](#11-sources)
+11. [Independent review](#11-independent-review)
+12. [Sources](#12-sources)
 
 ## 1. What it does
 
@@ -86,7 +93,7 @@ Built like shooter skill, but measuring saves. Weights fall by 0.07% per shot fa
 - **Personnel:** number of defensemen and forwards on the ice for the shooting team.
 - **League scoring level:** goals vs base xG across the league over the last 15,000 shots.
 
-Shift data comes from the NHL shift charts. 107 games (1.4%) have none, and those inputs are left blank there.
+Shift data comes from the NHL shift charts. For 107 games the API has none: 57 in 2024-25, 50 in 2026-27, none in the sealed season. For the numbers in sections 3–8 those inputs were blank, which affected 18% of 2026-27 shots. The downloader now falls back to the NHL's HTML time-on-ice reports, which recovered all 107 games for the weekly scoreboard.
 
 ### 2.6 Calibration
 After the model, every prediction's log-odds is shifted by
@@ -120,6 +127,8 @@ Each idea was added as a group, and the test measured how much worse the full mo
 | Revenge game | Facing an old team | +1.2 | +3.0 | Dropped: not confirmed |
 | *Placebo (random noise)* | *the control* | *+0.4* | *+1.8* | — |
 
+**A consistency note** (from the review): revenge (+1.2, +3.0) was dropped while context (+1.6, +4.8) was kept, though neither passed the per-group rule. Context made the final model only through the candidate comparison. Treat both as unconfirmed.
+
 **Two separate decisions.**
 - *Which groups pass on their own:* only **shot speed** passed the strict per-group rule (helps in both development seasons, interval above zero after Holm correction).
 - *Which model goes into the sealed test:* that was chosen by comparing whole candidate models on both development seasons (`results/dev_candidates.txt`). The model with shooter skill, shot speed, goalie skill and context was best in both seasons (+20.0 and +23.4 vs standard xG). Both it and the speed-only model were registered and scored on the sealed season, and the larger model won there too (+8.5, interval +4.7 to +12.1).
@@ -136,11 +145,11 @@ Adding all the dropped groups back made the model **worse** on both development 
 ## 4. How we kept ourselves honest
 
 ### 4.1 A sealed season
-2025-26 was set aside as the control. No model was scored on it, and no setting was chosen from it, until the end.
+2025-26 was set aside as the control for every decision from round 2 onward. **Correction:** `prereg.json` says the test ran "before any model was scored on 2025-26", and an earlier version of this section said "no model was scored on it". Both are wrong as written. Round 1, before the seal existed, scored five models on 2025-26 against MoneyPuck (`results/round1.json`; all lost to MoneyPuck, the best at 0.2186 vs 0.21784). The registered model was built after that and scored on 2025-26 once.
 - **Development seasons:** all choices used 2024-25 (validation and early stopping) and 2026-27 to date.
 - **Still used as history:** 2025-26 shots fed the player histories for 2026-27, as they would live. No model was scored on them.
 - **Disclosures:**
-  - Round 1, before the seal was set up, printed summary numbers for 2025-26 once. The two decisions taken from round 1 (fix the drift; drop streaks) both show up in 2024-25 on its own.
+  - Round 1, before the seal was set up, evaluated models on 2025-26 (see the correction above). The two decisions taken from round 1 (fix the drift; drop streaks) both show up in 2024-25 on its own.
   - Some quick descriptive tables (goals vs xG for back-to-backs and so on) once pooled all seasons, including 2025-26. No model was scored and nothing was chosen from them.
 
 ### 4.2 Pre-registration
@@ -208,20 +217,20 @@ The file was fingerprinted (SHA-256 `f7350036…4b54`, in `prereg.sha256`) and c
 | 2. Beats standard xG, interval above 0 | PASS |
 | 3. Beats Rinkside xG today, interval above 0 | PASS |
 | 4. Season total within 3% | PASS (+1.1%) |
-| 5. Split-half ≥ MoneyPuck and standard | PASS |
+| 5. Split-half ≥ MoneyPuck and standard | PASS (but near-automatic: SGP's predictions include the shooter's own earlier goals, and the other models' don't; the same applies to the shooter RMSE row above) |
 
 **How big is the gain?** A 1.3% log-loss improvement over MoneyPuck sounds small, but goals are rare and mostly luck. On this dataset the whole gap between "no model at all" and a good xG model is only about 13%. SGP's +27.7 is about a tenth of MoneyPuck's total skill. The player tests show the practical effect most clearly: SGP's season predictions for shooters are 17% closer than MoneyPuck's, and it predicts a player's future scoring rate better than his own past goals do.
 
 ## 6. Limitations
 
 - **Goalie season totals:** on the sealed 2025-26 season MoneyPuck was slightly closer (RMSE 11.5 vs 11.7). Pooled over 2024-25 to 2026-27, SGP is closer (10.6 vs 11.3). More goalie data did not help (section 7).
-- **2026-27 so far:** MoneyPuck's published current-season xG is ahead of SGP (log loss 0.2210 vs 0.2224 on 23,369 shots; 95% interval of the gap −3 to +31 × 10⁻⁴, so not conclusive). It could be noise, or MoneyPuck refitting its model during the season. The weekly scoreboard (section 9) settles it on games after the freeze.
+- **2026-27 so far:** MoneyPuck's published current-season xG is ahead of SGP (log loss 0.2210 vs 0.2224 on 23,369 shots; 95% interval of the gap −3 to +31 × 10⁻⁴). The independent review traced more than all of that lead to a few shots MoneyPuck marks with 0 seconds of defender ice time. Those 156–174 shots score 25–29% of the time, against about 1% one second later: a stoppage artifact that partly reveals the result. Without them SGP leads (section 11). That exclusion uses an outcome-related field, so it is indicative; the weekly scoreboard reports both.
 - **History starts in 2020-21:** a veteran's record before then is unknown, so he starts near average and the model learns him over his first few hundred shots of our data.
 - **Shot speed:** previous season only, from 2021-22 on. Missing for rookies and for 2021-22 itself.
 - **Shots on goal only:** SGP is built for all unblocked attempts. If you want "this shot is on net, will it go in?", that would need its own model.
 - **Not in the public data:** passes before a shot (except on goals), screens, where the goalie was standing, puck height, and the speed of each individual shot.
 - **One sealed season:** 2025-26 is one season. The development seasons point the same way, but more seasons would tighten the intervals.
-- **MoneyPuck comparison:** we compare against the xGoal values MoneyPuck publishes. Its models may be fitted in-season, which if anything would favor MoneyPuck.
+- **MoneyPuck comparison:** we compare against the xGoal values MoneyPuck publishes, and those use outcome-related fields (section 11). In the 2021–2025 files, 5v4 shots where MoneyPuck's penalty-length field is 0 score 81% of the time and MoneyPuck predicts about 0.51. So its 5v4 numbers are inflated, and at 5v5 SGP's lead is much larger (0.1968 vs 0.2131 on 2025-26). "Beats MoneyPuck" is therefore true but not a like-for-like model comparison.
 
 ## 7. More goalie data: tested, not added
 
@@ -311,6 +320,12 @@ The cleanest test of all is games that hadn't been played when the models were f
   3. downloads MoneyPuck's current-season shot file;
   4. scores the frozen models on games after the cutoff (`scripts/scoreboard.py`);
   5. commits `scoreboard/README.md`, `scoreboard/latest.json` and a running `scoreboard/history.csv`.
+- **Safeguards** (added after the review):
+  - MoneyPuck values are snapshotted the first time each shot appears, so later revisions or a failed download can't change past numbers.
+  - Results are also shown at 5v5 vs other strengths, and without MoneyPuck's 0-second time-on-ice shots (marked indicative).
+  - Input coverage is printed (shift data, handedness, shot speed).
+  - One history row per day.
+  - **One verdict date: 2027-04-16**, the end of the regular season. Weekly numbers before then are progress reports: looking every week and stopping when it looks good would be fooling ourselves.
 - **What it reports:**
   - **Shot models:** log loss, AUC and predicted vs actual goals for SGP, standard xG, Rinkside's xG and MoneyPuck, with game-level bootstrap intervals for SGP vs each.
   - **Goalie totals:** once goalies have enough shots.
@@ -346,7 +361,44 @@ Copy `scripts/` and `prereg.json` / `prereg.sha256` into one working folder and 
 
 Downloaded data and model files are not committed. They are about 300 MB and can be rebuilt with steps 1–3, which take roughly 20 minutes at the NHL API's rate limits. MoneyPuck shot files for the comparison: `https://peter-tanner.com/moneypuck/downloads/shots_<year>.zip`.
 
-## 11. Sources
+## 11. Independent review
+
+A separate reviewer was given this README, the scripts, the results and the data, and asked to find leakage, overstated claims, protocol problems and the best improvements. Its scripts are kept outside the repo. Every finding below was re-checked by hand before it went in here; the "Checked" column says how.
+
+| Finding | Checked | Consequence |
+|---|---|---|
+| **Training window dominates.** Standard xG (no player inputs) trained on only 2023-24 and 2024-25 scores **0.21451** on 2025-26, beating registered SGP's **0.21505**. Scorekeeping drifts: wrist shots fell from 56% to 41% of attempts between 2021-22 and 2026-27, snap shots rose from 13% to 28%. | Re-ran it independently: 0.21451 vs 0.21505 on the same 110,327 shots | Most of the "+17.4 vs standard xG" in section 5 is a training-window effect. Against a standard xG trained on the same recent seasons, player skill adds **+3.5 [−0.4, +7.2]** (last 2 seasons) or **+8.4 [+4.7, +12.1]** (last 3) on 2025-26, and +5 to +6 (not significant) on 2026-27. The variant lengths were chosen after 2025-26 was open, so these numbers are post hoc. |
+| **"Shot speed is the strongest group" is confounded.** EDGE speed is blank for all of 2021-22, and `sh_neff`, `g_neff` and `lg_env` all grow over the seasons, so these inputs can act as "which era is this" flags. | Reasoning plus the drift above; not separately measured | Treat the per-group values in section 3 as era-confounded until they're redone on a recency-matched base. |
+| **MoneyPuck 2021–25 power-play leak.** 5v4 shots where MoneyPuck's penalty-length field is 0: 839 shots in 2025-26, 80.7% goals, MoneyPuck xG 0.51 (other 5v4 shots: 5.4% goals). | Reproduced from `mp/shots_2025.csv` | MoneyPuck's 5v4 numbers are inflated. At 5v5 on 2025-26: SGP 0.19676 vs MoneyPuck 0.21308. |
+| **MoneyPuck 2026-27 time-on-ice artifact.** Shots with 0 s minimum defender ice time: 174 shots, 28.7% goals, MoneyPuck 0.154. At 1 s: 1.2% goals. | Reproduced from `mp/shots_2026.csv` | MoneyPuck's 2026-27 lead comes from these shots. The scoreboard now also reports the comparison without them, marked indicative. |
+| **Shift-data gaps.** 50 games in 2026-27 (18% of shots) and 57 in 2024-25 had no shift chart; none in 2025-26. | Counted | Fixed: the HTML time-on-ice fallback recovered all 107 games. Results in sections 3–8 still have the gaps. |
+| **Handedness** was missing for 3.4% of 2026-27 shots (`rosters.mjs` read every 25th game). | Counted | Fixed: all games are read, and missing players are looked up individually. |
+| **Seal wording** in `prereg.json` and section 4.1 was false. | `results/round1.json` | Corrected in 4.1. `prereg.json` is fingerprinted and left as it was. |
+| **Scoreboard bugs:** 2026-27 has 1,344 games, not 1,312 (game 2026021344 exists); empty shift charts were cached forever; MoneyPuck values were re-downloaded and overwritten weekly; `history.csv` got duplicate rows on re-runs. | API checked for the game count; the rest by reading the code | All four fixed (`run.sh`, `shifts.mjs`, `scoreboard.py`). The scoreboard also has a fixed verdict date (**2027-04-16**), a 5v5 vs special-teams split, and input-coverage lines. |
+| Stage-1 settings in `model.py` didn't match the stored base xG (31 leaves, feature fraction 0.8). | Code; the refit with 31 leaves reproduces the stored values exactly | Fixed. |
+| Minor: `lg_env` updates game by game within a date; the empty-net filter for goals with no goalie listed depends on the outcome; season-relative skill crosses the season boundary; the chances table shows last season's averages for game 1. | Code reading | Small effects. Left as is and noted here. |
+
+**Checked and found fine** by the reviewer:
+- The calibration step excludes the current day.
+- Trailing means and history updates use earlier games only.
+- Shift membership has no spike at zero.
+- EDGE uses the prior season only.
+- The MoneyPuck join is one-to-one.
+- The bootstrap is paired, resamples whole games, and is stable when clustered by shooter, goalie, team, date or week.
+- The sealed numbers reproduce exactly.
+
+**What this means for the claims:**
+- SGP still beat MoneyPuck and standard xG on the sealed season under the registered protocol.
+- The win over MoneyPuck is partly a win over MoneyPuck's leak at 5v4; at 5v5 it's a clear win.
+- The player-skill layer is real but small. The biggest single improvement available is simply **training on recent seasons**.
+
+**Next steps the review suggested**, not yet done:
+- Train on the last 2–3 seasons or with recency weights, and freeze that as a challenger with its own cutoff.
+- Redo the group tests on a recency-matched base, then simplify (a 44-feature model is within −2 to −3 of the full one).
+- Add time since the last line change (strict, lagged, so it can't pick up the stoppage artifact).
+- Make the weekly pipeline incremental (it rebuilds all games each week).
+
+## 12. Sources
 
 Research consulted for feature ideas, and the checks above:
 - Noel, *Expected by Whom? A Skill-Adjusted Expected Goals Model for NHL Shooters and Goaltenders* (2025), [arXiv:2511.07703](https://arxiv.org/abs/2511.07703). The closest published model. It reports 1–5% log-loss gains from skill on 5v5 shots on goal, without shrinkage, calibration checks or a MoneyPuck comparison.
