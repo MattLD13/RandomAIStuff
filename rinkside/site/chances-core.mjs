@@ -21,6 +21,8 @@ export function reduce(pbp) {
   const blank = () => ({ att: 0, hits: 0, blk: 0, fow: 0, fo: 0, give: 0, take: 0, pim: 0, ppo: 0, ppg: 0 });
   const st = { [home]: blank(), [away]: blank() }, other = (t) => (t === home ? away : home);
   let onPP = { [home]: false, [away]: false };
+  const score = { [home]: 0, [away]: 0 };
+  out.misses = [];
   let prev = null;
   const plays = [...pbp.plays].sort((a, b) => a.sortOrder - b.sortOrder);
   for (const p of plays) {
@@ -52,21 +54,26 @@ export function reduce(pbp) {
       const shooter = d.eventOwnerTeamId;
       if (d.reason !== 'teammate-blocked') out.blocked[shooter] = (out.blocked[shooter] || 0) + 1;
     }
-    if (type === 'shot-on-goal' || type === 'goal') {
+    if (type === 'shot-on-goal' || type === 'goal' || type === 'missed-shot') {
       const team = d.eventOwnerTeamId, isHome = team === home;
       const sc = String(p.situationCode || '1551').padStart(4, '0');
       const [awayG, awayS, homeS, homeG] = sc.split('').map(Number);
       const own = isHome ? homeS : awayS, opp = isHome ? awayS : homeS, oppGoalie = isHome ? awayG : homeG;
       const x = d.xCoord ?? 0, y = d.yCoord ?? 0;
-      out.shots.push({
+      const s = {
         team, goal: type === 'goal' ? 1 : 0, zone: d.zoneCode || '',
         shooter: d.shootingPlayerId || d.scoringPlayerId || 0, goalie: d.goalieInNetId || 0,
         fx: 89 - Math.abs(x), ay: Math.abs(y), type: d.shotType || 'other',
         en: oppGoalie === 0 || (type === 'goal' && !d.goalieInNetId) ? 1 : 0,
         pp: own > opp ? 1 : 0, sh: own < opp ? 1 : 0,
+        xa: (isHome ? homeG : awayG) === 0 ? 1 : 0,   // own goalie pulled for an extra attacker
+        sd: score[team] - score[other(team)],         // the shooting team's lead at the time (Box WAR score adjustment)
         rebound: prev && prev.shot && prev.team === team && t - prev.t <= 3 ? 1 : 0,
         rush: prev && t - prev.t <= 4 && (Math.abs(prev.x) < 25 || Math.sign(prev.x) !== Math.sign(x)) ? 1 : 0,
-      });
+      };
+      if (type === 'missed-shot') out.misses.push({ ...s, t });   // unblocked misses: Box WAR only
+      else out.shots.push(s);
+      if (type === 'goal' && team in score) score[team]++;
     }
     if (d.xCoord != null) prev = { t, team: d.eventOwnerTeamId, x: d.xCoord, shot: ['shot-on-goal', 'missed-shot', 'blocked-shot'].includes(type) };
     if (type === 'goal') prev = null;   // no rebounds or rushes carry across a goal

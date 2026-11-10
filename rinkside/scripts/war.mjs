@@ -4,21 +4,26 @@
 // giveaways, blocks) and the shift chart (who was on the ice each second). Shifts come from the
 // stats API or the NHL's HTML time-on-ice reports, whichever has more ice time for the game.
 //
-// Every shot on goal is worth v = ½·xG + ½·goal (process and result, half each).
+// Every unblocked shot (on goal or missed) is worth v = 0.6·xG + 0.4·goal (process and result).
+// xG here is the unblocked-shot model, adjusted for the score: a trailing team's shots are worth a
+// little less, a leading team's a little more (weights measured each season, see seasonModel).
 //   Goal creation   the shooter's 35% of v; on a goal, 15% to the first assist, 5% to the second
 //   On-ice offence  the rest of v, split evenly between the attacking skaters on the ice
 //   On-ice defence  minus the shot's xG, split evenly between the defending skaters on the ice
 //                   (goals against beyond xG are the goalie's, not the skaters')
 //   Power play      the three above while on the power play
-//   Penalties       0.17 goals per minor drawn, minus 0.17 per minor taken (majors 2.5 minors)
+//   Penalties       per minor drawn, plus the season's net power-play goals per minor (~0.19);
+//                   minus the same per minor taken (majors 2.5 minors; offsetting calls cancel)
 //   Other           faceoffs (±0.008 a draw), takeaways (+0.015), giveaways (−0.01), blocks (+0.012)
 // Each piece is measured against a replacement-level player: the per-60 rate, at the same
 // strength, of the skaters outside each team's top 13 forwards and top 7 defencemen by ice time.
-// Goalies: goals saved above expected, minus the replacement goalies' rate per shot (goalies
+// Goalies (shots on goal, the shot-on-goal xG model): goals saved above expected, minus the replacement goalies' rate per shot (goalies
 // outside each team's top two by shots faced, shrunk toward −0.006 a shot). Wins = goals ÷ (2 × league goals per team-game).
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { digest, apiShifts, parseToiReport, rawGame, r2, pctOf, ST, parts as partsR, goalieGar, gameRows } from '../site/war-core.mjs';
+import { xg } from '../site/chances-core.mjs';
+import { fitModel } from './chances.mjs';
 export { parseToiReport, digest, compactGame, pctFromQ } from '../site/war-core.mjs';
 
 // Fetch (or read from cache) every game's digest.
@@ -59,9 +64,43 @@ export async function loadDigests(gameIds, get, getText, cacheDir, { concurrency
   return { digests: out, fetched, fromReport, missing };
 }
 
-export function computeWar(digests, w) {
+// The season-level refinements, measured from the games themselves (see seasonModel below).
+// opts switches them off one by one, for testing.
+export function seasonModel(games, { fenwick = true, score = true, minor = true, gw, shooter } = {}) {
+  const M = {};
+  // 4. a shot's worth is 60% its xG and 40% whether it went in (was half and half): tested on this
+  //    season, it makes GAR more repeatable and more predictive for little loss in describing games
+  M.gw = gw ?? 0.4;
+  if (shooter != null) M.shooter = shooter;
+  const unblocked = games.flatMap((g) => [...g.shots, ...(g.misses || [])]).filter((s) => !s.en);
+  // 1. xG for every unblocked shot (missed shots too), so near-misses count for the shooter and the
+  //    players on the ice, not only shots the goalie had to stop
+  if (fenwick && games.some((g) => g.misses)) M.wf = fitModel(unblocked);
+  // 2. score effects: a trailing team takes more (and easier) shots, a leading team sits back. Weight
+  //    each shot so every score state would come out even: 0.5 / the shooting team's xG share there.
+  if (score && M.wf) {
+    const X = {};
+    for (const s of unblocked) { const k = Math.max(-2, Math.min(2, s.sd ?? 0)); X[k] = (X[k] || 0) + xg(M.wf, s); }
+    M.sa = {};
+    for (let k = -2; k <= 2; k++) M.sa[k] = r3(X[k] + X[-k] ? 0.5 / (X[k] / (X[k] + X[-k])) : 1);
+  }
+  // 3. a minor's worth: net power-play goals (for minus shorthanded against) per minor that led to one
+  if (minor && games.every((g) => g.pmin)) {
+    let net = 0, mins = 0;
+    for (const g of games) {
+      for (const s of g.shots) if (s.goal && !s.en && !s.xa) net += s.pp ? 1 : s.sh ? -1 : 0;
+      mins += g.pmin[g.home] + g.pmin[g.away];
+    }
+    if (mins > 100) M.minor = r3(net / mins);
+  }
+  return M;
+}
+const r3 = (v) => Math.round(v * 1000) / 1000;
+
+export function computeWar(digests, w, opts) {
   const games = [...digests.values()].sort((a, b) => a.id - b.id);
-  const raw = new Map(games.map((g) => [g.id, rawGame(g, w)]));
+  const M = seasonModel(games, opts);
+  const raw = new Map(games.map((g) => [g.id, rawGame(g, w, M)]));
   // season totals per player (raw), and the team each skater played for most recently
   const season = {};
   let goals = 0;
@@ -106,7 +145,7 @@ export function computeWar(digests, w) {
   // replacement-adjusted pieces for one game (or a season total): site/war-core.mjs
   const parts = (p) => partsR(p, R), gGar = (p) => goalieGar(p, R);
 
-  const out = { gpw, games: new Map(), season: {}, R };
+  const out = { gpw, games: new Map(), season: {}, R, M };
   const sk = [], gk = [];
   for (const g of games) {
     const { rows, goalies: gl } = gameRows(g, raw.get(g.id), R);

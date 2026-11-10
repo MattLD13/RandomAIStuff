@@ -292,9 +292,14 @@ game. It uses the play-by-play and the shift chart (who was on the ice each seco
 from the stats API's shift chart or the NHL's HTML time-on-ice reports, whichever has more ice
 time: right after a game the API chart is often only part-posted (about 15% of ice time missing
 for NYR @ EDM on 2026-11-09), while the reports match the official ice times. A game is cached
-in `.cache/war-v3/` only once its shifts add up to a full game.
+in `.cache/war-v4/` only once its shifts add up to a full game.
 
-Each shot on goal is worth ½ × its xG, plus ½ if it scores. The value is split into six pieces:
+Each unblocked shot (on goal or missed) is worth 0.6 × its xG, plus 0.4 if it scores. The xG
+here comes from a second model fitted on every unblocked shot, so a shot that just misses the net
+still counts for the shooter and the players on the ice. It is also adjusted for the score:
+a team that's trailing takes more shots while the leading team sits back, so each shot is weighted
+by the shooting team's xG share in that score state (this season: 0.93 when down 2+, 1.09 when up 2+).
+The value is split into six pieces:
 
 | Piece | What goes in it |
 | --- | --- |
@@ -302,8 +307,16 @@ Each shot on goal is worth ½ × its xG, plus ½ if it scores. The value is spli
 | On-ice offence | The rest of the shot, shared by the attacking skaters on the ice. |
 | On-ice defence | Minus the shot's xG, shared by the defending skaters. Goals beyond xG are the goalie's. |
 | Power play | The three pieces above, while on the power play. |
-| Penalties | +0.17 goals per minor drawn, −0.17 per minor taken (a major counts as 2.5 minors). |
+| Penalties | Per minor drawn, the season's net power-play goals per minor (about 0.19); minus the same per minor taken. A major counts as 2.5 minors; penalties called together that offset count for neither side. |
 | Other | Faceoffs ±0.008, takeaways +0.015, giveaways −0.01, blocked shots +0.012. |
+
+**How the model was tested** (2026-11-10, 282 games). Two checks: split-half repeatability (a
+skater's GAR per 60 in odd games against even games, 485 skaters) and whether a team's GAR in its
+first 9 games predicts its goal difference after that. Before → after: repeatability 0.30 → 0.37
+(the on-ice pieces alone 0.14 → 0.31), team prediction 0.40 → 0.43. How closely a game's GAR
+tracks its goal difference dipped slightly, 0.96 → 0.94, as goals now weigh 40% not 50%. Counting missed shots did the most (the on-ice pieces
+became twice as repeatable); the score adjustment and the 60/40 split each added a little. The
+measured penalty value costs a little repeatability but is what power plays actually produced.
 
 Each piece is measured against **replacement level**: the per-60 rate, at the same strength,
 of the skaters outside each team's top 13 forwards and top 7 defencemen by ice time.

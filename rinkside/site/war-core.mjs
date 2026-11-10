@@ -51,10 +51,11 @@ export function digest(pbp, shifts) {
     const st = (me, op) => (!c[me].g || !c[op].g ? 'x' : c[me].s > c[op].s ? 'pp' : c[me].s < c[op].s ? 'sh' : 'ev');
     return { [home]: st(home, away), [away]: st(away, home) };
   };
-  const toi = {};
+  const toi = {}, pps = { [home]: 0, [away]: 0 };   // pps: seconds each team spent on a power play
   for (let t = 0; t < T; t++) {
     if (!on[t].length) continue;
     const s = strength(t);
+    if (s[home] === 'pp') pps[home]++; else if (s[away] === 'pp') pps[away]++;
     for (const id of on[t]) {
       const p = players[id];
       toi[id] ??= { ev: 0, pp: 0, sh: 0, x: 0 };
@@ -65,7 +66,7 @@ export function digest(pbp, shifts) {
   const bump = (id, k, v = 1) => { if (!id || !players[id]) return; box[id] ??= {}; box[id][k] = (box[id][k] || 0) + v; };
   // shots on goal in the same order as reduce() lists them
   const red = reduce(pbp), plays = [...pbp.plays].sort((a, b) => a.sortOrder - b.sortOrder);
-  const shots = [];
+  const shots = [], pens = [];
   let k = 0;
   for (const p of plays) {
     const pd = p.periodDescriptor || {};
@@ -77,19 +78,40 @@ export function digest(pbp, shifts) {
       shots.push({ ...s, a1: d.assist1PlayerId || 0, a2: d.assist2PlayerId || 0, of: skaters(s.team), df: skaters(s.team === home ? away : home) });
     } else if (type === 'penalty') {
       const minors = d.typeCode === 'MIN' || d.typeCode === 'BEN' ? (d.duration || 2) / 2 : d.typeCode === 'MAJ' || d.typeCode === 'MAT' ? 2.5 : 0;
-      if (minors) { bump(d.committedByPlayerId, 'pt', minors); bump(d.drawnByPlayerId, 'pd', minors); }
+      if (minors) pens.push({ t, team: d.eventOwnerTeamId, by: d.committedByPlayerId, drawn: d.drawnByPlayerId, minors });
     } else if (type === 'faceoff') { bump(d.winningPlayerId, 'fw'); bump(d.losingPlayerId, 'fl'); }
     else if (type === 'takeaway') bump(d.playerId, 'tk');
     else if (type === 'giveaway') bump(d.playerId, 'gv');
     else if (type === 'blocked-shot' && d.reason !== 'teammate-blocked') bump(d.blockingPlayerId, 'bk');
     else if (type === 'hit') bump(d.hittingPlayerId, 'ht');
   }
-  return { id: pbp.id, home, away, players, toi, box, shots };
+  // Penalties called at the same moment cancel out (no power play): only the excess counts.
+  const at = {}, pmin = { [home]: 0, [away]: 0 };   // pmin: minors each team took that led to a power play
+  for (const x of pens) ((at[x.t] ??= {})[x.team] ??= []).push(x);
+  for (const byTeam of Object.values(at)) {
+    const sum = (tm) => (byTeam[tm] || []).reduce((a, x) => a + x.minors, 0), h = sum(home), a = sum(away);
+    for (const [tm, mine, theirs] of [[home, h, a], [away, a, h]]) {
+      const keep = mine ? Math.max(0, mine - theirs) / mine : 0;
+      pmin[tm] += mine * keep;
+      for (const x of byTeam[tm] || []) if (keep) { bump(x.by, 'pt', x.minors * keep); bump(x.drawn, 'pd', x.minors * keep); }
+    }
+  }
+  // unblocked missed shots, with who was on the ice
+  const misses = (red.misses || []).filter((m) => !m.en).map((m) => {
+    const on1 = on[Math.min(T - 1, Math.max(0, m.t - 1))] || [];
+    const skaters = (team) => on1.filter((id) => players[id]?.t === team && players[id].pos !== 'G');
+    const { t, ...rest } = m;
+    return { ...rest, of: skaters(m.team), df: skaters(m.team === home ? away : home) };
+  });
+  return { id: pbp.id, home, away, players, toi, box, shots, misses, pps, pmin };
 }
 
 // ---------- raw (not yet replacement-adjusted) value of one game ----------
-export function rawGame(g, w) {
+// M (from the season, scripts/war.mjs) turns on the refinements: wf = unblocked-shot xG weights
+// (missed shots count too), sa = score-state weights, minor = measured value of a minor penalty.
+export function rawGame(g, w, M = {}) {
   const P = {};
+  const xf = (s) => (M.wf ? xg(M.wf, s) : xg(w, s)) * (M.sa ? M.sa[Math.max(-2, Math.min(2, s.sd ?? 0))] ?? 1 : 1);
   const get = (id) => {
     if (!P[id]) {
       const p = g.players[id] || {};
@@ -110,7 +132,7 @@ export function rawGame(g, w) {
       for (const id of s.df) get(id).x.ga++;
     }
     if (s.en) continue;
-    const x = xg(w, s), v = 0.5 * x + 0.5 * s.goal;
+    const x = xg(w, s), xs = xf(s), gw = M.gw ?? 0.5, v = (1 - gw) * xs + gw * s.goal;
     if (has(s.shooter)) get(s.shooter).x.ixg += x;
     for (const id of s.of) get(id).x.xgf += x;
     for (const id of s.df) get(id).x.xga += x;
@@ -118,15 +140,23 @@ export function rawGame(g, w) {
     const st = s.pp ? 'pp' : s.sh ? 'sh' : 'ev', dst = s.pp ? 'sh' : s.sh ? 'pp' : 'ev';
     let pool = v;
     const give = (id, share) => { if (id && g.players[id]) { get(id).gc[st] += share * v; pool -= share * v; } };
-    give(s.shooter, VALUE.shooter);
+    give(s.shooter, M.shooter ?? VALUE.shooter);
     if (s.goal) { give(s.a1, VALUE.a1); give(s.a2, VALUE.a2); }
     if (s.of.length) for (const id of s.of) get(id).oio[st] += pool / s.of.length;
-    if (s.df.length) for (const id of s.df) get(id).oid[dst] -= x / s.df.length;
+    if (s.df.length) for (const id of s.df) get(id).oid[dst] -= xs / s.df.length;
     if (s.goalie && g.players[s.goalie]) { const gk = get(s.goalie); gk.shots++; gk.gsax += x - s.goal; }
+  }
+  // unblocked missed shots: the same pieces, with no goal half and no goalie
+  if (M.wf) for (const s of g.misses || []) {
+    const xs = xf(s), v = (1 - (M.gw ?? 0.5)) * xs, st = s.pp ? 'pp' : s.sh ? 'sh' : 'ev', dst = s.pp ? 'sh' : s.sh ? 'pp' : 'ev';
+    let pool = v;
+    if (s.shooter && g.players[s.shooter]) { get(s.shooter).gc[st] += (M.shooter ?? VALUE.shooter) * v; pool -= (M.shooter ?? VALUE.shooter) * v; }
+    if (s.of.length) for (const id of s.of) get(id).oio[st] += pool / s.of.length;
+    if (s.df.length) for (const id of s.df) get(id).oid[dst] -= xs / s.df.length;
   }
   for (const [id, b] of Object.entries(g.box)) {
     const p = get(id);
-    p.pen += VALUE.minor * ((b.pd || 0) - (b.pt || 0));
+    p.pen += (M.minor ?? VALUE.minor) * ((b.pd || 0) - (b.pt || 0));
     p.oth += VALUE.faceoff * ((b.fw || 0) - (b.fl || 0)) + VALUE.takeaway * (b.tk || 0) + VALUE.giveaway * (b.gv || 0) + VALUE.block * (b.bk || 0);
   }
   return Object.values(P);

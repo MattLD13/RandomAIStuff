@@ -21,6 +21,7 @@ export async function loadGames(gameIds, get, cacheDir, { concurrency = 8 } = {}
         const [pbp, rail] = await Promise.all([get(`https://api-web.nhle.com/v1/gamecenter/${id}/play-by-play`),
           get(`https://api-web.nhle.com/v1/gamecenter/${id}/right-rail`).catch(() => null)]);
         const g = reduce(pbp);
+        delete g.misses;   // missed shots are for Box WAR (scripts/war.mjs) only
         officialStats(g.stats, g.home, g.away, rail?.teamGameStats);
         await writeFile(file, JSON.stringify(g));
         games.set(id, g); fetched++;

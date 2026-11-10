@@ -1198,7 +1198,7 @@
     warCore ??= await import('./war-core.mjs').catch(() => null);
     if (!warCore) return null;
     const shifts = await liveShiftList(pbp);
-    const dg = warCore.digest(pbp, shifts), raw = warCore.rawGame(dg, d.xgModel);
+    const dg = warCore.digest(pbp, shifts), raw = warCore.rawGame(dg, d.xgModel, model.M || {});
     const v = warCore.gameRows(dg, raw, model.R, { anyTime: shifts.length < 40 });
     for (const r of v.rows) r.pct = warCore.pctFromQ(model.q?.sk, r.gar);
     for (const r of v.goalies) r.pct = warCore.pctFromQ(model.q?.gk, r.gar);

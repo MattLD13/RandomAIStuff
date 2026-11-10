@@ -146,7 +146,7 @@ const ratedNow = players.rateSkaters(skNow, shooters), ratedLast = players.rateS
 console.log(`player ratings: ${Object.keys(ratedNow).length} skaters, ${Object.keys(ratedGoalies).length} goalies (last season ${Object.keys(ratedLast).length})`);
 
 // ---------- Box WAR (play-by-play + shift charts, see scripts/war.mjs) ----------
-const warDigests = await war.loadDigests(finals.map((g) => g.id), get, getText, join(ROOT, '.cache', 'war-v3')   /* v3: shifts from whichever source is complete */);
+const warDigests = await war.loadDigests(finals.map((g) => g.id), get, getText, join(ROOT, '.cache', 'war-v4')   /* v4: missed shots, score state, power-play time, offsetting penalties */);
 const WAR = war.computeWar(warDigests.digests, xgModel);
 const abbrevOfId = {};
 for (const g of finals) { abbrevOfId[g.homeTeam.id] = g.homeTeam.abbrev; abbrevOfId[g.awayTeam.id] = g.awayTeam.abbrev; }
@@ -630,7 +630,7 @@ async function buildTeam(TEAM) {
   // ---------- Box WAR: every game's table for this team, season totals on the cards ----------
   const R2 = war.round2;
   // model: what the browser needs to value a live game the same way (replacement rates, percentile tables)
-  const warOut = { gpw: WAR.gpw, games: {}, season: {}, model: { R: WAR.R, q: WAR.q } };
+  const warOut = { gpw: WAR.gpw, games: {}, season: {}, model: { R: WAR.R, q: WAR.q, M: WAR.M } };
   const warIds = new Set();
   for (const g of games) {
     const v = g.id && WAR.games.get(g.id);
