@@ -35,15 +35,23 @@ jobs:
       - name: Install Python packages
         run: pip install --quiet pandas pyarrow lightgbm scikit-learn
 
-      # finished games never change: keep downloads between runs so only new games are fetched
-      - uses: actions/cache@v4
+      # finished games never change: keep downloads between runs so only new games are fetched.
+      # Saved even when a run fails or times out, so a slow first download resumes instead of starting over.
+      - uses: actions/cache/restore@v4
         with:
           path: rinkside/research/goal-model/work
           key: goal-model-data-${{ github.run_id }}
           restore-keys: goal-model-data-
 
       - name: Download, rebuild features, score
+        timeout-minutes: 200
         run: bash scripts/run.sh
+
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: rinkside/research/goal-model/work
+          key: goal-model-data-${{ github.run_id }}
 
       - name: Commit scoreboard
         run: |

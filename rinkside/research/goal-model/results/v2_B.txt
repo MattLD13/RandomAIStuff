@@ -1,0 +1,76 @@
+2025 standard
+2025 full
+2025 -shooter
+2025 -speed
+2025 -goalie
+2025 -context
+2025 -change
+2025 -change_lag
+2025 -placebo
+2026 standard
+2026 full
+2026 -shooter
+2026 -speed
+2026 -goalie
+2026 -context
+2026 -change
+2026 -change_lag
+2026 -placebo
+
+== 2025  (111066 shots)
+  standard         logloss 0.21397
+  full             logloss 0.21180
+  -shooter         logloss 0.21148
+  -speed           logloss 0.21178
+  -goalie          logloss 0.21155
+  -context         logloss 0.21225
+  -change          logloss 0.21332
+  -change_lag      logloss 0.21158
+  -placebo         logloss 0.21162
+  full vs standard       +21.70 [+17.10, +26.44] p=0.0005
+  full vs -shooter        -3.24 [ -5.51,  -0.99] p=0.0030
+  full vs -speed          -0.24 [ -1.90,  +1.47] p=0.8110
+  full vs -goalie         -2.49 [ -4.35,  -0.56] p=0.0090
+  full vs -context        +4.50 [ +2.23,  +6.78] p=0.0005
+  full vs -change        +15.21 [+12.32, +18.17] p=0.0005
+  full vs -change_lag     -2.19 [ -3.76,  -0.50] p=0.0130
+  full vs -placebo        -1.81 [ -3.54,  -0.03] p=0.0460
+
+== 2026  (23613 shots)
+  standard         logloss 0.22150
+  full             logloss 0.21831
+  -shooter         logloss 0.21831
+  -speed           logloss 0.21842
+  -goalie          logloss 0.21826
+  -context         logloss 0.21899
+  -change          logloss 0.21983
+  -change_lag      logloss 0.21847
+  -placebo         logloss 0.21861
+  full vs standard       +31.83 [+19.96, +43.34] p=0.0005
+  full vs -shooter        -0.07 [ -4.83,  +4.56] p=0.9620
+  full vs -speed          +1.04 [ -2.91,  +4.93] p=0.5980
+  full vs -goalie         -0.51 [ -5.11,  +4.00] p=0.8230
+  full vs -context        +6.71 [ +1.40, +11.72] p=0.0100
+  full vs -change        +15.15 [ +7.53, +22.21] p=0.0005
+  full vs -change_lag     +1.61 [ -1.88,  +4.95] p=0.3700
+  full vs -placebo        +2.93 [ -0.55,  +6.16] p=0.0910
+
+== pooled  (134679 shots)
+  standard         logloss 0.21529
+  full             logloss 0.21294
+  -shooter         logloss 0.21267
+  -speed           logloss 0.21294
+  -goalie          logloss 0.21273
+  -context         logloss 0.21343
+  -change          logloss 0.21446
+  -change_lag      logloss 0.21279
+  -placebo         logloss 0.21284
+  full vs standard       +23.48 [+19.00, +27.85] p=0.0005
+  full vs -shooter        -2.69 [ -4.58,  -0.68] p=0.0100
+  full vs -speed          -0.02 [ -1.58,  +1.57] p=0.9990
+  full vs -goalie         -2.15 [ -3.96,  -0.39] p=0.0150
+  full vs -context        +4.89 [ +2.84,  +7.08] p=0.0005
+  full vs -change        +15.20 [+12.32, +17.88] p=0.0005
+  full vs -change_lag     -1.52 [ -3.06,  -0.08] p=0.0420
+  full vs -placebo        -0.98 [ -2.49,  +0.53] p=0.2280
+exit 0

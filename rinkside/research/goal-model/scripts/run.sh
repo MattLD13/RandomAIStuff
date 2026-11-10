@@ -10,7 +10,7 @@ export FROZEN=../frozen SCOREBOARD=../scoreboard
 # 1. downloads (each script skips what it already has)
 node fetch.mjs 2020 868 6
 for s in $(seq 2021 $((SEASON - 1))); do node fetch.mjs $s 1312 6; done
-node fetch.mjs $SEASON 1312 6
+node fetch.mjs $SEASON 1400 6      # 2026-27 has 1,344 games; unplayed or missing ids are skipped
 node rosters.mjs
 node shifts.mjs
 python3 build.py

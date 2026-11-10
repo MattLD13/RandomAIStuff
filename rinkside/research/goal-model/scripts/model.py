@@ -19,13 +19,14 @@ df['skdiff'] = df.own - df.opp
 df['pp'] = (df.own > df.opp).astype(int); df['sh'] = (df.own < df.opp).astype(int)
 
 
+P1 = dict(P, num_leaves=31, feature_fraction=0.8)   # the settings the stored / frozen base xG was fitted with
 def fit(X, y, Xv=None, yv=None, rounds=3000):
     dtr = lgb.Dataset(X, y, categorical_feature=[c for c in X.columns if c in CAT])
     if Xv is not None:
         dv = lgb.Dataset(Xv, yv, reference=dtr)
-        m = lgb.train(P, dtr, rounds, valid_sets=[dv], callbacks=[lgb.early_stopping(100, verbose=False)])
+        m = lgb.train(P1, dtr, rounds, valid_sets=[dv], callbacks=[lgb.early_stopping(100, verbose=False)])
     else:
-        m = lgb.train(P, dtr, rounds)
+        m = lgb.train(P1, dtr, rounds)
     return m
 
 ne = df[df.en == 0]   # empty-net shots are modelled separately (nearly every on-target one scores)
@@ -35,7 +36,6 @@ ne = df[df.en == 0]   # empty-net shots are modelled separately (nearly every on
 import os
 FROZEN = os.environ.get('FROZEN')          # weekly scoreboard: use the frozen base xG instead of refitting it
 df['xg_base'] = np.nan
-hist_seasons = [2020] + TRAIN if not FROZEN else []
 if FROZEN:
     xb = pd.read_parquet(f'{FROZEN}/xg_base.parquet')                 # game, so, xg_base for every shot frozen at cutoff
     key = pd.MultiIndex.from_frame(df[['game', 'so']]); look = pd.Series(xb.xg_base.values, index=pd.MultiIndex.from_frame(xb[['game', 'so']]))
@@ -44,16 +44,22 @@ if FROZEN:
     miss = df.index[df.xg_base.isna() & (df.en == 0)]
     if len(miss): df.loc[miss, 'xg_base'] = s1.predict(df.loc[miss, BASE])
     df.loc[df.en == 1, 'xg_base'] = np.nan
-for s in hist_seasons:
-    tr = ne[ne.season.isin(hist_seasons) & (ne.season != s)]
-    m = fit(tr[BASE], tr.goal, rounds=700)
-    idx = ne.index[ne.season == s]
-    df.loc[idx, 'xg_base'] = m.predict(ne.loc[idx, BASE])
-if not FROZEN:
-    tr = ne[ne.season.isin(hist_seasons)]
-    m_hist = fit(tr[BASE], tr.goal, rounds=700)
-    idx = ne.index[~ne.season.isin(hist_seasons)]
-    df.loc[idx, 'xg_base'] = m_hist.predict(ne.loc[idx, BASE])
+else:
+    # walk-forward (review fix): each season's base xG comes from a model trained on the two seasons before it only.
+    # 2020-21 has no earlier season here, so it is cross-fitted by halves (it only seeds player histories).
+    seasons = sorted(ne.season.unique())
+    for s in seasons:
+        idx = ne.index[ne.season == s]
+        prior = [x for x in seasons if s - 2 <= x < s]
+        if prior:
+            tr = ne[ne.season.isin(prior)]; m = fit(tr[BASE], tr.goal, rounds=700)
+            df.loc[idx, 'xg_base'] = m.predict(ne.loc[idx, BASE])
+            if s == seasons[-1]: m.save_model('stage1_latest.txt')     # used for new games of the current season
+        else:
+            odd = ne.loc[idx, 'game'] % 2 == 1
+            for half in (True, False):
+                tr = ne.loc[idx[(odd != half).values]]; m = fit(tr[BASE], tr.goal, rounds=700)
+                tgt = idx[(odd == half).values]; df.loc[tgt, 'xg_base'] = m.predict(ne.loc[tgt, BASE])
 print('stage 1 done', file=sys.stderr)
 
 # ---------- stage 2: shooter and goalie history, strictly from earlier games ----------

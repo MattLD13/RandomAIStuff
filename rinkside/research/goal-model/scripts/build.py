@@ -13,7 +13,13 @@ def secs(t):
     return int(m) * 60 + int(s)
 
 rows = []
+CUR = int(os.environ.get('SEASON', '0'))     # with SEASON set, completed seasons are read from a per-season cache
+cached = []
 for season in sorted(os.listdir(RAW)):
+    cf = f'cache_shots_{season}.parquet'
+    if CUR and int(season) < CUR and os.path.exists(cf):
+        cached.append(pd.read_parquet(cf)); continue
+    start = len(rows)
     for f in sorted(os.listdir(f'{RAW}/{season}')):
         g = json.loads(gzip.open(f'{RAW}/{season}/{f}').read())
         home, away = g['home'], g['away']
@@ -57,7 +63,7 @@ for season in sorted(os.listdir(RAW)):
                 own_g, opp_g = (hg, ag) if ishome else (ag, hg)
                 shooter = d.get('shootingPlayerId') or d.get('scoringPlayerId') or 0
                 goalie = d.get('goalieInNetId') or 0
-                en = 1 if (opp_g == 0 or (typ == 'goal' and not goalie)) else 0
+                en = 1 if opp_g == 0 else 0          # game state only: an outcome-free rule (review fix)
                 other = away if ishome else home
                 r = dict(season=int(season), game=g['id'], date=g['date'], so=so, eid=eid, period=per, t=t,
                          team=team, home=int(ishome), shooter=shooter, goalie=goalie, goal=int(typ == 'goal'),
@@ -109,8 +115,9 @@ for season in sorted(os.listdir(RAW)):
             if x is not None:
                 prev = dict(per=per, t=t, team=team, typ=typ, x=x if x is not None else 0, y=y or 0)
             if typ == 'goal': prev = None
+    if CUR and int(season) < CUR: pd.DataFrame(rows[start:]).to_parquet(cf)
     print(season, len(rows), file=sys.stderr)
 
-df = pd.DataFrame(rows)
+df = pd.concat(cached + [pd.DataFrame(rows)], ignore_index=True) if cached else pd.DataFrame(rows)
 df.to_parquet('shots.parquet')
 print(df.shape, df.goal.mean())

@@ -1,0 +1,16 @@
+2024 noise 0.0 0.20896
+2024 noise 1.0 0.20908
+2024 noise 2.0 0.20965
+  2024 no-noise vs noise 1.0: +1.27 [-0.60, +3.24] (+ = noise hurts)
+  2024 no-noise vs noise 2.0: +6.93 [+4.42, +9.52] (+ = noise hurts)
+2025 noise 0.0 0.21366
+2025 noise 1.0 0.21381
+2025 noise 2.0 0.21429
+  2025 no-noise vs noise 1.0: +1.48 [-0.58, +3.54] (+ = noise hurts)
+  2025 no-noise vs noise 2.0: +6.29 [+3.51, +9.02] (+ = noise hurts)
+2026 noise 0.0 0.22056
+2026 noise 1.0 0.22109
+2026 noise 2.0 0.22177
+  2026 no-noise vs noise 1.0: +5.34 [+0.12, +10.71] (+ = noise hurts)
+  2026 no-noise vs noise 2.0: +12.06 [+5.53, +18.38] (+ = noise hurts)
+exit 0
