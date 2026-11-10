@@ -18,7 +18,7 @@ my browser and ask me before anything that needs a password or a payment. Do the
    https://mattld13.github.io/RandomAIStuff/rangers/ shows a Rangers dashboard.
 4. mattdicks.org was bought through Cloudflare, so its DNS is in the Cloudflare dashboard
    (https://dash.cloudflare.com). Open mattdicks.org → DNS → Records → Add record:
-   type CNAME, name `hockey`, target `mattld13.github.io`, proxy status "DNS only" (grey
+   type CNAME, name `hockey`, target `mattld13.github.io`, proxy status "DNS only" (gray
    cloud, not orange), TTL Auto. Save it. Don't change any other records.
 5. Back on https://github.com/MattLD13/RandomAIStuff/settings/pages, enter
    `hockey.mattdicks.org` under Custom domain and click Save. Wait for the DNS check to pass.

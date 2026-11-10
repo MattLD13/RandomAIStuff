@@ -640,7 +640,7 @@ body:not(.stack) .tallcol .ch .chf { flex-wrap: wrap; justify-content: flex-star
   .wheelcard .st .v { font-size: 15px; }
 }
 
-/* team colour + gold touches */
+/* team color + gold touches */
 .pc-chart { margin-top: 12px; padding: 7px 9px 4px; background: var(--card); border-radius: 3px; }
 .pc-ch { display: flex; align-items: baseline; justify-content: space-between; color: var(--muted); font-size: 12.5px; margin-bottom: 4px; }
 .pc-ch .k { font: 700 10.5px var(--cond); letter-spacing: 0.1em; color: var(--otl); text-transform: uppercase; }
@@ -678,7 +678,7 @@ body:not(.stack) .tallcol .ch .chf { flex-wrap: wrap; justify-content: flex-star
 .cmpv b { font-size: 15px; min-width: 40px; }
 body:not(.stack) .tallcol .rbt.mini { display: none; }
 
-/* percentile tiles: shaded by the team colour, elite ones edged in gold */
+/* percentile tiles: shaded by the team color, elite ones edged in gold */
 .ptiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
 .ptiles.g { grid-template-columns: repeat(4, 1fr); }
 .ptile { text-align: center; }

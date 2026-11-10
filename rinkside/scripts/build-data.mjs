@@ -599,7 +599,7 @@ async function buildTeam(TEAM) {
     [...skaters].filter((x) => grp(x) && x.gamesPlayed >= 3).sort((a, b) => b.avgTimeOnIcePerGame - a.avgTimeOnIcePerGame)
       .forEach((x, i) => { usage[x.playerId] = `${['1st', '2nd', '3rd', '4th'][Math.min(Math.floor(i / size), 3)]} ${word}`; });
   }
-  const TILE = [['evOff', 'EV offence'], ['evDef', 'EV defence'], ['possession', 'Possession'], ['pp', 'Power play'], ['pk', 'Penalty kill'],
+  const TILE = [['evOff', 'EV offense'], ['evDef', 'EV defense'], ['possession', 'Possession'], ['pp', 'Power play'], ['pk', 'Penalty kill'],
     ['finishing', 'Finishing'], ['goals', 'Goals'], ['primary', '1st assists'], ['penalties', 'Penalties'], ['physical', 'Physical']];
   const cards = {};
   for (const x of skaters) {

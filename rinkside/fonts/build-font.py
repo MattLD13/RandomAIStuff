@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds Rinkside Mono, the board's numeral font, from straight-line geometry.
 
-Sporty monoline numerals: every glyph is a centreline widened by one constant stroke,
+Sporty monoline numerals: every glyph is a centerline widened by one constant stroke,
 with 45-degree chamfered corners, flat cut terminals, no serifs and no curves.
 Proportions were measured from the reference screenshot (digit height = 700 units).
 
@@ -24,7 +24,7 @@ from shapely.ops import unary_union
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--stroke', type=float, default=93, help='stroke width (the reference: 4px at a 30px digit height)')
-ap.add_argument('--chamfer', type=float, default=96, help='corner cut, measured on the centreline')
+ap.add_argument('--chamfer', type=float, default=96, help='corner cut, measured on the centerline')
 ap.add_argument('--advance', type=int, default=590)
 ap.add_argument('--width', type=float, default=446)
 ap.add_argument('--out', default=str(Path(__file__).resolve().parent.parent / 'site' / 'fonts' / 'RinksideMono.woff2'))
@@ -35,12 +35,12 @@ L = (ADV - o.width) / 2
 R = L + o.width
 CX = ADV / 2
 h = S / 2
-XL, XR, YB, YT = L + h, R - h, h, H - h  # centreline box
+XL, XR, YB, YT = L + h, R - h, h, H - h  # centerline box
 ADV_P = 300
 
 
 def stroke(*paths, closed=False):
-    """Widen centreline paths by the one stroke width: mitred joins, flat ends."""
+    """Widen centerline paths by the one stroke width: mitred joins, flat ends."""
     shapes = []
     for pts in paths:
         if closed:

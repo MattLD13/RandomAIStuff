@@ -2,9 +2,9 @@
 // browser (live games). Pure functions only: no Node or DOM APIs.
 //
 // A scoring chance is a shot on goal (or goal) from the offensive zone with the goalie in net.
-// Danger zones (feet from the goal line, feet either side of centre):
-//   high: up to 20 ft out (or just behind the line), within 19 ft of centre
-//   mid:  up to 30 ft out, within 30 ft of centre
+// Danger zones (feet from the goal line, feet either side of center):
+//   high: up to 20 ft out (or just behind the line), within 19 ft of center
+//   mid:  up to 30 ft out, within 30 ft of center
 //   low:  anywhere else in the offensive zone
 // Shots on goal from outside the zone, or more than 58 ft from the goal line, count as "dumps".
 // These boundaries were calibrated against a published scoring-chances report for NYR @ SEA on
