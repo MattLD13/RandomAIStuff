@@ -414,23 +414,23 @@
   function chancesTable(d, g, compact) {
     const c = g.chances, me = d.team.abbrev, opp = g.opp;
     const cell = (v, sub, win, tint) => `<div class="cv${win ? ' win' : ''}"${win && tint ? ` style="--tint:${tint}"` : ''}><b class="m">${v}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
-    const row = (label, a, b, dot, tint, subA, subB) =>
-      `<div class="chr">${cell(a, subA, +a > +b, tint)}<div class="cl">${dot ? `<i style="background:${dot}"></i>` : ''}${label}</div>${cell(b, subB, +b > +a, tint)}</div>`;
+    const row = (label, a, b, tint, subA, subB) =>
+      `<div class="chr">${cell(a, subA, +a > +b, tint)}<div class="cl">${label}</div>${cell(b, subB, +b > +a, tint)}</div>`;
     const lg = (t) => d.teams[t]?.logo;
     const ot = g.liveLabel ? '' : g.info.status.includes('/') ? '/' + g.info.status.split('/')[1] : '';
     const fu = g.info?.us ?? c.us.goals, ft = g.info?.them ?? c.them.goals;   // official final (adds the shootout winner)
     let h = `<div class="chh">${logo(lg(me), me)}<span class="m">${fu}</span><span class="cf">${g.home ? 'vs' : '@'} ${esc(opp)} \u00b7 ${g.liveLabel ? `<b class="lv">${esc(g.liveLabel)}</b>` : `Final${ot}`}<br>${esc(g.info.date)}</span><span class="m">${ft}</span>${logo(lg(opp), opp)}</div>`;
     h += row('Chances', c.us.chances, c.them.chances);
     for (const [k, label, col] of DANGER)
-      h += row(label, c.us[k].n, c.them[k].n, col, col, `xG ${c.us[k].xg.toFixed(2)} · G ${c.us[k].g}`, `xG ${c.them[k].xg.toFixed(2)} · G ${c.them[k].g}`);
-    h += row('Expected goals', c.us.xg.toFixed(2), c.them.xg.toFixed(2), null, '#5b8fd6');
+      h += row(label, c.us[k].n, c.them[k].n, col, `xG ${c.us[k].xg.toFixed(2)} · G ${c.us[k].g}`, `xG ${c.them[k].xg.toFixed(2)} · G ${c.them[k].g}`);
+    h += row('Expected goals', c.us.xg.toFixed(2), c.them.xg.toFixed(2), '#5b8fd6');
     // goals = goals on chances + empty-net goals + long-range goals, so the row always matches the score
     const so = (g.info?.status || '').endsWith('SO');
     const extra = (x, won) => {
       const parts = [x.en ? `${x.en} empty net` : '', x.dumpGoals ? `${x.dumpGoals} long range` : ''].filter(Boolean);
       return [parts.length ? `incl. ${parts.join(', ')}` : '', so && won ? 'won shootout' : ''].filter(Boolean).join(' \u00b7 ');
     };
-    h += row('Goals', c.us.goals, c.them.goals, null, null, extra(c.us, fu > ft), extra(c.them, ft > fu));
+    h += row('Goals', c.us.goals, c.them.goals, null, extra(c.us, fu > ft), extra(c.them, ft > fu));
     if (!compact) h += `<div class="chf"><span>Empty net <b class="m">${c.us.en}–${c.them.en}</b></span><span>Dumps <b class="m">${c.us.dumps}–${c.them.dumps}</b></span><span>Blocked <b class="m">${c.us.blocked}–${c.them.blocked}</b></span></div>`;
     return `<div class="ch${compact ? ' compact' : ''}">${h}</div>`;
   }
