@@ -1,14 +1,67 @@
 # Shot Goal Probability (SGP)
 
-A model of the chance that a shot becomes a goal. It starts from the usual expected-goals inputs (where the shot came from, what happened just before it) and then adds what is known about **who is shooting, who is in net, and the state of the shift**. It was built and tested on 7,700 NHL regular-season games (2020-21 to 2026-27, 661,682 unblocked shots).
+A model of the chance that a shot becomes a goal, built and tested on 7,700 NHL regular-season games (2020-21 to 2026-27, 661,682 unblocked shots).
+
+## The current model: SGP v2
+
+**Inputs:**
+- the usual expected-goals inputs: where the shot came from, shot type, and what happened just before it;
+- **shift context:** how long the shooter, his teammates and the defenders have been on the ice, and **how many seconds since each team's last line change**;
+- the league's recent scoring level;
+- **the shooter's shot speed** (NHL EDGE, previous season).
+
+It is trained on the **two most recent complete seasons**.
+
+v2 came out of an independent review of v1 (section 11) and a rolling-origin re-test (section 0). Every test season is predicted only from earlier seasons:
+
+| What was tested (on the last-2-seasons base, 2025-26 + 2026-27 pooled) | Effect on log loss × 10⁻⁴ (+ = helps) |
+|---|---|
+| Train on the last 2 seasons instead of all 5 | **+14** and **+9** with SGP inputs; **+26** and **+19** for standard xG (2025-26, 2026-27) |
+| Time since each team's last line change | **+20.3** [+17.3, +23.3] |
+| Shift lengths and league scoring level | +4.9 [+2.8, +7.1] |
+| Shooter's shot speed | +2.1 [+0.2, +3.9] |
+| Shooter and goalie finishing / saving records (hand-built, v1) | −2.3 (hurts) |
+| The same, fitted directly as player effects (regularized model) | +0.5 (not significant) |
+| Random location noise in training (±1–2 ft) | −1 to −12 (hurts) |
+
+**The finding that matters most:** once the model trains on recent seasons and knows the shift context, **a shooter's or goalie's track record doesn't help predict the next shot**. The one player trait that survives is shot speed. v1's apparent player-skill gains were mostly a training-window effect: older seasons scored shots differently, for example wrist shots fell from 56% to 41% of attempts between 2021-22 and 2026-27.
+
+**Line-change timing** is new and large. Shots taken 1–3 seconds after either team changes score far less often than their location suggests (0.3–0.9× base xG, lowest at 1 second). The effect is a smooth ramp, not a spike, and it holds away from faceoffs. A frozen challenger without it is tracked on the scoreboard in case it turns out to be an artifact.
+
+| 2025-26 log loss (that season has been looked at, so not a clean test) | |
+|---|---|
+| **SGP v2** | **0.2111** |
+| SGP v1 (pre-registered) | 0.2151 |
+| Standard xG, last 2 seasons | 0.2140 |
+| MoneyPuck | 0.2178 |
+
+**The clean test is still to come:** frozen v2 models scored on games played on or after **2026-11-11**, with a verdict at the end of the regular season (section 9). The rest of this README documents v1 and how we got here.
+
+## 0. v2 tests (rolling origin)
+
+`scripts/eval6.py`:
+- **A:** training window, chosen on the 2023-24 and 2024-25 folds and confirmed on 2025-26 and 2026-27.
+- **B:** feature groups with a placebo control.
+- **C:** player inputs on the lean base.
+- **D:** training noise.
+
+Base xG is fitted walk-forward (`model.py`: each season from the two before it). Logs are in `results/v2_*.txt`. The review's minor fixes are all in:
+- empty net decided by game state only;
+- league level updated once per date;
+- season-relative skill doesn't cross seasons;
+- the chances table resets before game 1;
+- HTML shift-report fallback;
+- full handedness lookups.
+
+## v1 (the original model)
+
+A model of the chance that a shot becomes a goal. It starts from the usual expected-goals inputs (where the shot came from, what happened just before it) and then adds what is known about **who is shooting, who is in net, and the state of the shift**.
 
 On the sealed test season (2025-26), it beat MoneyPuck's expected goals, a conventional expected-goals model built the same way, and the xG Rinkside uses today. All five pass/fail tests written down before that test came out as passes.
 
 **An independent review (section 11) corrected two things.**
 - **Most of SGP's gain over standard xG comes from training on recent data.** A standard xG trained on only the last two seasons does about as well as SGP. Player skill adds a real but smaller amount: about +3 to +8 × 10⁻⁴ log loss, not +17.
 - **MoneyPuck is not a clean benchmark.** Its published xG uses fields that partly reveal the result on some shots.
-
-Read section 11 before quoting any headline number.
 
 Two follow-ups are documented here too:
 - **A pre-game "chances tonight" model** (section 8). It passed its own sealed test and found that the dressed lineup matters for how many chances a team creates.
@@ -308,11 +361,11 @@ Scripts: `chances_build.py`, `chances_eval.py`; results in `results/chances_dev.
 
 The cleanest test of all is games that hadn't been played when the models were frozen.
 
-- **Frozen** (`frozen/`, fingerprinted in `frozen/manifest.json`):
-  - SGP and standard xG (trained 2021-22 to 2025-26);
+- **Frozen** (`frozen/`, fingerprinted in `frozen/manifest.json`; **v2**, replacing the v1 freeze before any game was scored against it):
+  - SGP v2, the challenger without line-change timing (`sgp_no_change`), and standard xG, all trained on 2024-25 and 2025-26;
   - Rinkside's current xG recipe, refitted on the same seasons;
   - the four chances models;
-  - the base xG model and table that the player histories are built on. The refit reproduces the stored values exactly (largest difference 0.0).
+  - the walk-forward base xG table, plus the model that scores new games this season.
 - **Cutoff:** games on or after **2026-11-11** count. Nothing is tuned after that. A new freeze would need a new cutoff.
 - **Every Monday** (`.github/workflows/goal-model-scoreboard.yml`), GitHub Actions:
   1. downloads the week's games (cached, so only new games are fetched);
@@ -392,7 +445,7 @@ A separate reviewer was given this README, the scripts, the results and the data
 - The win over MoneyPuck is partly a win over MoneyPuck's leak at 5v4; at 5v5 it's a clear win.
 - The player-skill layer is real but small. The biggest single improvement available is simply **training on recent seasons**.
 
-**Next steps the review suggested**, not yet done:
+**Next steps the review suggested**, all done in v2 (see the top of this README):
 - Train on the last 2–3 seasons or with recency weights, and freeze that as a challenger with its own cutoff.
 - Redo the group tests on a recency-matched base, then simplify (a 44-feature model is within −2 to −3 of the full one).
 - Add time since the last line change (strict, lagged, so it can't pick up the stoppage artifact).

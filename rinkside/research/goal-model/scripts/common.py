@@ -25,3 +25,6 @@ ARENA = ['arena_bias']
 PLACEBO = ['placebo1', 'placebo2']
 GROUPS = dict(context=CTX, shooter=SHOOT, speed=SPEED, goalie=GOAL, linemates=MATES, momentum=MOM, travel=TRAVEL,
               arena=ARENA, streaks=FORM2, revenge=REVENGE, placebo=PLACEBO)
+# ---- v2 ----
+CHANGE = ['tm_shift_min', 'op_shift_min']                 # time since each team's last change, at the shot
+CHANGE_LAG = ['tm_shift_min_lag2', 'op_shift_min_lag2']   # same, 2 s before the shot (artifact control)

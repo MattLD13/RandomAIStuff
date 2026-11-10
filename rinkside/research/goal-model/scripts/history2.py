@@ -27,11 +27,12 @@ F = ['sh_neff', 'sh_fin_d', 'sh_fin_area', 'sh_fin_type', 'sh_acc_d', 'sh_dist_d
      'g_neff', 'g_sv_d', 'g_sv_area',
      'tm_a1_60_max', 'tm_a1_60_mean', 'tm_xgf60_mean', 'sh_xgf60', 'op_xga60_mean', 'op_xga60_min', 'n_d_on', 'n_f_on',
      'sh_shift', 'tm_shift_mean', 'op_shift_mean', 'op_shift_max',
+     'tm_shift_min', 'op_shift_min', 'tm_shift_min_lag2', 'op_shift_min_lag2',
      'lg_env']
 S = defaultdict(lambda: dict(n=0., g=0., x=0., og=0., d=0., ag=[0.] * 4, ax=[0.] * 4, tg=[0.] * 8, tx=[0.] * 8))
 G = defaultdict(lambda: dict(n=0., g=0., x=0., ag=[0.] * 4, ax=[0.] * 4))
 O = defaultdict(lambda: dict(toi=0., a1=0., xgf=0., xga=0., sh=0.))   # per-player on-ice, decayed per game
-lg_hist = deque(); lg_g = 0.; lg_x = 0.; LGW = 15000
+lg_hist = deque(); lg_g = 0.; lg_x = 0.; LGW = 15000; cur_day = None; env_day = 0.0
 
 out = np.full((len(df), len(F)), np.nan)
 pos = {}
@@ -45,7 +46,9 @@ for gid, g in df.groupby('game', sort=False):
     sh = np.array(json.loads(gzip.open(sf).read()) if os.path.exists(sf) else [], dtype=float).reshape(-1, 5)
     have_shifts = len(sh) > 200
     # ---------- snapshot ----------
-    env = math.log((lg_g + 50) / (lg_x + 50)) if lg_x else 0.0
+    dn_ = int(g.dnum.iat[0])
+    if dn_ != cur_day: cur_day = dn_; env_day = math.log((lg_g + 50) / (lg_x + 50)) if lg_x else 0.0   # once per date (review fix)
+    env = env_day
     for i, s_id, gl, t, per, team, ar, typ in zip(g.index, g.shooter, g.goalie, g.t, g.period, g.team, g.area, g.type):
         a = S[s_id]; b = G[gl]; tk = TYPEK.get(str(typ), 7)
         e = edge.get(f'{season - 1}:{s_id}')
@@ -68,8 +71,15 @@ for gid, g in df.groupby('game', sort=False):
                     sum(1 for p, _ in mates if pos.get(p) == 'D') + (pos.get(s_id) == 'D'), sum(1 for p, _ in mates if pos.get(p) in ('C', 'L', 'R')) + (pos.get(s_id) in ('C', 'L', 'R')),
                     me[0] if me else np.nan, np.mean([d for _, d in mates]) if mates else np.nan,
                     np.mean([d for _, d in opps]) if opps else np.nan, max([d for _, d in opps]) if opps else np.nan]
+            # time since each team's last change = shortest shift on the ice (shooter included); the same 2 s earlier as a control
+            own_d = [d for _, d in mates] + me
+            on2 = sh[(sh[:, 2] == per) & (sh[:, 3] < tp - 2) & (sh[:, 4] >= tp - 2)]
+            own2 = [tp - 2 - st for p, tm, _, st, _ in on2 if tm == team and pos.get(int(p)) != 'G']
+            opp2 = [tp - 2 - st for p, tm, _, st, _ in on2 if tm != team and pos.get(int(p)) != 'G']
+            row += [min(own_d) if own_d else np.nan, min(d for _, d in opps) if opps else np.nan,
+                    min(own2) if own2 else np.nan, min(opp2) if opp2 else np.nan]
         else:
-            row += [np.nan] * 12
+            row += [np.nan] * 16
         row.append(env)
         out[i] = row
     # ---------- update after the game ----------

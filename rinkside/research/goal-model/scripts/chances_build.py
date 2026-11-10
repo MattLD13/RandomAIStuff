@@ -41,6 +41,8 @@ for g in games.itertuples():
         if len(r) < 8: return [np.nan] * 3
         w = np.array([a for a, _, _ in r]); f = np.array([b for _, b, _ in r]); a_ = np.array([c for _, _, c in r])
         return [float((w * f).sum() / w.sum()), float((w * a_).sum() / w.sum()), float(len(r))]
+    for tm in (home, away):   # new season: season-to-date starts empty for this game's snapshot (review fix)
+        if team[tm].get('season') != g.season: team[tm].update(sn=0, sxgf=0., sxga=0., pts=0., gp=0, season=g.season)
     for us, them in ((home, away), (away, home)):
         a, b = team[us], team[them]
         rate = lambda o, k: o[k] / o['n'] if o['n'] > 2 else np.nan
