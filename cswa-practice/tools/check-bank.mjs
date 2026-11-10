@@ -8,10 +8,28 @@ import { EXAMS } from './content/exams.mjs';
 const site = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'site');
 const context = { window: {} };
 vm.runInNewContext(fs.readFileSync(path.join(site, 'data/exams.js'), 'utf8'), context);
-const exams = context.window.CSWA_DATA.exams;
+const allExams = context.window.CSWA_DATA.exams;
+const exams = allExams.filter(e => !e.legacy);
 const errors = [];
 const imageModels = new Map();
 if (exams.length !== 15 || EXAMS.length !== 15) errors.push('Expected 10 mocks and 5 concept exams');
+if (allExams.filter(e => e.legacy).length !== 7) errors.push('Expected seven saved-attempt versions');
+if (exams.slice(0, 10).flatMap(e => e.questions).filter(q => q.section === 'asm' && q.parts).length !== 40) {
+  errors.push('Expected an assembly download in all 40 assembly questions');
+}
+if (exams.slice(7, 10).some(e => e.questions.some(q => q.prompt.includes('Hint: if none of the options')))) {
+  errors.push('Hardest exams should not show multiple-choice hints');
+}
+if (exams[8].questions[4].type !== 'num' || exams[9].questions[4].type !== 'num') {
+  errors.push('The two hardest exams should require a numeric mass answer');
+}
+for (const old of allExams.filter(e => e.legacy)) {
+  for (const q of old.questions) {
+    for (const image of q.images) if (!fs.existsSync(path.join(site, image.src))) errors.push(`${q.id}: missing historical image ${image.src}`);
+    if (q.parts && !fs.existsSync(path.join(site, q.parts))) errors.push(`${q.id}: missing historical archive ${q.parts}`);
+    if (q.section === 'asm' && !q.parts) errors.push(`${q.id}: missing historical assembly download`);
+  }
+}
 for (const [index, exam] of exams.entries()) {
   if (index < 10 && (exam.questions.length !== 14 || exam.total !== 240 || exam.passScore !== 168)) {
     errors.push(`${exam.id}: unexpected mock exam format`);
@@ -19,6 +37,7 @@ for (const [index, exam] of exams.entries()) {
   if (index >= 10 && exam.questions.some(q => q.type !== 'mc' || q.section !== 'concept')) {
     errors.push(`${exam.id}: expected text-only concept questions`);
   }
+  if (exam.difficultyRank !== (index < 10 ? index + 1 : index - 9)) errors.push(`${exam.id}: difficulty order`);
   const ids = new Set();
   for (const q of exam.questions) {
     if (ids.has(q.id)) errors.push(`${exam.id}: duplicate ${q.id}`);

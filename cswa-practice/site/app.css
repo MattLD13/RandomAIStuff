@@ -103,6 +103,7 @@ input[type="text"]::placeholder { color: var(--dim); }
   padding: 14px 16px; text-align: left; font: inherit; color: inherit; cursor: pointer; width: 100%;
 }
 .exam-card:hover { background: var(--hover); }
+.exam-card .difficulty { margin-bottom: 5px; font: 700 12px/1.2 var(--cond); letter-spacing: .1em; text-transform: uppercase; color: var(--gold-hi); }
 .exam-card h3 { font: 700 23px/1.05 var(--head); letter-spacing: 0.02em; text-transform: uppercase; }
 .exam-card p { margin: 3px 0 0; color: var(--muted); font-size: 15px; }
 .exam-card .meta { margin-top: 7px; font: 600 12px var(--cond); letter-spacing: 0.1em; text-transform: uppercase; color: var(--otl); }

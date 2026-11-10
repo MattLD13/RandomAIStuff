@@ -23,6 +23,8 @@ only gives you the drawings and checks your answers.
 
 - Click a drawing to open the image viewer. Zoom with the mouse wheel or + / −, drag to pan, and use ◀ ▶ to switch views.
 - **Assembly questions come with the parts**, like the real exam: **Download parts (zip)** includes standalone SOLIDWORKS 2025 `.SLDPRT` parts and exact STEP copies. Open the parts, apply the materials from the question, then insert the Base first, fixed at the origin. Its part origin is already on the assembly origin shown in the images. The native files contain imported solid geometry, rather than editable feature histories.
+- The 10 full mocks are ordered from estimated easiest to hardest. The most challenging use more complex part and assembly families and less answer guidance, including numeric mass entry in place of some multiple-choice questions. These are editorial estimates, not official ratings. The five concept exams have a separate estimated difficulty order; individual topic familiarity varies.
+- Earlier versions of Exams 4–10 remain available when resuming or reviewing an existing saved attempt, so the new ranking does not change the questions or scoring in that attempt.
 - Fill-in answers are grams, numbers only. Answers within **1 %** of the correct value score full points.
 - Progress saves in the browser, so you can close the tab and resume. Past attempts are listed on the home screen with a Review button.
 - Keyboard: PageUp / PageDown move between questions; Esc closes the viewer.
@@ -62,6 +64,7 @@ python solidworks_parts.py  # add verified native 2025 parts to the STEP archive
 - `tools/content/models.mjs`: part and assembly models, with their dimensioned views
 - `tools/content/exams.mjs`: question text, parameters, materials and multiple-choice distractors
 - `tools/content/drafting.mjs`: the drawing-sheet SVGs for the drafting questions; `tools/content/concept-drills.mjs`: the new text-only questions
+- `tools/content/legacy-exams.json`: previous exam versions retained for saved attempts
 - `tools/lib/geom.mjs`: modelling helpers and mass properties; `tools/lib/render.mjs` and `tools/render/`: the image renderer
 - `site/`: the deployed app (`index.html`, `app.css`, `app.js`, `data/`, `img/`, `parts/`)
 

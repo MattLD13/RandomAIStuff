@@ -387,8 +387,8 @@ drill.questions.forEach((q) => { q.section = 'concept'; });
 // They are additional practice sets, not seven entirely new model families.
 const families = [exam1, exam2, exam3];
 const combinations = [
-  [0, 0, 1, 2, 0], [1, 1, 2, 0, 1], [2, 2, 0, 1, 2],
-  [0, 1, 0, 2, 1], [1, 2, 1, 0, 2], [2, 0, 2, 1, 0], [0, 2, 1, 2, 2],
+  [0, 0, 0, 0, 0], [1, 1, 0, 0, 0], [1, 1, 1, 1, 1],
+  [2, 2, 0, 1, 1], [0, 0, 2, 1, 2], [1, 2, 1, 2, 2], [2, 2, 2, 2, 2],
 ];
 const variants = combinations.map(([draftFamily, basicFamily, interFamily, advFamily, asmFamily], index) => {
   const number = index + 4;
@@ -398,7 +398,8 @@ const variants = combinations.map(([draftFamily, basicFamily, interFamily, advFa
     structuredClone(families[family].questions.slice(start, end)));
   const delta = 4 * (index + 1);
   questions.forEach((q, i) => {
-    q.id = `e${number}q${i + 1}`;
+    q.id = `e${number}r2q${i + 1}`;
+    if (number >= 8 && q.kind === 'mc-mass') q.kind = 'num';
     if (q.assembly && typeof q.assembly.params.A === 'number') {
       // Keep all four assembly modifications coherent, including the final material step.
       const assemblyDelta = 2 * (index + 1);
@@ -420,11 +421,36 @@ const variants = combinations.map(([draftFamily, basicFamily, interFamily, advFa
     }
   });
   return {
-    id: `exam${number}`,
+    id: `exam${number}-r2`,
     title: `CSWA Practice Exam ${number}`,
     blurb: 'A mixed practice set with changed dimensions and assembly positions, combining familiar model families.',
     questions,
   };
 });
 
-export const EXAMS = [exam1, exam2, exam3, ...variants, drill, ...CONCEPT_DRILLS];
+// Editorial study progression, not an official SOLIDWORKS difficulty rating.
+const orderedMocks = [exam1, variants[0], variants[1], exam2, variants[2], variants[3],
+  exam3, variants[4], variants[5], variants[6]];
+const descriptions = [
+  'Foundation: straightforward parts and a hinged arm.',
+  'Foundation: familiar features, new dimensions and a hinged arm.',
+  'Developing: a guide block and a hinged arm.',
+  'Developing: a sliding assembly, support and housing.',
+  'Intermediate: modified dimensions and a sliding assembly.',
+  'Intermediate: tapered geometry and a sliding assembly.',
+  'Challenging: a revolved spindle, angled hole and three-link chain.',
+  'Hard: revolve, housing and three-link chain; fewer answer cues.',
+  'Harder: tapered geometry, angled hole and chain; fewer answer cues.',
+  'Most challenging: tapered geometry, revolve, angled hole and chain; fewer answer cues.',
+];
+orderedMocks.forEach((exam, index) => {
+  exam.difficultyRank = index + 1;
+  exam.difficultyLabel = descriptions[index];
+  if (index >= 7) exam.showHints = false;
+});
+const orderedConcepts = [drill, CONCEPT_DRILLS[0], CONCEPT_DRILLS[1], CONCEPT_DRILLS[3], CONCEPT_DRILLS[2]];
+orderedConcepts.forEach((exam, index) => {
+  exam.difficultyRank = index + 1;
+  exam.difficultyLabel = 'Suggested concept-study order; topic familiarity varies.';
+});
+export const EXAMS = [...orderedMocks, ...orderedConcepts];

@@ -81,16 +81,19 @@
     $('cand-name').value = store.name || '';
     const list = $('exam-list');
     list.textContent = '';
-    for (const ex of DATA.exams) {
+    for (const ex of DATA.exams.filter((exam) => !exam.legacy)) {
       const tries = store.history.filter((h) => h.examId === ex.id && h.mode === 'exam');
       const best = tries.length ? Math.max(...tries.map((h) => h.score)) : null;
       const counts = {};
       ex.questions.forEach((q) => (counts[q.section] = (counts[q.section] || 0) + 1));
-      const tier = ex.id === 'exam3' ? ' tier-hard' : ex.id.startsWith('drill') ? ' tier-drill' : '';
+      const isDrill = ex.id.startsWith('drill');
+      if (ex.id === 'drill') list.append(el('h3', { class: 'h-sec' }, 'Concept exams — estimated difficulty'));
+      const tier = isDrill ? ' tier-drill' : ex.difficultyRank >= 8 ? ' tier-hard' : '';
       list.append(el('button', { class: 'exam-card' + tier, type: 'button', onclick: () => openIntro(ex.id) },
         el('div', null,
+          el('div', { class: 'difficulty' }, isDrill ? `Concept difficulty ${ex.difficultyRank} / 5` : `Difficulty ${ex.difficultyRank} / 10`),
           el('h3', null, ex.title),
-          el('p', null, ex.blurb),
+          el('p', null, ex.difficultyLabel || ex.blurb),
           el('div', { class: 'meta' }, `${ex.questions.length} questions · ${ex.total} points · ${ex.timeMinutes} min · pass ${ex.passScore}`)),
         el('div', { class: 'best' }, best == null ? 'Not taken' : el('span', null, 'Best', el('b', null, `${best}/${ex.total}`)))));
     }
