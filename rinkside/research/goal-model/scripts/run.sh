@@ -2,7 +2,9 @@
 # Weekly scoreboard pipeline. Run from rinkside/research/goal-model. Data lives in work/ (cached between runs).
 set -euo pipefail
 export SEASON=${SEASON:-2026}          # current season key (2026 = 2026-27)
-mkdir -p work && cp scripts/* work/ && cp prereg.json work/ && cd work
+mkdir -p work && cp scripts/* work/ && cp prereg.json work/
+for f in frozen/seed/*.json; do [ -f "work/$(basename $f)" ] || cp "$f" work/; done   # lookups as they were at the freeze
+cd work
 export FROZEN=../frozen SCOREBOARD=../scoreboard
 
 # 1. downloads (each script skips what it already has)
