@@ -2,7 +2,7 @@
 
 A model of the chance that a shot becomes a goal, built and tested on 7,700 NHL regular-season games (2020-21 to 2026-27, 661,682 unblocked shots).
 
-## The current model: SGP v2
+## The current model: SGP v2 (frozen as v2.1, see below)
 
 **Inputs:**
 - the usual expected-goals inputs: where the shot came from, shot type, and what happened just before it;
@@ -36,6 +36,33 @@ v2 came out of an independent review of v1 (section 11) and a rolling-origin re-
 | MoneyPuck | 0.2178 |
 
 **The clean test is still to come:** frozen v2 models scored on games played on or after **2026-11-11**, with a verdict at the end of the regular season (section 9). The rest of this README documents v1 and how we got here.
+
+## v2.1 (the frozen version): seed averaging and a leak fix
+
+A second model search (`model-search/`, run by a separate Fable agent under the same protocol and keep rule, and re-checked here) found one clean improvement and one bug.
+
+- **Seed averaging passes.** v2 trained five times with different random seeds, averaging the log-odds: **+1.74 [+0.83, +2.64]** pooled over 2025-26 and 2026-27 (re-checked here with the leak below removed: +1.78 and +1.52 by season). Fable's own run: +1.81 / +1.43 / +0.54 by fold, pooled +1.28 [+0.35, +2.19].
+- **An outcome leak, now fixed.** A missing shot type was stored as the category `unknown`, and **all 75 such shots were goals**: the NHL sometimes leaves the type blank on goals, never on saves. It is now treated as missing, at about 1 shot a month.
+- **A feed change, now documented.** Shots 0 seconds after the previous event scored about 20% of the time in 2020-22 and about 1% from 2023-24 on, which looks like the NHL timestamping goals differently. Rush and rebound rates moved with it. Training on only the last two seasons is what keeps the model on the current feed. Line-change timing may be the same kind of feed quirk rather than hockey, which is why the challenger without it stays on the scoreboard.
+- **Monthly retraining:** +15.8 / +1.7 / +0.8 by fold; with 5 seeds it reaches +2.93 [+0.79, +5.01] pooled, but that combination was chosen after looking. On top of seed averaging alone it adds +1.65 [−0.32, +3.62]. Its big 2024-25 gain comes from a scorekeeping break at the start of that season, so 2024-25 can't be used to tune how aggressively to retrain: a 14-day, 540-day policy won there (+22) and lost elsewhere (−3.8).
+- **Nothing else helped:**
+  - calibration windows, and calibration by strength, shot type or previous event;
+  - shot speed as a within-season percentile;
+  - six engineered interactions;
+  - separate even-strength and special-teams models;
+  - other LightGBM settings.
+
+**The v2.1 freeze** (cutoff still 2026-11-11, made before any game after it existed) replaces v2:
+
+| Model | What it is |
+|---|---|
+| `sgp` (primary) | v2's features and settings, 5-seed average, trained on 2024-25 and 2025-26 |
+| `sgp_monthly` | challenger: the same, refit on the 1st of every month on the previous 730 days (5 seeds) |
+| `sgp_no_change` | challenger: without line-change timing |
+| `standard` | location and play context only, 5 seeds |
+| `rinkside` | today's site xG recipe, same seasons |
+
+**Unchanged from v2:** the chances models, the base-xG table and the seed lookups. The base xG still carries the `unknown` category for those 75 goals. It only enters through the league scoring level, which averages over 15,000 shots, so the effect is negligible.
 
 ## v3 candidates (tested after the v2 freeze; none adopted)
 

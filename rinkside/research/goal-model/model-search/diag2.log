@@ -1,0 +1,62 @@
+          size          mean        
+rush         0     1       0       1
+season                              
+2021    109669  2858  0.0676  0.0899
+2022    110298  3002  0.0690  0.0610
+2023    110324  3689  0.0678  0.0385
+2024    109160  2114  0.0672  0.0161
+2025    108984  2082  0.0690  0.0226
+2026     23108   505  0.0728  0.0337
+           size           mean        
+rebound       0      1       0       1
+season                                
+2021     104527   8000  0.0597  0.1785
+2022     103262  10038  0.0621  0.1381
+2023     102487  11526  0.0618  0.1120
+2024     100016  11258  0.0619  0.1051
+2025      99319  11747  0.0640  0.1033
+2026      21097   2516  0.0677  0.1073
+season              2021       2022       2023       2024       2025      2026
+sh_edge_avg  count   0.0  108319.00  108740.00  106164.00  104717.00  22848.00
+             mean    NaN      56.78      56.49      56.70      59.96     57.16
+             std     NaN       8.08       7.99       8.28       7.09      8.06
+             min     NaN       1.71      14.13      25.97       0.00     18.49
+             25%     NaN      50.40      50.62      50.25      54.49     50.73
+             50%     NaN      55.19      55.14      55.74      58.97     55.65
+             75%     NaN      63.96      63.16      63.98      65.72     64.17
+             max     NaN      81.11      81.15      85.47      81.68     80.03
+sh_edge_top  count   0.0  108319.00  108740.00  106164.00  104717.00  22848.00
+             mean    NaN      91.05      90.79      90.20      88.97     89.01
+             std     NaN       6.12       5.78       6.46       6.28      5.72
+             min     NaN       1.71      14.13      36.55       0.00     32.88
+             25%     NaN      87.66      87.46      86.71      85.53     85.09
+             50%     NaN      91.43      91.13      90.23      89.14     89.06
+             75%     NaN      95.23      94.60      94.54      92.64     93.06
+             max     NaN     101.95     101.71     102.59     106.00    103.51
+sh_edge_hard count   0.0  108347.00  108761.00  106164.00  104717.00  22848.00
+             mean    NaN       5.57       5.29       4.94       3.11      3.22
+             std     NaN      13.35      12.06      11.74       8.17      8.93
+             min     NaN       0.00       0.00       0.00       0.00      0.00
+             25%     NaN       0.00       0.00       0.00       0.00      0.00
+             50%     NaN       1.00       1.00       1.00       0.00      0.00
+             75%     NaN       5.00       4.00       4.00       2.00      2.00
+             max     NaN     122.00      79.00     111.00      74.00     97.00
+        size  sum
+season           
+2021       1    1
+2022      17   17
+2023      10   10
+2024      20   20
+2025      24   24
+2026       3    3
+Traceback (most recent call last):
+  File "/tmp/claude-0/-home-user-RandomAIStuff/e907f58d-7aa5-51f8-977a-8e41200e6ced/scratchpad/fable2/diag2.py", line 8, in <module>
+    a=recal(ne,get('v2',t)); b=recal(ne,get('m730',t)); x=ne[m].copy(); x['d']=(ll(x.goal.values,a[m])-ll(x.goal.values,b[m]))*1e4
+                                        ~~~^^^^^^^^^^
+  File "/tmp/claude-0/-home-user-RandomAIStuff/e907f58d-7aa5-51f8-977a-8e41200e6ced/scratchpad/fable2/lib.py", line 51, in get
+    def get(name, test): return np.load(os.path.join(HERE, 'preds', f'{name}_{test}.npy'))
+                                ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/claude-0/-home-user-RandomAIStuff/e907f58d-7aa5-51f8-977a-8e41200e6ced/scratchpad/fable2/preds/m730_2024.npy'

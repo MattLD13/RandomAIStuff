@@ -1,0 +1,14 @@
+Written 20:08 before any 2025/2026 run other than v2, m730 (replication of the README lead), placebo, and the
+calibration variants in calib.py (all nulls, reported).
+Candidates to be scored on 2025-26 + 2026-27 (all chosen on the 2024-25 fold only):
+ C1  v2 x5 seeds (season fit, log-odds average)
+ C2  refit every 14 days on previous 540 days, 1 seed (b540)      [best single policy on 2024-25: +22.2]
+ C3  C2 x 5 seeds (fixed at 20:15 after seeing 3 seeds help on 2024-25: +23.2 vs +22.2)
+ C4  weekly variant of C2 only if it beats b540 on 2024-25 by > 1.0
+ ref m730 (already run)
+Anything else run on 2025/2026 will be reported as post hoc.
+20:18 C2 (b540) scored: fails on 2025/2026 (-3.8 pooled). C3 cut to 3 seeds (no point spending 5). C4 dropped.
+C1 passed. Added, post hoc and labelled as such: m730 x5 seeds (README's prior lead combined with C1); and v2 + new features (feat.py) on 2024 first.
+20:37 feat2 (EDGE percentile replacing raw EDGE) +2.14 on 2024-25 -> scoring on 2025/2026, 1 seed then 5 seeds; feat.py newfeat +0.42 on 2024 -> scoring on 2025/2026
+20:38 edgepct and newfeat failed on 2025/2026 (1 seed); edgepct seeds cancelled. Next: cadence within the 730-day window (2024-25 order: weekly > 14-day > monthly) scored on 2025/2026 with 1 seed: b730, w730.
+20:48 b730/w730 1-seed on 2025/2026: +2.26 / +1.50 (m730 +1.56): cadence does not matter there. Final = monthly x5 seeds. Launching final_spec.py --fresh as reproducibility check; no further model runs.

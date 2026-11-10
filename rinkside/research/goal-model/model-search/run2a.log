@@ -1,0 +1,38 @@
+m365 2024 19:33:10
+m540 2024 19:34:10
+m730_hl120 2024 19:35:27
+m730_hl240 2024 19:36:44
+m730_hl480 2024 19:37:55
+m730_cw3 2024 19:39:03
+m730_cw8 2024 19:40:10
+b730 2024 19:42:32
+Traceback (most recent call last):
+  File "/tmp/claude-0/-home-user-RandomAIStuff/e907f58d-7aa5-51f8-977a-8e41200e6ced/scratchpad/fable2/run2.py", line 15, in <module>
+    save(name, t, refit(ne, t, **CFG[name])); print(name, t, time.strftime('%H:%M:%S'), flush=True)
+                  ~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/-home-user-RandomAIStuff/e907f58d-7aa5-51f8-977a-8e41200e6ced/scratchpad/fable2/lib.py", line 47, in refit
+    p[mask] = m.predict(ne.loc[mask, cols], num_threads=NT)
+              ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/lightgbm/basic.py", line 4894, in predict
+    return predictor.predict(
+           ~~~~~~~~~~~~~~~~~^
+        data=data,
+        ^^^^^^^^^^
+    ...<6 lines>...
+        validate_features=validate_features,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/site-packages/lightgbm/basic.py", line 1092, in predict
+    data = _data_from_pandas(
+           ~~~~~~~~~~~~~~~~~^
+        data=data,
+        ^^^^^^^^^^
+    ...<2 lines>...
+        pandas_categorical=self.pandas_categorical,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )[0]
+    ^
+  File "/usr/local/lib/python3.13/site-packages/lightgbm/basic.py", line 759, in _data_from_pandas
+    raise ValueError("Input data must be 2 dimensional and non empty.")
+ValueError: Input data must be 2 dimensional and non empty.
