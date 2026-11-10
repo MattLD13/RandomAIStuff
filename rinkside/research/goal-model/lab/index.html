@@ -1,0 +1,504 @@
+<title>SGP Shot Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an instrument bench. Rink + readout on top, controls in labeled trays, the tree explorer as a wide drawing below. */
+:root {
+  --bg: #f3f5f7; --panel: #ffffff; --ink: #14202c; --ink-2: #4c5b69; --ink-3: #7d8a96; --line: #d9e0e6;
+  --ice: #fbfdfe; --rink-line: #b9c6d1; --red-line: #d77a76; --blue-line: #6f95c4;
+  --accent: #c8322b; --accent-soft: #f6dcda; --up: #1f6fd0; --down: #d0612a; --path: #c8322b;
+  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f151b; --panel: #161e26; --ink: #e8eef3; --ink-2: #a9b6c2; --ink-3: #7b8895; --line: #2a3541;
+  --ice: #1a232c; --rink-line: #3d4c5a; --red-line: #a85a57; --blue-line: #5a7ea9;
+  --accent: #ff5b4f; --accent-soft: #3a1d1c; --up: #5aa2ff; --down: #f08a52; --path: #ff5b4f; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f151b; --panel: #161e26; --ink: #e8eef3; --ink-2: #a9b6c2; --ink-3: #7b8895; --line: #2a3541;
+  --ice: #1a232c; --rink-line: #3d4c5a; --red-line: #a85a57; --blue-line: #5a7ea9;
+  --accent: #ff5b4f; --accent-soft: #3a1d1c; --up: #5aa2ff; --down: #f08a52; --path: #ff5b4f; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font-body); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 24px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 20px; }
+h1, h2, h3 { font-family: var(--font-display); font-stretch: 85%; margin: 0; text-wrap: balance; letter-spacing: .005em; }
+h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 800; }
+h2 { font-size: 20px; font-weight: 700; }
+h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); font-stretch: 100%; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--ink-2); }
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+header.top { display: grid; gap: 6px; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; }
+button, select, input { font: inherit; color: inherit; }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.chip:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--up); outline-offset: 2px; }
+.bench { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.rinkbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: 6px 10px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+svg.rink { width: 100%; height: auto; display: block; touch-action: manipulation; cursor: crosshair; }
+.readouts { font-size: 12px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.readouts b { color: var(--ink); font-weight: 500; }
+.result { display: grid; gap: 4px; }
+.pct { font-family: var(--font-display); font-weight: 800; font-size: clamp(54px, 8vw, 76px); line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.pct small { font-size: .45em; font-weight: 700; }
+.sub { color: var(--ink-2); font-size: 13px; }
+.wf { display: grid; gap: 6px; }
+.wfrow { display: grid; grid-template-columns: minmax(0, 12em) minmax(0, 1fr) 4.6em; gap: 8px; align-items: center; font-size: 12.5px; }
+.wfrow .lbl { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wfrow .track { position: relative; height: 14px; }
+.wfrow .bar { position: absolute; top: 2px; height: 10px; border-radius: 2px; }
+.wfrow .val { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.wfrow.total .bar { background: var(--ink); }
+.wfrow.total .lbl, .wfrow.total .val { color: var(--ink); font-weight: 600; }
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+.tray { display: grid; gap: 10px; align-content: start; }
+.field { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; }
+.field label { font-size: 13px; color: var(--ink-2); }
+.field output { font-family: var(--font-mono); font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 4.5em; text-align: right; }
+.field input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.field select { grid-column: 2; border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 3px 6px; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--ink-2); }
+.check input { accent-color: var(--accent); }
+.hint { font-size: 12px; color: var(--ink-3); }
+.treebar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.treebar label { font-size: 13px; color: var(--ink-2); }
+.treebar input[type=number] { width: 6em; border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 3px 6px; }
+.treebar input[type=range] { flex: 1 1 200px; accent-color: var(--accent); }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.btn:hover { border-color: var(--ink-3); }
+.treewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--ice); }
+svg.tree text { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink); }
+svg.tree .edge { stroke: var(--rink-line); stroke-width: 1.2; fill: none; }
+svg.tree .edge.on { stroke: var(--path); stroke-width: 2.6; }
+svg.tree .node rect { fill: var(--panel); stroke: var(--line); }
+svg.tree .node.on rect { stroke: var(--path); stroke-width: 2; }
+svg.tree .leaf rect { stroke: none; }
+svg.tree .elab { font-size: 10px; fill: var(--ink-3); }
+.imp { display: grid; gap: 5px; }
+.improw { display: grid; grid-template-columns: minmax(0, 13em) minmax(0, 1fr) 4em; gap: 8px; align-items: center; font-size: 12.5px; }
+.improw .track { height: 10px; background: var(--line); border-radius: 2px; position: relative; }
+.improw .bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--ink-2); }
+.improw .val { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.status { font-size: 13px; color: var(--ink-2); }
+footer { font-size: 12.5px; color: var(--ink-3); display: grid; gap: 6px; }
+a { color: var(--up); }
+@media (max-width: 860px) { .bench, .two { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: no-preference) { .wfrow .bar, .pct { transition: all .18s ease-out; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>SGP Shot Lab</h1>
+    <p class="lede">Place a shot on the ice and change the situation around it. The page runs the frozen SGP v2.1 model (5 × 1,000 decision trees) in your browser and shows the chance the shot becomes a goal, what moved it, and every tree it passed through.</p>
+    <div class="presets" id="presets" aria-label="Example shots"></div>
+  </header>
+
+  <section class="bench">
+    <div class="panel">
+      <div class="rinkbar">
+        <div class="seg" role="group" aria-label="What a click on the ice places">
+          <button type="button" id="modeShot" aria-pressed="true">Place the shot</button>
+          <button type="button" id="modePrev" aria-pressed="false">Place the previous event</button>
+        </div>
+        <span class="hint">Attacking the net on the right</span>
+      </div>
+      <svg class="rink" id="rink" viewBox="-101 -44 202 88" role="img" aria-label="Rink: click to place the shot or the previous event"></svg>
+      <div class="readouts" id="readouts"></div>
+    </div>
+
+    <div class="panel">
+      <div class="result">
+        <h3>Chance this shot is a goal</h3>
+        <div class="pct" id="pct">–</div>
+        <div class="sub" id="pctsub">Loading the model…</div>
+      </div>
+      <div>
+        <h3 style="margin-bottom:8px">What moved it</h3>
+        <div class="wf" id="wf"></div>
+        <p class="hint" style="margin-top:8px">Each row adds one group of inputs, in this order, to the model's starting point. Blue raises the chance, orange lowers it. The last step is the daily calibration that keeps season totals honest.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>The situation</h2>
+    <div class="controls" id="controls"></div>
+  </section>
+
+  <section class="panel">
+    <div class="rinkbar">
+      <h2>The trees</h2>
+      <span class="status" id="treeinfo"></span>
+    </div>
+    <p class="lede">The model is five copies (seeds) of 1,000 small trees. Every tree asks up to 14 yes/no questions about the shot and ends in a leaf that nudges the goal chance up or down in log-odds. The highlighted path is the route your shot takes.</p>
+    <div class="treebar">
+      <label for="seedSel">Seed</label>
+      <select id="seedSel" class="btn"></select>
+      <label for="treeNum">Tree</label>
+      <input id="treeNum" type="number" min="1" max="1000" value="1">
+      <input id="treeRange" type="range" min="1" max="1000" value="1" aria-label="Tree number">
+      <button type="button" class="btn" id="bigTree">Show the tree that moves this shot most</button>
+    </div>
+    <div class="treewrap"><svg class="tree" id="tree"></svg></div>
+  </section>
+
+  <section class="two">
+    <div class="panel">
+      <h2>What the model asks about most</h2>
+      <p class="hint">Share of all 70,000 questions (splits) in the 5,000 trees that use each input.</p>
+      <div class="imp" id="imp"></div>
+    </div>
+    <div class="panel">
+      <h2>This shot's biggest single inputs</h2>
+      <p class="hint">Log-odds each input added, summed over every tree it was asked in.</p>
+      <div class="imp" id="top"></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>SGP v2.1, frozen 2026-11-10: trained on the 2024-25 and 2025-26 regular seasons. Calibration as of <span id="calAsOf">–</span>. Its clean test is games from 2026-11-11 on, scored every Monday. Method, tests and caveats: <a href="https://github.com/MattLD13/RandomAIStuff/tree/main/rinkside/research/goal-model" target="_blank" rel="noopener">the research README</a>.</p>
+    <p>Data: NHL play-by-play, shift charts and EDGE (prior-season shot speed). Coordinates in feet from center ice; the net is at x = 89.</p>
+  </footer>
+</div>
+
+<script>
+// ---------- evaluator (same code that was checked against Python: max error 3e-9 in log-odds over 400 shots) ----------
+function encodeRow(model, feats) {
+  return model.features.map((f) => {
+    const v = feats[f];
+    if (model.cats[f]) {
+      if (v === null || v === undefined) return NaN;
+      const i = model.cats[f].indexOf(String(v)); return i < 0 ? NaN : i;
+    }
+    return v === null || v === undefined || v === '' ? NaN : +v;
+  });
+}
+function walkTree(t, x, contrib) {
+  const [F, T, DT, DL, MT, L, R, IV, IC, LV] = t;
+  if (!F.length) return { v: LV[0], path: [] };
+  let n = 0; const path = [0];
+  for (;;) {
+    const v = x[F[n]]; let left;
+    if (DT[n] === 1) left = !Number.isNaN(v) && v >= 0 && T[n].includes(v);
+    else {
+      let val = v;
+      if (MT[n] === 2 && Number.isNaN(val)) left = DL[n] === 1;
+      else if (MT[n] === 1 && (Number.isNaN(val) || val === 0)) left = DL[n] === 1;
+      else { if (Number.isNaN(val)) val = 0; left = val <= T[n]; }
+    }
+    const next = left ? L[n] : R[n];
+    const nextVal = next < 0 ? LV[-next - 1] : IV[next];
+    if (contrib) contrib[F[n]] += nextVal - IV[n];
+    path.push(next);
+    if (next < 0) return { v: LV[-next - 1], path };
+    n = next;
+  }
+}
+function predict(model, x) {
+  const nf = model.features.length, contrib = new Float64Array(nf); let z = 0, bias = 0;
+  for (const trees of model.seeds) for (const t of trees) { z += walkTree(t, x, contrib).v; bias += t[0].length ? t[7][0] : t[9][0]; }
+  const k = model.seeds.length;
+  for (let i = 0; i < nf; i++) contrib[i] /= k;
+  return { z: z / k, bias: bias / k, contrib };
+}
+const sig = (z) => 1 / (1 + Math.exp(-z));
+
+// ---------- inputs ----------
+const NAMES = {
+  dist: 'Distance', angle: 'Angle', x: 'x (ft from center)', y: 'y (ft from center)', behind: 'Behind the goal line', type: 'Shot type',
+  prev_type: 'Previous event', prev_same: 'Previous event by same team', prev_dt: 'Seconds since previous event', prev_dist: 'Distance from previous event',
+  prev_speed: 'Puck speed from previous event', prev_x: 'Previous event x', prev_y: 'Previous event y', rebound: 'Rebound', reb_angle: 'Rebound angle change',
+  reb_speed: 'Rebound angle speed', rush: 'Rush', cross: 'Cross-ice movement', since_fo: 'Seconds since faceoff', fo_ozone: 'Offensive-zone faceoff',
+  flurry: 'Team attempts in last 10 s', own: 'Shooting team skaters', opp: 'Defending team skaters', skdiff: 'Skater difference', pulled: 'Own goalie pulled',
+  sdiff: 'Score difference', period: 'Period', t: 'Game second', home: 'Home team', hand: 'Shooter hand', offwing: 'Off wing', spos: 'Shooter position',
+  ghand: 'Goalie catch hand', g_faced: 'Shots goalie has faced', lg_env: 'League scoring level', sh_shift: "Shooter's shift so far", tm_shift_mean: "Teammates' shifts (avg)",
+  op_shift_mean: "Defenders' shifts (avg)", op_shift_max: "Longest defender shift", n_d_on: 'Defensemen on ice', n_f_on: 'Forwards on ice',
+  tm_shift_min: 'Since own line change', op_shift_min: "Since defenders' line change", sh_edge_avg: 'Avg shot speed (last season)', sh_edge_top: 'Top shot speed (last season)',
+  sh_edge_hard: '90+ mph shots (last season)'
+};
+const UNITS = { dist: ' ft', angle: '°', x: ' ft', y: ' ft', prev_dt: ' s', prev_dist: ' ft', prev_speed: ' ft/s', prev_x: ' ft', prev_y: ' ft', reb_angle: '°', reb_speed: '°/s',
+  since_fo: ' s', sh_shift: ' s', tm_shift_mean: ' s', op_shift_mean: ' s', op_shift_max: ' s', tm_shift_min: ' s', op_shift_min: ' s', sh_edge_avg: ' mph', sh_edge_top: ' mph', t: ' s' };
+const GROUPS = [
+  ['Location', ['dist', 'angle', 'x', 'y', 'behind', 'offwing', 'hand', 'ghand']],
+  ['Shot type', ['type']],
+  ['Play before the shot', ['prev_type', 'prev_same', 'prev_dt', 'prev_dist', 'prev_speed', 'prev_x', 'prev_y', 'rebound', 'reb_angle', 'reb_speed', 'rush', 'cross', 'flurry', 'since_fo', 'fo_ozone']],
+  ['Game state', ['own', 'opp', 'skdiff', 'pulled', 'sdiff', 'period', 't', 'home', 'spos', 'g_faced']],
+  ['Shift lengths', ['lg_env', 'sh_shift', 'tm_shift_mean', 'op_shift_mean', 'op_shift_max', 'n_d_on', 'n_f_on']],
+  ['Line-change timing', ['tm_shift_min', 'op_shift_min']],
+  ['Shot speed', ['sh_edge_avg', 'sh_edge_top', 'sh_edge_hard']],
+];
+const PREV_TYPES = [['faceoff', 'Faceoff'], ['shot-on-goal', 'Shot on goal (saved)'], ['missed-shot', 'Missed shot'], ['blocked-shot', 'Blocked shot'], ['hit', 'Hit'], ['giveaway', 'Giveaway'], ['takeaway', 'Takeaway']];
+const SHOT_TYPES = [['wrist', 'Wrist'], ['snap', 'Snap'], ['slap', 'Slap'], ['backhand', 'Backhand'], ['tip-in', 'Tip-in'], ['deflected', 'Deflected'], ['wrap-around', 'Wrap-around'], ['bat', 'Bat'], ['poke', 'Poke'], ['between-legs', 'Between the legs']];
+// trays of controls: [key, label, kind, min, max, step, format]
+const TRAYS = [
+  ['Play before the shot', [['prev_type', 'Previous event', 'select', PREV_TYPES], ['prev_same', 'Made by the shooting team', 'check'],
+    ['prev_dt', 'Seconds since it', 'range', 0, 60, 1, 's'], ['flurry', 'Team attempts in the last 10 s', 'range', 0, 5, 1, ''],
+    ['since_fo', 'Seconds since the faceoff', 'range', 0, 300, 1, 's'], ['fo_ozone', 'That faceoff was in the offensive zone', 'check']]],
+  ['Game state', [['own', 'Shooting team skaters', 'range', 3, 6, 1, ''], ['opp', 'Defending team skaters', 'range', 3, 6, 1, ''], ['pulled', 'Own goalie pulled', 'check'],
+    ['sdiff', 'Score (shooting team lead)', 'range', -3, 3, 1, '+'], ['period', 'Period', 'range', 1, 4, 1, 'P'], ['elapsed', 'Time into the period', 'range', 0, 1200, 5, 'clock'],
+    ['home', 'Shooting team is home', 'check'], ['g_faced', 'Shots the goalie has faced', 'range', 0, 50, 1, '']]],
+  ['Shifts and line changes', [['tm_shift_min', 'Seconds since own line change', 'range', 1, 120, 1, 's'], ['op_shift_min', "Seconds since defenders' change", 'range', 1, 120, 1, 's'],
+    ['sh_shift', "Shooter's shift so far", 'range', 1, 150, 1, 's'], ['tm_shift_mean', "Teammates' average shift", 'range', 1, 150, 1, 's'],
+    ['op_shift_mean', "Defenders' average shift", 'range', 1, 150, 1, 's'], ['op_shift_max', 'Longest defender shift', 'range', 1, 200, 1, 's'],
+    ['n_d_on', 'Shooting-team defensemen on', 'range', 0, 3, 1, ''], ['n_f_on', 'Shooting-team forwards on', 'range', 0, 4, 1, ''],
+    ['lg_env', 'League scoring vs base xG (log)', 'range', -0.15, 0.15, 0.005, 'f3']]],
+  ['Shot, shooter and goalie', [['type', 'Shot type', 'select', SHOT_TYPES], ['hand', 'Shooter shoots', 'select', [['L', 'Left'], ['R', 'Right'], ['', 'Unknown']]], ['spos', 'Shooter position', 'select', [['C', 'Center'], ['L', 'Left wing'], ['R', 'Right wing'], ['D', 'Defense']]],
+    ['ghand', 'Goalie catches', 'select', [['L', 'Left'], ['R', 'Right'], ['', 'Unknown']]],
+    ['speed_known', 'Shot-speed data available', 'check'], ['sh_edge_avg', 'Average shot speed', 'range', 40, 75, 0.1, 'mph'],
+    ['sh_edge_top', 'Top shot speed', 'range', 60, 105, 0.1, 'mph'], ['sh_edge_hard', '90+ mph shots last season', 'range', 0, 30, 1, '']]],
+];
+const S = {};       // the editable state
+let model = null, presets = [], cur = null, mode = 'shot', calNext = 0;
+
+function derive(s) {
+  const f = {};
+  const fx = 89 - s.x, ay = Math.abs(s.y);
+  f.x = s.x; f.y = s.y; f.dist = Math.hypot(fx, s.y);
+  f.angle = fx > 0 ? Math.atan2(ay, fx) * 180 / Math.PI : 90 + Math.atan2(-fx, ay + 1e-9) * 180 / Math.PI;
+  f.behind = fx < 0 ? 1 : 0;
+  f.type = s.type; f.hand = s.hand; f.ghand = s.ghand; f.spos = s.spos;
+  f.offwing = s.hand === 'L' ? (s.y < 0 ? 1 : 0) : s.hand === 'R' ? (s.y > 0 ? 1 : 0) : -1;
+  f.prev_type = s.prev_type; f.prev_same = s.prev_same ? 1 : 0; f.prev_dt = s.prev_dt;
+  f.prev_x = s.px; f.prev_y = s.py; f.prev_dist = Math.hypot(s.x - s.px, s.y - s.py); f.prev_speed = f.prev_dist / Math.max(s.prev_dt, 1);
+  const attempt = ['shot-on-goal', 'missed-shot', 'blocked-shot'].includes(s.prev_type);
+  f.rebound = attempt && s.prev_same && s.prev_dt <= 3 ? 1 : 0;
+  if (f.rebound) {
+    const pang = Math.atan2(s.py, Math.max(89 - s.px, 0.5)) * 180 / Math.PI, cang = Math.atan2(s.y, Math.max(fx, 0.5)) * 180 / Math.PI;
+    f.reb_angle = Math.abs(cang - pang); f.reb_speed = f.reb_angle / Math.max(s.prev_dt, 1);
+  } else { f.reb_angle = 0; f.reb_speed = 0; }
+  f.rush = s.prev_dt <= 4 && s.px < 25 ? 1 : 0;
+  f.cross = Math.abs(s.py - s.y) > 15 && s.prev_dt <= 2 && s.prev_same ? 1 : 0;
+  f.since_fo = s.since_fo; f.fo_ozone = s.fo_ozone ? 1 : 0; f.flurry = s.flurry;
+  f.own = s.own; f.opp = s.opp; f.skdiff = s.own - s.opp; f.pulled = s.pulled ? 1 : 0; f.sdiff = s.sdiff; f.period = s.period;
+  f.t = (s.period - 1) * 1200 + s.elapsed; f.home = s.home ? 1 : 0; f.g_faced = s.g_faced;
+  for (const k of ['lg_env', 'sh_shift', 'tm_shift_mean', 'op_shift_mean', 'op_shift_max', 'n_d_on', 'n_f_on', 'tm_shift_min', 'op_shift_min']) f[k] = s[k];
+  for (const k of ['sh_edge_avg', 'sh_edge_top', 'sh_edge_hard']) f[k] = s.speed_known ? s[k] : null;
+  return f;
+}
+function loadPreset(p) {
+  const f = p.features;
+  Object.assign(S, {
+    x: f.x, y: f.y, type: f.type ?? 'wrist', hand: f.hand ?? '', ghand: f.ghand ?? '', spos: f.spos ?? 'C',
+    prev_type: f.prev_type ?? 'faceoff', prev_same: !!f.prev_same, prev_dt: Math.min(60, f.prev_dt), px: f.prev_x, py: f.prev_y,
+    since_fo: Math.min(300, f.since_fo), fo_ozone: !!f.fo_ozone, flurry: f.flurry, own: f.own, opp: f.opp, pulled: !!f.pulled,
+    sdiff: Math.max(-3, Math.min(3, f.sdiff)), period: f.period, elapsed: f.t - (f.period - 1) * 1200, home: !!f.home, g_faced: Math.min(50, f.g_faced),
+    lg_env: f.lg_env, sh_shift: f.sh_shift, tm_shift_mean: f.tm_shift_mean, op_shift_mean: f.op_shift_mean, op_shift_max: f.op_shift_max,
+    n_d_on: f.n_d_on, n_f_on: f.n_f_on, tm_shift_min: f.tm_shift_min, op_shift_min: f.op_shift_min,
+    speed_known: f.sh_edge_avg !== null, sh_edge_avg: f.sh_edge_avg ?? 57, sh_edge_top: f.sh_edge_top ?? 85, sh_edge_hard: f.sh_edge_hard ?? 2, cal: p.cal,
+  });
+  syncControls(); update();
+}
+
+// ---------- rink ----------
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function drawRink() {
+  const g = document.getElementById('rink'); g.innerHTML = '';
+  const st = (c, w = 0.35) => ({ fill: 'none', stroke: c, 'stroke-width': w });
+  el('path', { d: 'M -72 -42.5 L 72 -42.5 A 28 28 0 0 1 100 -14.5 L 100 14.5 A 28 28 0 0 1 72 42.5 L -72 42.5 A 28 28 0 0 1 -100 14.5 L -100 -14.5 A 28 28 0 0 1 -72 -42.5 Z', fill: 'var(--ice)', stroke: 'var(--rink-line)', 'stroke-width': 0.8 }, g);
+  // danger areas from the scoring-chance definitions (inner slot, home plate), faint
+  el('path', { d: 'M 69 -30 L 59 -30 L 59 30 L 69 30 Z', fill: 'var(--accent)', opacity: 0.035 }, g);
+  el('rect', { x: 69, y: -19, width: 23, height: 38, fill: 'var(--accent)', opacity: 0.07 }, g);
+  el('line', { x1: 0, y1: -42.5, x2: 0, y2: 42.5, ...st('var(--red-line)', 1) }, g);
+  for (const x of [-25, 25]) el('line', { x1: x, y1: -42.5, x2: x, y2: 42.5, ...st('var(--blue-line)', 1.1) }, g);
+  for (const x of [-89, 89]) { const h = 14.5 + Math.sqrt(28 * 28 - 17 * 17); el('line', { x1: x, y1: -h, x2: x, y2: h, ...st('var(--red-line)', 0.4) }, g); }
+  el('circle', { cx: 0, cy: 0, r: 15, ...st('var(--blue-line)', 0.4) }, g);
+  for (const cx of [-69, 69]) for (const cy of [-22, 22]) { el('circle', { cx, cy, r: 15, ...st('var(--red-line)', 0.4) }, g); el('circle', { cx, cy, r: 1, fill: 'var(--red-line)' }, g); }
+  for (const cx of [-20, 20]) for (const cy of [-22, 22]) el('circle', { cx, cy, r: 1, fill: 'var(--red-line)' }, g);
+  el('path', { d: 'M 89 -4 A 6 6 0 0 0 89 4', fill: 'var(--blue-line)', opacity: 0.25 }, g);
+  el('path', { d: 'M 89 -6 A 6 6 0 0 0 89 6 Z', fill: 'var(--blue-line)', opacity: 0.18 }, g);
+  el('rect', { x: 89, y: -3, width: 3.3, height: 6, fill: 'none', stroke: 'var(--ink-3)', 'stroke-width': 0.4 }, g);
+  el('path', { d: 'M -89 -6 A 6 6 0 0 1 -89 6 Z', fill: 'var(--blue-line)', opacity: 0.18 }, g);
+  el('rect', { x: -92.3, y: -3, width: 3.3, height: 6, fill: 'none', stroke: 'var(--ink-3)', 'stroke-width': 0.4 }, g);
+  el('text', { x: 3, y: 41, 'font-size': 3, fill: 'var(--ink-3)', 'font-family': 'var(--font-mono)' }, g).textContent = 'center ice';
+  el('g', { id: 'marks' }, g);
+}
+function drawMarks() {
+  const m = document.getElementById('marks'); m.innerHTML = '';
+  el('line', { x1: S.px, y1: -S.py, x2: S.x, y2: -S.y, stroke: 'var(--ink-3)', 'stroke-width': 0.5, 'stroke-dasharray': '1.4 1' }, m);
+  el('circle', { cx: S.px, cy: -S.py, r: 1.8, fill: 'var(--panel)', stroke: 'var(--ink-2)', 'stroke-width': 0.6 }, m);
+  el('text', { x: S.px + 2.6, y: -S.py - 2.2, 'font-size': 3.2, fill: 'var(--ink-2)', 'font-family': 'var(--font-body)' }, m).textContent = 'previous event';
+  el('line', { x1: S.x, y1: -S.y, x2: 89, y2: 0, stroke: 'var(--accent)', 'stroke-width': 0.4, opacity: 0.6 }, m);
+  el('circle', { cx: S.x, cy: -S.y, r: 2.2, fill: 'var(--accent)', stroke: 'var(--panel)', 'stroke-width': 0.7 }, m);
+  el('text', { x: S.x + 3, y: -S.y + 1.2, 'font-size': 3.6, fill: 'var(--ink)', 'font-weight': 600, 'font-family': 'var(--font-body)' }, m).textContent = 'shot';
+}
+document.getElementById('rink').addEventListener('click', (ev) => {
+  const svg = ev.currentTarget, pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+  const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const x = Math.max(-99, Math.min(99, p.x)), y = Math.max(-42, Math.min(42, -p.y));
+  if (mode === 'shot') { S.x = Math.round(x * 10) / 10; S.y = Math.round(y * 10) / 10; } else { S.px = Math.round(x * 10) / 10; S.py = Math.round(y * 10) / 10; }
+  markPreset(null); update();
+});
+for (const [id, m] of [['modeShot', 'shot'], ['modePrev', 'prev']]) document.getElementById(id).addEventListener('click', () => {
+  mode = m; document.getElementById('modeShot').setAttribute('aria-pressed', m === 'shot'); document.getElementById('modePrev').setAttribute('aria-pressed', m === 'prev');
+});
+
+// ---------- controls ----------
+function fmt(v, kind) {
+  if (kind === 'clock') { const m = Math.floor(v / 60), s = Math.round(v % 60); return `${m}:${String(s).padStart(2, '0')}`; }
+  if (kind === 's') return `${Math.round(v)} s`;
+  if (kind === 'mph') return `${(+v).toFixed(1)} mph`;
+  if (kind === '+') return v > 0 ? `+${v}` : `${v}`;
+  if (kind === 'P') return v === 4 ? 'OT' : `P${v}`;
+  if (kind === 'f3') return (+v).toFixed(3);
+  return `${v}`;
+}
+function buildControls() {
+  const c = document.getElementById('controls');
+  for (const [title, items] of TRAYS) {
+    const tray = document.createElement('div'); tray.className = 'tray';
+    tray.innerHTML = `<h3>${title}</h3>`;
+    for (const [key, label, kind, a, b, step, f] of items) {
+      const id = 'c_' + key; let html;
+      if (kind === 'select') html = `<div class="field"><label for="${id}">${label}</label><select id="${id}">${a.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></div>`;
+      else if (kind === 'check') html = `<label class="check"><input type="checkbox" id="${id}"> ${label}</label>`;
+      else html = `<div class="field"><label for="${id}">${label}</label><output id="o_${key}"></output><input type="range" id="${id}" min="${a}" max="${b}" step="${step}" data-fmt="${f}"></div>`;
+      tray.insertAdjacentHTML('beforeend', html);
+    }
+    c.appendChild(tray);
+  }
+  c.addEventListener('input', (e) => {
+    const t = e.target; if (!t.id.startsWith('c_')) return;
+    const key = t.id.slice(2);
+    S[key] = t.type === 'checkbox' ? t.checked : t.tagName === 'SELECT' ? t.value : +t.value;
+    if (key === 'period') { const mx = S.period === 4 ? 300 : 1200; document.getElementById('c_elapsed').max = mx; S.elapsed = Math.min(S.elapsed, mx); }
+    markPreset(null); syncOutputs(); update();
+  });
+}
+function syncControls() {
+  for (const [, items] of TRAYS) for (const [key, , kind] of items) {
+    const e = document.getElementById('c_' + key); if (!e) continue;
+    if (kind === 'check') e.checked = !!S[key]; else e.value = S[key];
+  }
+  document.getElementById('c_elapsed').max = S.period === 4 ? 300 : 1200;
+  syncOutputs();
+}
+function syncOutputs() {
+  for (const [, items] of TRAYS) for (const [key, , kind, , , , f] of items) if (kind === 'range') document.getElementById('o_' + key).textContent = fmt(S[key], f);
+  for (const k of ['sh_edge_avg', 'sh_edge_top', 'sh_edge_hard']) document.getElementById('c_' + k).disabled = !S.speed_known;
+}
+
+// ---------- results ----------
+function update() {
+  if (!model) return;
+  const f = derive(S), x = encodeRow(model, f), r = predict(model, x);
+  cur = { f, x, r };
+  const cal = S.cal ?? calNext, p = sig(r.z + cal);
+  document.getElementById('pct').innerHTML = `${(p * 100).toFixed(1)}<small>%</small>`;
+  document.getElementById('pctsub').textContent = `About 1 in ${Math.max(1, Math.round(1 / p))} shots like this score. Before calibration: ${(sig(r.z) * 100).toFixed(1)}%.`;
+  document.getElementById('readouts').innerHTML = [
+    ['Distance', `${f.dist.toFixed(1)} ft`], ['Angle', `${f.angle.toFixed(0)}°`], ['Rebound', f.rebound ? 'yes' : 'no'], ['Rush', f.rush ? 'yes' : 'no'],
+    ['Off wing', f.offwing === 1 ? 'yes' : f.offwing === 0 ? 'no' : 'unknown'], ['From previous event', `${f.prev_dist.toFixed(0)} ft in ${S.prev_dt} s`],
+  ].map(([k, v]) => `<span>${k} <b class="num">${v}</b></span>`).join('');
+  drawMarks(); drawWaterfall(r, cal); drawTop(r); drawTree();
+}
+function drawWaterfall(r, cal) {
+  const rows = [], fi = model.fidx; let z = r.bias; rows.push(['Model starting point', null, sig(z)]);
+  for (const [g, cols] of GROUPS) { const z0 = z; z += cols.reduce((a, c) => a + r.contrib[fi[c]], 0); rows.push([g, [sig(z0), sig(z)], sig(z)]); }
+  const z0 = z; z += cal; rows.push(['Daily calibration', [sig(z0), sig(z)], sig(z)]);
+  rows.push(['SGP', 'total', sig(z)]);
+  const mx = Math.max(...rows.map((r_) => r_[2])) * 1.05, pc = (v) => `${(v / mx * 100).toFixed(2)}%`;
+  document.getElementById('wf').innerHTML = rows.map(([lab, ch, v]) => {
+    if (ch === null || ch === 'total') return `<div class="wfrow${ch ? ' total' : ''}"><span class="lbl">${lab}</span><span class="track"><span class="bar" style="left:0;width:${pc(v)};background:${ch ? 'var(--ink)' : 'var(--ink-3)'}"></span></span><span class="val">${(v * 100).toFixed(1)}%</span></div>`;
+    const [a, b] = ch, lo = Math.min(a, b), d = b - a;
+    return `<div class="wfrow"><span class="lbl" title="${lab}">${lab}</span><span class="track"><span class="bar" style="left:${pc(lo)};width:max(2px,${pc(Math.abs(d))});background:${d >= 0 ? 'var(--up)' : 'var(--down)'}"></span></span><span class="val">${d >= 0 ? '+' : '−'}${Math.abs(d * 100).toFixed(1)}</span></div>`;
+  }).join('');
+}
+function drawTop(r) {
+  const items = model.features.map((f, i) => [f, r.contrib[i]]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 10);
+  const mx = Math.max(...items.map((i) => Math.abs(i[1])));
+  document.getElementById('top').innerHTML = items.map(([f, v]) => `<div class="improw"><span title="${NAMES[f] || f}">${NAMES[f] || f}</span><span class="track"><span class="bar" style="width:${Math.abs(v) / mx * 100}%;background:${v >= 0 ? 'var(--up)' : 'var(--down)'}"></span></span><span class="val">${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}</span></div>`).join('');
+}
+function drawImportance() {
+  const n = new Array(model.features.length).fill(0); let tot = 0;
+  for (const trees of model.seeds) for (const t of trees) for (const f of t[0]) { n[f]++; tot++; }
+  const items = model.features.map((f, i) => [f, n[i] / tot]).sort((a, b) => b[1] - a[1]).slice(0, 14), mx = items[0][1];
+  document.getElementById('imp').innerHTML = items.map(([f, v]) => `<div class="improw"><span title="${NAMES[f] || f}">${NAMES[f] || f}</span><span class="track"><span class="bar" style="width:${v / mx * 100}%"></span></span><span class="val">${(v * 100).toFixed(1)}%</span></div>`).join('');
+}
+
+// ---------- tree drawing ----------
+function splitLabel(F, T, DT, i) {
+  const f = model.features[F[i]], name = NAMES[f] || f;
+  if (DT[i] === 1) { const cats = T[i].map((c) => model.cats[f][c] || '∅'); return `${name}: ${cats.slice(0, 3).join(', ')}${cats.length > 3 ? ` +${cats.length - 3}` : ''}`; }
+  const th = T[i], u = UNITS[f] || '';
+  const v = Math.abs(th) >= 100 ? th.toFixed(0) : Math.abs(th) >= 10 ? th.toFixed(1) : th.toFixed(2);
+  return `${name} ≤ ${v}${u}`;
+}
+function drawTree() {
+  const seed = +document.getElementById('seedSel').value || 0, k = Math.max(1, Math.min(1000, +document.getElementById('treeNum').value || 1)) - 1;
+  const t = model.seeds[seed][k], [F, T, DT, DL, MT, L, R, IV, IC, LV] = t, svg = document.getElementById('tree');
+  const run = walkTree(t, cur.x, null), onPath = new Set(run.path);
+  // layout: leaves in order, parents centered over their children
+  const pos = {}; let nextX = 0; const NW = 158, NH = 40, GX = 10, GY = 62;
+  const lay = (n, d) => {
+    if (n < 0) { pos[n] = { x: nextX++ * (NW + GX), d }; return pos[n].x; }
+    const a = lay(L[n], d + 1), b = lay(R[n], d + 1); pos[n] = { x: (a + b) / 2, d }; return pos[n].x;
+  };
+  if (F.length) lay(0, 0); else pos[-1] = { x: 0, d: 0 };
+  const depth = Math.max(...Object.values(pos).map((p) => p.d)), W = nextX * (NW + GX) + 20, H = (depth + 1) * GY + 30;
+  svg.setAttribute('width', Math.max(W, 600)); svg.setAttribute('height', H); svg.setAttribute('viewBox', `-10 -10 ${Math.max(W, 600)} ${H}`); svg.innerHTML = '';
+  const cx = (n) => pos[n].x + NW / 2, cy = (n) => pos[n].d * GY;
+  for (let i = 0; i < F.length; i++) for (const [c, lab] of [[L[i], 'yes'], [R[i], 'no']]) {
+    const on = onPath.has(i) && onPath.has(c);
+    el('path', { d: `M ${cx(i)} ${cy(i) + NH} C ${cx(i)} ${cy(i) + NH + 16}, ${cx(c)} ${cy(c) - 16}, ${cx(c)} ${cy(c)}`, class: 'edge' + (on ? ' on' : '') }, svg);
+    el('text', { x: (cx(i) + cx(c)) / 2 + (lab === 'yes' ? -10 : 4), y: cy(i) + NH + 14, class: 'elab' }, svg).textContent = lab === 'yes' ? 'yes' : 'no';
+  }
+  const lvMax = Math.max(...LV.map(Math.abs));
+  for (let i = 0; i < F.length; i++) {
+    const g = el('g', { class: 'node' + (onPath.has(i) ? ' on' : ''), transform: `translate(${pos[i].x},${cy(i)})` }, svg);
+    el('rect', { width: NW, height: NH, rx: 5 }, g);
+    el('text', { x: 8, y: 16 }, g).textContent = splitLabel(F, T, DT, i);
+    el('text', { x: 8, y: 31, class: 'elab' }, g).textContent = `${IC[i].toLocaleString()} training shots${MT[i] === 2 ? (DL[i] ? ' · missing → yes' : ' · missing → no') : ''}`;
+  }
+  for (let j = 0; j < LV.length; j++) {
+    const n = -(j + 1); if (!pos[n]) continue;
+    const v = LV[j], on = onPath.has(n), a = 0.15 + 0.75 * Math.abs(v) / (lvMax || 1);
+    const g = el('g', { class: 'leaf', transform: `translate(${pos[n].x},${cy(n)})` }, svg);
+    el('rect', { width: NW, height: NH, rx: 5, fill: v >= 0 ? 'var(--up)' : 'var(--down)', 'fill-opacity': a, stroke: on ? 'var(--path)' : 'none', 'stroke-width': on ? 3 : 0 }, g);
+    el('text', { x: 8, y: 16 }, g).textContent = `leaf: ${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(4)}`;
+    el('text', { x: 8, y: 31, class: 'elab' }, g).textContent = on ? '← this shot ends here' : 'log-odds nudge';
+  }
+  const wrap = svg.parentElement, rootX = F.length ? pos[0].x + NW / 2 : 0;
+  wrap.scrollLeft = Math.max(0, rootX - wrap.clientWidth / 2);
+  document.getElementById('treeinfo').textContent = `Seed ${seed + 1}, tree ${k + 1}: ${F.length} questions, ${LV.length} leaves. This shot gets ${run.v >= 0 ? '+' : '−'}${Math.abs(run.v).toFixed(4)} log-odds here.`;
+}
+function biggestTree() {
+  const seed = +document.getElementById('seedSel').value || 0; let best = 0, bv = -1;
+  model.seeds[seed].forEach((t, i) => { const r = walkTree(t, cur.x, null); const v = Math.abs(r.v - (t[0].length ? t[7][0] : t[9][0])); if (v > bv) { bv = v; best = i; } });
+  setTree(best + 1);
+}
+function setTree(n) { document.getElementById('treeNum').value = n; document.getElementById('treeRange').value = n; drawTree(); }
+document.getElementById('treeNum').addEventListener('input', (e) => setTree(Math.max(1, Math.min(1000, +e.target.value || 1))));
+document.getElementById('treeRange').addEventListener('input', (e) => setTree(+e.target.value));
+document.getElementById('seedSel').addEventListener('change', drawTree);
+document.getElementById('bigTree').addEventListener('click', biggestTree);
+
+// ---------- presets ----------
+function markPreset(i) { document.querySelectorAll('#presets .chip').forEach((b, j) => b.setAttribute('aria-pressed', j === i)); if (i === null) S.cal = undefined; }
+function buildPresets() {
+  const box = document.getElementById('presets');
+  presets.forEach((p, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = p.label; b.title = `${p.note} Model: ${(p.p * 100).toFixed(1)}%. ${p.goal ? 'It was a goal.' : 'No goal.'}`;
+    b.addEventListener('click', () => { loadPreset(p); markPreset(i); });
+    box.appendChild(b);
+  });
+}
+
+// ---------- boot ----------
+drawRink(); buildControls();
+Promise.all([fetch('sgp_model.json').then((r) => r.json()), fetch('sgp_presets.json').then((r) => r.json())]).then(([m, p]) => {
+  model = m; model.fidx = Object.fromEntries(model.features.map((f, i) => [f, i]));
+  presets = p.presets; calNext = p.cal_next; document.getElementById('calAsOf').textContent = p.cal_as_of;
+  document.getElementById('seedSel').innerHTML = model.seeds.map((_, i) => `<option value="${i}">${i + 1}</option>`).join('');
+  buildPresets(); drawImportance(); loadPreset(presets[0]); markPreset(0); biggestTree();
+}).catch((e) => { document.getElementById('pctsub').textContent = 'The model file did not load. Reload the page to try again.'; console.error(e); });
+</script>
