@@ -15,7 +15,7 @@ G = dict(form=['o_xgf', 'o_ff', 'o_hd', 'o_xga', 'o_gf', 'd_xga', 'd_fa', 'd_hda
          home=['is_home'], placebo=['placebo1', 'placebo2'])
 ALL = [c for v in G.values() for c in v]
 TARGETS = {'y_xgf': 'regression', 'y_ff': 'poisson', 'y_hd': 'poisson', 'y_gf': 'poisson'}
-PRM = dict(learning_rate=0.02, num_leaves=7, min_data_in_leaf=200, feature_fraction=0.8, bagging_fraction=0.8, bagging_freq=1, lambda_l2=10, verbose=-1, seed=1, num_threads=4)
+PRM = dict(learning_rate=0.02, num_leaves=7, min_data_in_leaf=200, feature_fraction=0.8, bagging_fraction=0.8, bagging_freq=1, lambda_l2=10, verbose=-1, seed=1, num_threads=2)
 if UNSEAL:
     b = open('chances_prereg.json', 'rb').read(); assert hashlib.sha256(b).hexdigest() == open('chances_prereg.sha256').read().split()[0]
     REG = json.loads(b)
@@ -54,6 +54,8 @@ for y, obj in TARGETS.items():
         spec = REG['targets'][y]; fit_all = d[d.season.isin([2021, 2022, 2023, 2024])]
         rr = Ridge(1.0).fit(fit_all[rc].fillna(fit_all[rc].mean()), fit_all[y]); P_['linear'] = rr.predict(d[rc].fillna(fit_all[rc].mean()))
         P_['model'], _ = fitpred(spec['features'], y, obj, rounds=spec['rounds'], fit_on=fit_all)
+        for alt in ('no_lineup', 'no_travel'):
+            P_[alt], _ = fitpred(spec[alt]['features'], y, obj, rounds=spec[alt]['rounds'], fit_on=fit_all)
         evals = [('SEALED 2025-26', d.season == SEALED)]
     R[y] = {'rounds': rounds}
     for title, mask in evals:
@@ -65,6 +67,8 @@ for y, obj in TARGETS.items():
         tests = {f'{best} vs {k}': boot(sub, k, best) for k in ['league_avg', 'matchup', 'linear']}
         if not UNSEAL:
             for g in G: tests['group ' + g] = boot(sub, '-' + g, 'model_all')
+        else:
+            tests['H: lineup helps'] = boot(sub, 'no_lineup', 'model'); tests['H: travel/rest helps'] = boot(sub, 'no_travel', 'model')
         R[y][title] = dict(models=r, tests=tests)
         print(f'\n== {y}  {title}  (n={len(sub)}, sd={np.sqrt(var):.3f})')
         for k, v in r.items(): print(f"  {k:<12} RMSE {v['rmse']:.4f}  R2 {v['r2']:+.4f}")

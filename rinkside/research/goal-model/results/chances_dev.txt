@@ -1,0 +1,185 @@
+
+== y_xgf  2024-25 validation  (n=2624, sd=0.862)
+  league_avg   RMSE 0.8739  R2 -0.0270
+  matchup      RMSE 0.8196  R2 +0.0966
+  linear       RMSE 0.8186  R2 +0.0988
+  model_all    RMSE 0.8170  R2 +0.1024
+  -form        RMSE 0.8184  R2 +0.0993
+  -season      RMSE 0.8195  R2 +0.0968
+  -strength    RMSE 0.8169  R2 +0.1025
+  -lineup      RMSE 0.8170  R2 +0.1024
+  -travel      RMSE 0.8184  R2 +0.0993
+  -home        RMSE 0.8186  R2 +0.0989
+  -placebo     RMSE 0.8169  R2 +0.1025
+  model_all vs league_avg  MSE gain +0.09621 [+0.07710, +0.11491] p=0.0005
+  model_all vs matchup     MSE gain +0.00431 [-0.00484, +0.01353] p=0.3930
+  model_all vs linear      MSE gain +0.00265 [-0.00601, +0.01133] p=0.5660
+  group form               MSE gain +0.00232 [-0.00269, +0.00742] p=0.4140
+  group season             MSE gain +0.00414 [+0.00076, +0.00765] p=0.0180
+  group strength           MSE gain -0.00008 [-0.00214, +0.00194] p=0.9500
+  group lineup             MSE gain +0.00002 [-0.00516, +0.00537] p=0.9940
+  group travel             MSE gain +0.00230 [+0.00009, +0.00470] p=0.0380
+  group home               MSE gain +0.00258 [-0.00236, +0.00738] p=0.2960
+  group placebo            MSE gain -0.00009 [-0.00149, +0.00131] p=0.9290
+
+== y_xgf  2026-27 dev  (n=570, sd=0.904)
+  league_avg   RMSE 0.9162  R2 -0.0261
+  matchup      RMSE 0.8425  R2 +0.1324
+  linear       RMSE 0.8397  R2 +0.1380
+  model_all    RMSE 0.8301  R2 +0.1576
+  -form        RMSE 0.8290  R2 +0.1599
+  -season      RMSE 0.8257  R2 +0.1667
+  -strength    RMSE 0.8296  R2 +0.1587
+  -lineup      RMSE 0.8485  R2 +0.1199
+  -travel      RMSE 0.8328  R2 +0.1521
+  -home        RMSE 0.8333  R2 +0.1511
+  -placebo     RMSE 0.8310  R2 +0.1558
+  model_all vs league_avg  MSE gain +0.15028 [+0.09900, +0.20166] p=0.0005
+  model_all vs matchup     MSE gain +0.02065 [-0.00262, +0.04356] p=0.0870
+  model_all vs linear      MSE gain +0.01603 [-0.00245, +0.03487] p=0.0890
+  group form               MSE gain -0.00185 [-0.01553, +0.01266] p=0.8050
+  group season             MSE gain -0.00743 [-0.01586, +0.00045] p=0.0620
+  group strength           MSE gain -0.00091 [-0.00564, +0.00364] p=0.6750
+  group lineup             MSE gain +0.03080 [+0.01844, +0.04398] p=0.0005
+  group travel             MSE gain +0.00448 [-0.00071, +0.00992] p=0.0980
+  group home               MSE gain +0.00534 [-0.00382, +0.01482] p=0.2650
+  group placebo            MSE gain +0.00149 [-0.00155, +0.00471] p=0.3400
+
+== y_ff  2024-25 validation  (n=2624, sd=8.832)
+  league_avg   RMSE 8.8636  R2 -0.0071
+  matchup      RMSE 8.3148  R2 +0.1138
+  linear       RMSE 8.2805  R2 +0.1211
+  model_all    RMSE 8.2909  R2 +0.1188
+  -form        RMSE 8.5055  R2 +0.0726
+  -season      RMSE 8.2937  R2 +0.1182
+  -strength    RMSE 8.2942  R2 +0.1181
+  -lineup      RMSE 8.2896  R2 +0.1191
+  -travel      RMSE 8.2982  R2 +0.1173
+  -home        RMSE 8.2945  R2 +0.1181
+  -placebo     RMSE 8.2922  R2 +0.1186
+  model_all vs league_avg  MSE gain +9.82475 [+7.48666, +12.22281] p=0.0005
+  model_all vs matchup     MSE gain +0.39635 [-0.50195, +1.31060] p=0.4080
+  model_all vs linear      MSE gain -0.17346 [-0.95951, +0.61423] p=0.6420
+  group form               MSE gain +3.60453 [+2.44770, +4.72796] p=0.0005
+  group season             MSE gain +0.04676 [-0.10056, +0.19433] p=0.5190
+  group strength           MSE gain +0.05417 [-0.21425, +0.31031] p=0.6580
+  group lineup             MSE gain -0.02191 [-0.34953, +0.30979] p=0.9260
+  group travel             MSE gain +0.12020 [-0.10791, +0.33932] p=0.3140
+  group home               MSE gain +0.05886 [-0.39416, +0.55108] p=0.7730
+  group placebo            MSE gain +0.02088 [-0.12709, +0.16605] p=0.7630
+
+== y_ff  2026-27 dev  (n=570, sd=8.474)
+  league_avg   RMSE 8.6440  R2 -0.0406
+  matchup      RMSE 7.8121  R2 +0.1500
+  linear       RMSE 7.8092  R2 +0.1507
+  model_all    RMSE 7.8674  R2 +0.1380
+  -form        RMSE 8.2137  R2 +0.0604
+  -season      RMSE 7.8748  R2 +0.1363
+  -strength    RMSE 7.8427  R2 +0.1434
+  -lineup      RMSE 7.9032  R2 +0.1301
+  -travel      RMSE 7.8805  R2 +0.1351
+  -home        RMSE 7.8574  R2 +0.1402
+  -placebo     RMSE 7.8756  R2 +0.1362
+  model_all vs league_avg  MSE gain +12.82286 [+7.81969, +17.95827] p=0.0005
+  model_all vs matchup     MSE gain -0.86796 [-2.64427, +1.08104] p=0.3650
+  model_all vs linear      MSE gain -0.91325 [-2.77693, +0.90146] p=0.3350
+  group form               MSE gain +5.56936 [+2.60681, +8.63270] p=0.0005
+  group season             MSE gain +0.11664 [-0.19433, +0.43066] p=0.4510
+  group strength           MSE gain -0.38885 [-0.97985, +0.21898] p=0.2000
+  group lineup             MSE gain +0.56430 [-0.09882, +1.24572] p=0.1100
+  group travel             MSE gain +0.20594 [-0.20022, +0.60465] p=0.2980
+  group home               MSE gain -0.15832 [-0.92756, +0.62984] p=0.7190
+  group placebo            MSE gain +0.12815 [-0.15833, +0.41308] p=0.4040
+
+== y_hd  2024-25 validation  (n=2624, sd=4.748)
+  league_avg   RMSE 4.8198  R2 -0.0306
+  matchup      RMSE 4.5572  R2 +0.0787
+  linear       RMSE 4.5772  R2 +0.0705
+  model_all    RMSE 4.5400  R2 +0.0856
+  -form        RMSE 4.5809  R2 +0.0690
+  -season      RMSE 4.5424  R2 +0.0846
+  -strength    RMSE 4.5389  R2 +0.0860
+  -lineup      RMSE 4.5456  R2 +0.0833
+  -travel      RMSE 4.5441  R2 +0.0839
+  -home        RMSE 4.5421  R2 +0.0847
+  -placebo     RMSE 4.5411  R2 +0.0851
+  model_all vs league_avg  MSE gain +2.61908 [+2.02493, +3.22160] p=0.0005
+  model_all vs matchup     MSE gain +0.15658 [-0.10734, +0.40733] p=0.2450
+  model_all vs linear      MSE gain +0.33975 [+0.07794, +0.60267] p=0.0070
+  group form               MSE gain +0.37368 [+0.14910, +0.58954] p=0.0010
+  group season             MSE gain +0.02220 [-0.02876, +0.07303] p=0.4080
+  group strength           MSE gain -0.00972 [-0.05164, +0.03279] p=0.6640
+  group lineup             MSE gain +0.05142 [-0.06203, +0.16635] p=0.3790
+  group travel             MSE gain +0.03788 [-0.03423, +0.10732] p=0.3040
+  group home               MSE gain +0.01931 [-0.11659, +0.16200] p=0.7620
+  group placebo            MSE gain +0.01043 [-0.02376, +0.04714] p=0.5550
+
+== y_hd  2026-27 dev  (n=570, sd=4.652)
+  league_avg   RMSE 4.6526  R2 -0.0002
+  matchup      RMSE 4.3964  R2 +0.1069
+  linear       RMSE 4.4258  R2 +0.0949
+  model_all    RMSE 4.3309  R2 +0.1334
+  -form        RMSE 4.3696  R2 +0.1178
+  -season      RMSE 4.3286  R2 +0.1343
+  -strength    RMSE 4.3334  R2 +0.1323
+  -lineup      RMSE 4.3812  R2 +0.1131
+  -travel      RMSE 4.3369  R2 +0.1309
+  -home        RMSE 4.3238  R2 +0.1362
+  -placebo     RMSE 4.3285  R2 +0.1343
+  model_all vs league_avg  MSE gain +2.89066 [+1.46112, +4.29373] p=0.0005
+  model_all vs matchup     MSE gain +0.57231 [-0.01710, +1.14242] p=0.0560
+  model_all vs linear      MSE gain +0.83143 [+0.34775, +1.29065] p=0.0005
+  group form               MSE gain +0.33750 [-0.14578, +0.81114] p=0.1850
+  group season             MSE gain -0.01933 [-0.13285, +0.09011] p=0.7390
+  group strength           MSE gain +0.02209 [-0.06283, +0.11059] p=0.6150
+  group lineup             MSE gain +0.43876 [+0.18927, +0.69251] p=0.0010
+  group travel             MSE gain +0.05273 [-0.06816, +0.16919] p=0.4010
+  group home               MSE gain -0.06114 [-0.29087, +0.16585] p=0.6210
+  group placebo            MSE gain -0.02076 [-0.08377, +0.04176] p=0.5260
+
+== y_gf  2024-25 validation  (n=2624, sd=1.619)
+  league_avg   RMSE 1.6233  R2 -0.0055
+  matchup      RMSE 1.6048  R2 +0.0172
+  linear       RMSE 1.5962  R2 +0.0278
+  model_all    RMSE 1.5949  R2 +0.0293
+  -form        RMSE 1.5955  R2 +0.0286
+  -season      RMSE 1.5954  R2 +0.0288
+  -strength    RMSE 1.5948  R2 +0.0295
+  -lineup      RMSE 1.5957  R2 +0.0284
+  -travel      RMSE 1.5959  R2 +0.0281
+  -home        RMSE 1.5961  R2 +0.0279
+  -placebo     RMSE 1.5945  R2 +0.0299
+  model_all vs league_avg  MSE gain +0.09115 [+0.05267, +0.13138] p=0.0005
+  model_all vs matchup     MSE gain +0.03170 [+0.00210, +0.06151] p=0.0440
+  model_all vs linear      MSE gain +0.00402 [-0.02050, +0.02703] p=0.7450
+  group form               MSE gain +0.00197 [-0.01195, +0.01647] p=0.7830
+  group season             MSE gain +0.00149 [-0.00455, +0.00728] p=0.5960
+  group strength           MSE gain -0.00053 [-0.00658, +0.00542] p=0.8660
+  group lineup             MSE gain +0.00249 [-0.00662, +0.01170] p=0.5740
+  group travel             MSE gain +0.00314 [-0.00454, +0.01008] p=0.3980
+  group home               MSE gain +0.00364 [-0.00229, +0.00974] p=0.2390
+  group placebo            MSE gain -0.00149 [-0.00633, +0.00292] p=0.5290
+
+== y_gf  2026-27 dev  (n=570, sd=1.654)
+  league_avg   RMSE 1.6533  R2 +0.0009
+  matchup      RMSE 1.6231  R2 +0.0371
+  linear       RMSE 1.6025  R2 +0.0614
+  model_all    RMSE 1.6007  R2 +0.0635
+  -form        RMSE 1.6033  R2 +0.0605
+  -season      RMSE 1.6039  R2 +0.0597
+  -strength    RMSE 1.5983  R2 +0.0663
+  -lineup      RMSE 1.6037  R2 +0.0599
+  -travel      RMSE 1.6050  R2 +0.0584
+  -home        RMSE 1.6022  R2 +0.0617
+  -placebo     RMSE 1.6015  R2 +0.0626
+  model_all vs league_avg  MSE gain +0.17119 [+0.07816, +0.26880] p=0.0005
+  model_all vs matchup     MSE gain +0.07207 [+0.00955, +0.13564] p=0.0250
+  model_all vs linear      MSE gain +0.00555 [-0.04048, +0.04982] p=0.8140
+  group form               MSE gain +0.00814 [-0.03008, +0.04251] p=0.6880
+  group season             MSE gain +0.01023 [-0.00517, +0.02556] p=0.1910
+  group strength           MSE gain -0.00771 [-0.02188, +0.00622] p=0.2820
+  group lineup             MSE gain +0.00965 [-0.00981, +0.03003] p=0.3240
+  group travel             MSE gain +0.01382 [-0.00117, +0.02823] p=0.0730
+  group home               MSE gain +0.00482 [-0.00939, +0.01833] p=0.5160
+  group placebo            MSE gain +0.00245 [-0.00827, +0.01288] p=0.6510
+exit 0
