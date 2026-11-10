@@ -75,6 +75,8 @@
   const cur = () => store.current;
   const activeExam = () => examById(reviewRec ? reviewRec.examId : cur().examId);
   const activeAnswers = () => (reviewRec ? reviewRec.answers : cur().answers);
+  // Display order of a question's options in this attempt (attempts saved before shuffling: as stored).
+  const orderOf = (q) => ((reviewRec ? reviewRec.order : cur().order) || {})[q.id] || q.options.map((_, i) => i);
 
   // ---------- home ----------
   function renderHome() {
@@ -159,11 +161,23 @@
     show('intro');
   }
 
+  // A fresh a/b/c/d order for every attempt, so a retake doesn't teach you the letters.
+  // Answers are stored as the option's own index, so scoring never depends on the order.
+  function randomOrder(n) {
+    const a = [...Array(n).keys()];
+    const r = new Uint32Array(n);
+    try { crypto.getRandomValues(r); } catch (e) { for (let i = 0; i < n; i++) r[i] = Math.random() * 2 ** 32; }
+    for (let i = n - 1; i > 0; i--) { const j = r[i] % (i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+
   function begin() {
     const ex = examById(pendingExamId), mode = selectedMode(), now = Date.now();
+    const order = {};
+    for (const q of ex.questions) if (q.type === 'mc') order[q.id] = randomOrder(q.options.length);
     store.current = {
       examId: ex.id, mode, startedAt: now, deadline: mode === 'exam' ? now + ex.timeMinutes * 60000 : null,
-      idx: 0, answers: {}, flags: {}, checked: {},
+      idx: 0, answers: {}, flags: {}, checked: {}, order,
     };
     save();
     enterExam();
@@ -277,7 +291,8 @@
     if (q.type === 'mc') {
       box.append(el('div', { class: 'lbl' }, 'Select one answer'));
       const opts = el('div', { class: 'opts', role: 'radiogroup' });
-      q.options.forEach((o, i) => {
+      orderOf(q).forEach((i, pos) => {
+        const o = q.options[i];
         let cls = 'opt';
         if (locked && i === q.answer) cls += ' is-correct';
         else if (locked && ans[q.id] === i) cls += ' is-wrong';
@@ -286,7 +301,7 @@
         if (ans[q.id] === i) input.checked = true;
         input.addEventListener('change', () => setAnswer(q, i));
         opts.append(el('label', { class: cls, for: `opt-${q.id}-${i}` }, input,
-          el('span', { class: 'letter' }, 'abcd'[i] + ')'),
+          el('span', { class: 'letter' }, 'abcd'[pos] + ')'),
           el('span', { class: 'otext' + (isCom || / g$/.test(o) ? ' num' : '') }, isCom ? o.replace(/, /g, '\n') : o)));
       });
       box.append(opts);
@@ -319,7 +334,7 @@
         if (answered) body += ` Your answer: <b class="mono">${escapeHtml(String(ans[q.id]))}</b>.`;
         body += '</p>';
       } else if (!ok) {
-        body += `<p>Correct answer: <b>${'abcd'[q.answer]})</b> ${escapeHtml(q.options[q.answer])}</p>`;
+        body += `<p>Correct answer: <b>${'abcd'[orderOf(q).indexOf(q.answer)]})</b> ${escapeHtml(q.options[q.answer])}</p>`;
       }
       fb.innerHTML = `<div class="fb-head">${head}</div>${body}<div>${q.explain}</div>`;
       fb.hidden = false;
@@ -429,7 +444,7 @@
     const rec = {
       examId: ex.id, mode: c.mode, date: Date.now(), score: s.pts, total: ex.total, passScore: ex.passScore,
       passed: s.pts >= ex.passScore, correct: s.correct, used: Math.round((end - c.startedAt) / 1000), timeUp: !!timeUp,
-      answers: c.answers,
+      answers: c.answers, order: c.order,
     };
     store.history.push(rec);
     if (store.history.length > 60) store.history = store.history.slice(-60);
