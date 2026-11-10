@@ -288,9 +288,11 @@ time left.
 ## Box WAR (wins above replacement)
 
 `scripts/war.mjs` gives every skater and goalie a goals-above-replacement (GAR) value for each
-game. It uses the play-by-play and the shift chart (who was on the ice each second). When the
-stats API has no shift chart for a game, the build reads the NHL's HTML time-on-ice reports
-instead. Results are cached in `.cache/war-v1/`.
+game. It uses the play-by-play and the shift chart (who was on the ice each second). Shifts come
+from the stats API's shift chart or the NHL's HTML time-on-ice reports, whichever has more ice
+time: right after a game the API chart is often only part-posted (about 15% of ice time missing
+for NYR @ EDM on 2026-11-09), while the reports match the official ice times. A game is cached
+in `.cache/war-v3/` only once its shifts add up to a full game.
 
 Each shot on goal is worth ½ × its xG, plus ½ if it scores. The value is split into six pieces:
 

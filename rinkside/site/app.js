@@ -1360,7 +1360,8 @@
     const w = d.war.games[d.season.games[i].id], rows = w.rows.map(warRow);
     let h = `<div class="btab"><div class="btr bth"><span class="bn">Skater</span><span>TOI</span>${WAR_HEAD.map(([, l]) => `<span>${l}</span>`).join('')}<span>GAR</span><span>Pctl</span></div>`;
     h += rows.map((r) => `<div class="btr"${link(r.id)}><span class="bn"><b>${esc(r.n)}</b><small>${esc(r.pos)}</small></span><span class="m bt">${mmss(r.toi)}</span>` +
-      WAR_HEAD.map(([k]) => `<span class="m bc" style="background:${cellBg(r[k], 0.25)}">${gsign(r[k])}</span>`).join('') +
+      // a piece that rounds to 0.00 is left blank, so the cells that mattered stand out
+      WAR_HEAD.map(([k]) => (Math.abs(r[k]) < 0.005 ? '<span class="m bc"></span>' : `<span class="m bc" style="background:${cellBg(r[k], 0.25)}">${gsign(r[k])}</span>`)).join('') +
       `<span class="m bc bg" style="background:${cellBg(r.gar, 0.45)}">${gsign(r.gar)}</span><span class="m bp" style="color:${pctTone(r.pct)}">${r.pct ?? '\u2013'}</span></div>`).join('') + '</div>';
     if (w.g.length) h += `<div class="btab bgk"><div class="btr bth"><span class="bn">Goalie</span><span>Shots</span><span>Saved vs xG</span><span>GAR</span><span>Pctl</span></div>` +
       w.g.map(([id, n, shots, gsax, gar, pct]) => `<div class="btr"${link(id)}><span class="bn"><b>${esc(n)}</b><small>G</small></span><span class="m bt">${shots}</span>` +

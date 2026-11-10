@@ -1,8 +1,8 @@
 // Box WAR: goals and wins above replacement for every skater and goalie, game by game.
 //
 // Inputs per game: the play-by-play (shots, goals, assists, penalties, faceoffs, takeaways,
-// giveaways, blocks) and the shift chart (who was on the ice each second). Shift charts come
-// from the stats API; when it has none for a game, the NHL's HTML time-on-ice reports are parsed.
+// giveaways, blocks) and the shift chart (who was on the ice each second). Shifts come from the
+// stats API or the NHL's HTML time-on-ice reports, whichever has more ice time for the game.
 //
 // Every shot on goal is worth v = ½·xG + ½·goal (process and result, half each).
 //   Goal creation   the shooter's 35% of v; on a goal, 15% to the first assist, 5% to the second
@@ -33,18 +33,24 @@ export async function loadDigests(gameIds, get, getText, cacheDir, { concurrency
       try {
         const [pbp, sc] = await Promise.all([get(`https://api-web.nhle.com/v1/gamecenter/${id}/play-by-play`),
           get(`https://api.nhle.com/stats/rest/en/shiftcharts?cayenneExp=gameId=${id}`).catch(() => ({ data: [] }))]);
-        let shifts = apiShifts(sc.data || []);
-        if (shifts.length < 200) {   // the API sometimes has nothing for a run of games: use the HTML reports
-          const s = String(id), base = `https://www.nhl.com/scores/htmlreports/${s.slice(0, 4)}${+s.slice(0, 4) + 1}`;
-          try {
-            const [th, tv] = await Promise.all([getText(`${base}/TH${s.slice(4)}.HTM`), getText(`${base}/TV${s.slice(4)}.HTM`)]);
-            shifts = [...parseToiReport(th, pbp.homeTeam.id, pbp.rosterSpots), ...parseToiReport(tv, pbp.awayTeam.id, pbp.rosterSpots)];
-            if (shifts.length >= 200) fromReport++;
-          } catch {}
-        }
+        // Use whichever source has more ice time. Right after a game the stats API's chart is often
+        // only part-posted (NYR@EDM 2026-11-09: 678 of 779 shifts, ~15% of ice time missing), while the
+        // HTML time-on-ice reports are complete within a minute of the clock.
+        const api = apiShifts(sc.data || []);
+        const s = String(id), base = `https://www.nhl.com/scores/htmlreports/${s.slice(0, 4)}${+s.slice(0, 4) + 1}`;
+        let html = [];
+        try {
+          const [th, tv] = await Promise.all([getText(`${base}/TH${s.slice(4)}.HTM`), getText(`${base}/TV${s.slice(4)}.HTM`)]);
+          html = [...parseToiReport(th, pbp.homeTeam.id, pbp.rosterSpots), ...parseToiReport(tv, pbp.awayTeam.id, pbp.rosterSpots)];
+        } catch {}
+        const iceMin = (l) => l.reduce((a, x) => a + (x.e - x.s), 0) / 60;
+        const shifts = iceMin(html) > iceMin(api) ? html : api;
         if (shifts.length < 200) { missing++; continue; }   // try again on the next build
+        if (shifts === html) fromReport++;
         const g = digest(pbp, shifts);
-        await writeFile(file, JSON.stringify(g));
+        // a full game is ~700 player-minutes (12 on the ice for 60); cache only once it adds up to one,
+        // so a game whose shifts are still being posted is fetched again on the next build
+        if (iceMin(shifts) >= 640) await writeFile(file, JSON.stringify(g));
         out.set(id, g); fetched++;
       } catch (err) { console.warn(`war ${id}: ${err.message}`); }
     }

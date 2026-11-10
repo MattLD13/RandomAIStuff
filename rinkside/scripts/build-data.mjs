@@ -146,7 +146,7 @@ const ratedNow = players.rateSkaters(skNow, shooters), ratedLast = players.rateS
 console.log(`player ratings: ${Object.keys(ratedNow).length} skaters, ${Object.keys(ratedGoalies).length} goalies (last season ${Object.keys(ratedLast).length})`);
 
 // ---------- Box WAR (play-by-play + shift charts, see scripts/war.mjs) ----------
-const warDigests = await war.loadDigests(finals.map((g) => g.id), get, getText, join(ROOT, '.cache', 'war-v2'));
+const warDigests = await war.loadDigests(finals.map((g) => g.id), get, getText, join(ROOT, '.cache', 'war-v3')   /* v3: shifts from whichever source is complete */);
 const WAR = war.computeWar(warDigests.digests, xgModel);
 const abbrevOfId = {};
 for (const g of finals) { abbrevOfId[g.homeTeam.id] = g.homeTeam.abbrev; abbrevOfId[g.awayTeam.id] = g.awayTeam.abbrev; }
