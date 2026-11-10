@@ -1,6 +1,6 @@
 # Weekly prospective scoreboard: the frozen models, scored only on games played on or after the freeze cutoff.
 # Nothing here is tuned; the models, features and calibration rule are fixed in frozen/manifest.json.
-import json, hashlib, os, sys, datetime
+import json, hashlib, os, sys, datetime, gzip
 import numpy as np, pandas as pd, lightgbm as lgb
 from sklearn.metrics import log_loss, roc_auc_score, brier_score_loss
 exec(open('common.py').read()); exec(open('rk.py').read())
@@ -8,7 +8,7 @@ FZ = os.environ.get('FROZEN', '../frozen'); OUT = os.environ.get('SCOREBOARD', '
 man = json.load(open(f'{FZ}/manifest.json'))
 for f, h in man['sha256'].items():
     assert hashlib.sha256(open(f'{FZ}/{f}', 'rb').read()).hexdigest() == h, f'frozen file changed: {f}'
-cut = man['cutoff']
+cut = os.environ.get('TEST_CUTOFF') or man['cutoff']     # TEST_CUTOFF is for local pipeline tests only; the workflow never sets it
 df = pd.read_parquet('shots_feat2.parquet')
 for c in CAT: df[c] = df[c].astype('category')
 ne = df[df.en == 0].sort_values(['dnum', 'game', 'so']).copy()
@@ -17,7 +17,8 @@ def recal(p, W=35):
     c = np.log((day.g.rolling(W, min_periods=10).sum().shift(1) + 20) / (day.p.rolling(W, min_periods=10).sum().shift(1) + 20)).fillna(0)
     return 1 / (1 + np.exp(-(np.log(p / (1 - p)) + ne.dnum.map(c).values)))
 for name, spec in man['shot_models'].items():
-    m = lgb.Booster(model_file=f"{FZ}/{spec['file']}")
+    f = f"{FZ}/{spec['file']}"
+    m = lgb.Booster(model_str=gzip.open(f, 'rt').read()) if f.endswith('.gz') else lgb.Booster(model_file=f)
     p = m.predict(ne[spec['features']]); ne['p_' + name] = recal(p) if spec['calibrated'] else p
 rk = json.load(open(f"{FZ}/{man['rinkside_file']}"))
 z = rk_X(ne) @ np.array(rk['coef']) + rk['intercept']; ne['p_rinkside'] = recal(1 / (1 + np.exp(-z)))

@@ -4,6 +4,10 @@ A model of the chance that a shot becomes a goal. It starts from the usual expec
 
 On a season it never saw during development (2025-26, sealed until the end), it beat MoneyPuck's expected goals, a conventional expected-goals model built the same way, and the xG Rinkside uses today. All five pass/fail tests that were written down before that season was opened came out as passes.
 
+Two follow-ups are documented here too:
+- **A pre-game "chances tonight" model** (section 8). It passed its own sealed test and found that the dressed lineup matters for how many chances a team creates.
+- **A weekly scoreboard** that scores the frozen models on games played after 2026-11-11 (section 9).
+
 ## Contents
 1. [What it does](#1-what-it-does)
 2. [How it works](#2-how-it-works)
@@ -11,8 +15,11 @@ On a season it never saw during development (2025-26, sealed until the end), it 
 4. [How we kept ourselves honest](#4-how-we-kept-ourselves-honest)
 5. [Results on the sealed season](#5-results-on-the-sealed-season)
 6. [Limitations](#6-limitations)
-7. [Files and how to reproduce](#7-files-and-how-to-reproduce)
-8. [Sources](#8-sources)
+7. [More goalie data: tested, not added](#7-more-goalie-data-tested-not-added)
+8. [Chances tonight: a team-game model](#8-chances-tonight-a-team-game-model)
+9. [The weekly prospective scoreboard](#9-the-weekly-prospective-scoreboard)
+10. [Files and how to reproduce](#10-files-and-how-to-reproduce)
+11. [Sources](#11-sources)
 
 ## 1. What it does
 
@@ -207,7 +214,8 @@ The file was fingerprinted (SHA-256 `f7350036…4b54`, in `prereg.sha256`) and c
 
 ## 6. Limitations
 
-- **Goalie season totals:** MoneyPuck is slightly closer (RMSE 11.5 vs 11.7). SGP's goalie inputs help shot by shot, but don't beat MoneyPuck on goalie totals.
+- **Goalie season totals:** on the sealed 2025-26 season MoneyPuck was slightly closer (RMSE 11.5 vs 11.7). Pooled over 2024-25 to 2026-27, SGP is closer (10.6 vs 11.3). More goalie data did not help (section 7).
+- **2026-27 so far:** MoneyPuck's published current-season xG is ahead of SGP (log loss 0.2210 vs 0.2224 on 23,369 shots; 95% interval of the gap −3 to +31 × 10⁻⁴, so not conclusive). It could be noise, or MoneyPuck refitting its model during the season. The weekly scoreboard (section 9) settles it on games after the freeze.
 - **History starts in 2020-21:** a veteran's record before then is unknown, so he starts near average and the model learns him over his first few hundred shots of our data.
 - **Shot speed:** previous season only, from 2021-22 on. Missing for rookies and for 2021-22 itself.
 - **Shots on goal only:** SGP is built for all unblocked attempts. If you want "this shot is on net, will it go in?", that would need its own model.
@@ -215,7 +223,102 @@ The file was fingerprinted (SHA-256 `f7350036…4b54`, in `prereg.sha256`) and c
 - **One sealed season:** 2025-26 is one season. The development seasons point the same way, but more seasons would tighten the intervals.
 - **MoneyPuck comparison:** we compare against the xGoal values MoneyPuck publishes. Its models may be fitted in-season, which if anything would favor MoneyPuck.
 
-## 7. Files and how to reproduce
+## 7. More goalie data: tested, not added
+
+The one place SGP trailed MoneyPuck on the sealed season was goalie season totals, so we tried adding much more goalie information. Every input used only data from before the shot.
+
+| Group | What it is |
+|---|---|
+| Career | Even-strength save % above league average, 2010-11 to last season (NHL stats API), decayed by season and shrunk; last season alone |
+| EDGE | Last season's 5v5, close-game, high-, mid- and long-range save % above league average |
+| Glove / blocker | Which side the shot is on, and his decayed record on that side |
+| Shot type | Decayed record against this shot type |
+| Rebound control | Share of his saves followed by another attempt within 3 seconds |
+| Workload | Starts in the last 7 days, consecutive starts |
+| Height | Inches |
+
+These were tested like the rest: leave-one-group-out with a placebo group, pooled over 2024-25, 2025-26 and 2026-27 (244,276 shots). The keep rule was fixed before the run.
+
+| | Log loss | Goalie season-total error (RMSE) |
+|---|---|---|
+| **SGP as is** | **0.21520** | **10.63** |
+| SGP + all new goalie data | 0.21549 (worse: −2.95 × 10⁻⁴, interval −4.3 to −1.6) | 12.02 |
+| MoneyPuck | 0.21614 | 11.25 |
+
+None of the seven groups beat the placebo. Most made the model slightly worse, and goalie totals got worse too. So **nothing was added**.
+
+What SGP already uses (a decayed, league-relative save record, by area and by season, plus rest and age) captures what can be learned about a goalie from public data. The rest looks like noise, consistent with the research finding no goalie hot hand. Scripts: `goalie_data.mjs`, `goalie2.py`, `eval5.py`; results in `results/goalie_dev.txt`.
+
+## 8. Chances tonight: a team-game model
+
+A separate model predicts, before puck drop, what each team will generate in a game:
+- expected goals (the main target);
+- unblocked shot attempts;
+- inner-slot chances;
+- goals.
+
+One row per team per game (15,426 rows). This is where linemates, travel and rest had a fair chance to matter, because they affect how many chances a team creates rather than whether a given shot goes in.
+
+**Inputs** (all known before the game; the lineup is the dressed roster):
+- **Recent form:** decayed per-game offense and defense of both teams.
+- **Season to date.**
+- **Points.**
+- **Lineup:** the dressed skaters' earlier on-ice expected goals for and against per 60 minutes, weighted by their ice time.
+- **Travel and rest:** rest days, back-to-back, km travelled and time zones crossed, for both teams.
+- **Home or away.**
+
+**Model:** LightGBM with 7-leaf trees, trained 2021-22 to 2024-25. Same protocol: leave-one-group-out with a placebo on 2024-25 and 2026-27, then a pre-registered, one-time test on 2025-26 team-games (`chances_prereg.json`, committed in `50f90a4` before the run). Team-level chance counts had never been looked at on any season, so 2025-26 was still unseen for this model.
+
+**Sealed 2025-26, team expected goals per game** (2,624 team-games; standard deviation 0.90):
+
+| Model | RMSE | R² |
+|---|---|---|
+| **Chances model** | **0.846** | **0.107** |
+| Linear (team offense, opponent defense, home) | 0.854 | 0.090 |
+| Matchup average | 0.858 | 0.083 |
+| League average | 0.901 | −0.013 |
+
+Pre-registered results:
+
+| Criterion or question | Result |
+|---|---|
+| Beats the matchup average (95% game-level interval above 0) | **PASS**: MSE gain +0.019 [+0.010, +0.029] |
+| Beats the linear baseline | **PASS**: +0.014 [+0.006, +0.022] |
+| H1, lineup quality helps | **Confirmed**: +0.011 [+0.006, +0.016] |
+| H2, travel and rest help | **Not confirmed** for expected goals: +0.002 [−0.001, +0.005] |
+
+Secondary, not pass/fail:
+- **Travel and rest** did help predict **shot attempts**: +0.24 [+0.03, +0.45]. Tired or travelling teams seem to give up or take *more* shots, not better ones.
+- **Lineup** also helped inner-slot chances (+0.12 [+0.01, +0.24]).
+
+The honest bottom line: a single game is mostly noise. Even the best model explains about 11% of the game-to-game variation in a team's expected goals, and 2% for goals. The model is better than simple averages, and it shows that **who dresses matters for how many chances a team creates**, even though it doesn't matter for whether a given shot goes in.
+
+Scripts: `chances_build.py`, `chances_eval.py`; results in `results/chances_dev.txt`, `results/chances_sealed.txt`.
+
+## 9. The weekly prospective scoreboard
+
+The cleanest test of all is games that hadn't been played when the models were frozen.
+
+- **Frozen** (`frozen/`, fingerprinted in `frozen/manifest.json`):
+  - SGP and standard xG (trained 2021-22 to 2025-26);
+  - Rinkside's current xG recipe, refitted on the same seasons;
+  - the four chances models;
+  - the base xG model and table that the player histories are built on. The refit reproduces the stored values exactly (largest difference 0.0).
+- **Cutoff:** games on or after **2026-11-11** count. Nothing is tuned after that. A new freeze would need a new cutoff.
+- **Every Monday** (`.github/workflows/goal-model-scoreboard.yml`), GitHub Actions:
+  1. downloads the week's games (cached, so only new games are fetched);
+  2. rebuilds the features;
+  3. downloads MoneyPuck's current-season shot file;
+  4. scores the frozen models on games after the cutoff (`scripts/scoreboard.py`);
+  5. commits `scoreboard/README.md`, `scoreboard/latest.json` and a running `scoreboard/history.csv`.
+- **What it reports:**
+  - **Shot models:** log loss, AUC and predicted vs actual goals for SGP, standard xG, Rinkside's xG and MoneyPuck, with game-level bootstrap intervals for SGP vs each.
+  - **Goalie totals:** once goalies have enough shots.
+  - **Chances:** RMSE against the matchup and league averages.
+
+The first few weeks will be noisy; a season's worth of games will settle the 2026-27 question in section 6.
+
+## 10. Files and how to reproduce
 
 Copy `scripts/` and `prereg.json` / `prereg.sha256` into one working folder and run everything from there: the scripts read each other (`common.py`, `rk.py`) and write `raw/`, `shifts/` and several parquet files next to themselves. Python needs `pandas`, `pyarrow`, `lightgbm` and `scikit-learn`; the downloaders need Node 18+.
 
@@ -232,6 +335,10 @@ Copy `scripts/` and `prereg.json` / `prereg.sha256` into one working folder and 
 | 9 | `prereg.json`, `prereg.sha256` | The locked pre-registration |
 | 10 | `scripts/final.py` | The one-time sealed test (`results/sealed.json`, `results/sealed.txt`) |
 | 11 | `scripts/prod.py [playerId]` | Production refit on 2021-26, multipliers and explanations for the current season |
+| 12 | `scripts/goalie_data.mjs` → `goalie2.py` → `eval5.py` | More goalie data and its test (section 7) |
+| 13 | `scripts/chances_build.py` → `chances_eval.py [--unseal]` | Chances-tonight table, development tests, one-time sealed test (section 8) |
+| 14 | `scripts/freeze.py` | Writes `frozen/` and its manifest (run once; a new freeze needs a new cutoff) |
+| 15 | `scripts/run.sh` → `scoreboard.py` | The weekly pipeline the GitHub workflow runs (section 9) |
 
 `scripts/common.py` holds the feature lists and model settings. `scripts/rk.py` is Rinkside's current xG recipe, refitted for comparison.
 
@@ -239,7 +346,7 @@ Copy `scripts/` and `prereg.json` / `prereg.sha256` into one working folder and 
 
 Downloaded data and model files are not committed. They are about 300 MB and can be rebuilt with steps 1–3, which take roughly 20 minutes at the NHL API's rate limits. MoneyPuck shot files for the comparison: `https://peter-tanner.com/moneypuck/downloads/shots_<year>.zip`.
 
-## 8. Sources
+## 11. Sources
 
 Research consulted for feature ideas, and the checks above:
 - Noel, *Expected by Whom? A Skill-Adjusted Expected Goals Model for NHL Shooters and Goaltenders* (2025), [arXiv:2511.07703](https://arxiv.org/abs/2511.07703). The closest published model. It reports 1–5% log-loss gains from skill on 5v5 shots on goal, without shrinkage, calibration checks or a MoneyPuck comparison.

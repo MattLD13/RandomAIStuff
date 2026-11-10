@@ -1,0 +1,76 @@
+sgp 1132
+sgp+goalie 1118
+-g_career 913
+-g_edge 1106
+-g_side 1288
+-g_type 912
+-g_rebound 741
+-g_workload 1235
+-g_height 915
+-placebo 911
+
+== 2024-25  (110590 shots, goalies 70)
+  sgp            logloss 0.21046  on-goal 0.28538  goalie RMSE 10.75  pred 7386/7350
+  sgp+goalie     logloss 0.21065  on-goal 0.28576  goalie RMSE 11.59  pred 7364/7350
+  -g_career      logloss 0.21064  on-goal 0.28579  goalie RMSE 10.72  pred 7356/7350
+  -g_edge        logloss 0.21060  on-goal 0.28568  goalie RMSE 11.04  pred 7364/7350
+  -g_side        logloss 0.21059  on-goal 0.28564  goalie RMSE 12.02  pred 7376/7350
+  -g_type        logloss 0.21062  on-goal 0.28572  goalie RMSE 10.92  pred 7372/7350
+  -g_rebound     logloss 0.21069  on-goal 0.28595  goalie RMSE 10.73  pred 7342/7350
+  -g_workload    logloss 0.21063  on-goal 0.28570  goalie RMSE 12.07  pred 7378/7350
+  -g_height      logloss 0.21077  on-goal 0.28598  goalie RMSE 11.32  pred 7361/7350
+  -placebo       logloss 0.21071  on-goal 0.28591  goalie RMSE 11.48  pred 7359/7350
+  moneypuck      logloss 0.21341  on-goal 0.28938  goalie RMSE 12.35  pred 7475/7350
+
+== 2025-26 (opened)  (110317 shots, goalies 71)
+  sgp            logloss 0.21756  on-goal 0.29725  goalie RMSE 11.73  pred 7725/7559
+  sgp+goalie     logloss 0.21794  on-goal 0.29768  goalie RMSE 13.79  pred 7760/7559
+  -g_career      logloss 0.21781  on-goal 0.29766  goalie RMSE 11.86  pred 7721/7559
+  -g_edge        logloss 0.21769  on-goal 0.29718  goalie RMSE 13.08  pred 7779/7559
+  -g_side        logloss 0.21785  on-goal 0.29757  goalie RMSE 14.16  pred 7759/7559
+  -g_type        logloss 0.21783  on-goal 0.29767  goalie RMSE 13.01  pred 7722/7559
+  -g_rebound     logloss 0.21781  on-goal 0.29768  goalie RMSE 12.37  pred 7714/7559
+  -g_workload    logloss 0.21779  on-goal 0.29755  goalie RMSE 14.07  pred 7742/7559
+  -g_height      logloss 0.21777  on-goal 0.29755  goalie RMSE 12.88  pred 7729/7559
+  -placebo       logloss 0.21785  on-goal 0.29767  goalie RMSE 13.26  pred 7728/7559
+  moneypuck      logloss 0.21784  on-goal 0.29942  goalie RMSE 11.46  pred 7529/7559
+
+== 2026-27  (23369 shots, goalies 66)
+  sgp            logloss 0.22645  on-goal 0.30740  goalie RMSE 4.68  pred 1704/1694
+  sgp+goalie     logloss 0.22685  on-goal 0.30843  goalie RMSE 4.99  pred 1682/1694
+  -g_career      logloss 0.22686  on-goal 0.30820  goalie RMSE 4.89  pred 1691/1694
+  -g_edge        logloss 0.22677  on-goal 0.30845  goalie RMSE 4.82  pred 1676/1694
+  -g_side        logloss 0.22688  on-goal 0.30834  goalie RMSE 5.08  pred 1689/1694
+  -g_type        logloss 0.22690  on-goal 0.30832  goalie RMSE 4.92  pred 1689/1694
+  -g_rebound     logloss 0.22677  on-goal 0.30845  goalie RMSE 4.80  pred 1674/1694
+  -g_workload    logloss 0.22676  on-goal 0.30808  goalie RMSE 5.08  pred 1693/1694
+  -g_height      logloss 0.22681  on-goal 0.30825  goalie RMSE 4.85  pred 1687/1694
+  -placebo       logloss 0.22702  on-goal 0.30856  goalie RMSE 5.07  pred 1687/1694
+  moneypuck      logloss 0.22102  on-goal 0.30003  goalie RMSE 4.97  pred 1707/1694
+
+== pooled  (244276 shots, goalies 164)
+  sgp            logloss 0.21520  on-goal 0.29281  goalie RMSE 10.63  pred 16816/16603
+  sgp+goalie     logloss 0.21549  on-goal 0.29328  goalie RMSE 12.02  pred 16807/16603
+  -g_career      logloss 0.21543  on-goal 0.29326  goalie RMSE 10.71  pred 16768/16603
+  -g_edge        logloss 0.21535  on-goal 0.29302  goalie RMSE 11.42  pred 16818/16603
+  -g_side        logloss 0.21543  on-goal 0.29317  goalie RMSE 12.39  pred 16824/16603
+  -g_type        logloss 0.21544  on-goal 0.29324  goalie RMSE 11.35  pred 16783/16603
+  -g_rebound     logloss 0.21544  on-goal 0.29336  goalie RMSE 10.94  pred 16731/16603
+  -g_workload    logloss 0.21541  on-goal 0.29316  goalie RMSE 12.37  pred 16812/16603
+  -g_height      logloss 0.21546  on-goal 0.29330  goalie RMSE 11.44  pred 16776/16603
+  -placebo       logloss 0.21549  on-goal 0.29336  goalie RMSE 11.72  pred 16775/16603
+  moneypuck      logloss 0.21614  on-goal 0.29490  goalie RMSE 11.25  pred 16711/16603
+
+== value of each new goalie group, pooled 2024-27 (log loss x1e4 lost when removed)
+  g_career      -0.63 [ -1.70,  +0.43]  p=0.2410 holm=1.0000
+  g_edge        -1.45 [ -2.53,  -0.32]  p=0.0100 holm=0.0800
+  g_side        -0.64 [ -1.73,  +0.43]  p=0.2670 holm=1.0000
+  g_type        -0.55 [ -1.54,  +0.43]  p=0.2680 holm=1.0000
+  g_rebound     -0.47 [ -1.48,  +0.55]  p=0.3520 holm=1.0000
+  g_workload    -0.82 [ -1.87,  +0.22]  p=0.1420 holm=0.9940
+  g_height      -0.27 [ -1.24,  +0.68]  p=0.5720 holm=1.0000
+  placebo       +0.01 [ -1.08,  +1.11]  p=0.9980 holm=1.0000
+  sgp+goalie vs sgp:  -2.95 [ -4.33,  -1.63]
+  sgp+goalie vs moneypuck:  +6.47 [ -1.25, +14.61]
+  sgp vs moneypuck:  +9.42 [ +1.59, +17.33]
+exit 0

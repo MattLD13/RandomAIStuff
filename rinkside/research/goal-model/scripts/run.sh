@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Weekly scoreboard pipeline. Run from rinkside/research/goal-model. Data lives in work/ (cached between runs).
 set -euo pipefail
-SEASON=${SEASON:-2026}                 # current season key (2026 = 2026-27)
+export SEASON=${SEASON:-2026}          # current season key (2026 = 2026-27)
 mkdir -p work && cp scripts/* work/ && cp prereg.json work/ && cd work
 export FROZEN=../frozen SCOREBOARD=../scoreboard
 
@@ -15,8 +15,9 @@ python3 build.py
 python3 - <<'PY'
 import pandas as pd
 d = pd.read_parquet('shots.parquet', columns=['season', 'shooter', 'goalie'])
-d[(d.season >= 2021) & (d.shooter > 0)][['season', 'shooter']].drop_duplicates().to_csv('edge_pairs.csv', index=False)
-d[(d.season >= 2021) & (d.goalie > 0)][['season', 'goalie']].drop_duplicates().to_csv('gedge_pairs.csv', index=False)
+S = int(__import__('os').environ['SEASON'])
+d[(d.season >= 2021) & (d.season < S) & (d.shooter > 0)][['season', 'shooter']].drop_duplicates().to_csv('edge_pairs.csv', index=False)
+d[(d.season >= 2021) & (d.season < S) & (d.goalie > 0)][['season', 'goalie']].drop_duplicates().to_csv('gedge_pairs.csv', index=False)
 open('shooters.txt', 'w').write('\n'.join(map(str, sorted(set(d.shooter[d.shooter > 0])))))
 PY
 node edge.mjs

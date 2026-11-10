@@ -1,0 +1,53 @@
+
+== y_xgf  SEALED 2025-26  (n=2624, sd=0.895)
+  league_avg   RMSE 0.9011  R2 -0.0129
+  matchup      RMSE 0.8575  R2 +0.0828
+  linear       RMSE 0.8542  R2 +0.0897
+  model        RMSE 0.8461  R2 +0.1069
+  no_lineup    RMSE 0.8524  R2 +0.0937
+  no_travel    RMSE 0.8471  R2 +0.1047
+  model vs league_avg      MSE gain +0.09600 [+0.07424, +0.11823] p=0.0005
+  model vs matchup         MSE gain +0.01933 [+0.01018, +0.02885] p=0.0005
+  model vs linear          MSE gain +0.01380 [+0.00615, +0.02175] p=0.0005
+  H: lineup helps          MSE gain +0.01059 [+0.00610, +0.01558] p=0.0005
+  H: travel/rest helps     MSE gain +0.00173 [-0.00133, +0.00474] p=0.2700
+
+== y_ff  SEALED 2025-26  (n=2624, sd=8.903)
+  league_avg   RMSE 8.9413  R2 -0.0086
+  matchup      RMSE 8.2699  R2 +0.1372
+  linear       RMSE 8.1862  R2 +0.1546
+  model        RMSE 8.1613  R2 +0.1597
+  no_lineup    RMSE 8.1709  R2 +0.1577
+  no_travel    RMSE 8.1760  R2 +0.1567
+  model vs league_avg      MSE gain +13.33967 [+11.05830, +15.78570] p=0.0005
+  model vs matchup         MSE gain +1.78312 [+0.94314, +2.60604] p=0.0005
+  model vs linear          MSE gain +0.40712 [-0.34509, +1.13392] p=0.2840
+  H: lineup helps          MSE gain +0.15527 [-0.13869, +0.43118] p=0.2950
+  H: travel/rest helps     MSE gain +0.24004 [+0.03447, +0.45482] p=0.0230
+
+== y_hd  SEALED 2025-26  (n=2624, sd=4.756)
+  league_avg   RMSE 4.7553  R2 +0.0003
+  matchup      RMSE 4.5870  R2 +0.0698
+  linear       RMSE 4.6001  R2 +0.0645
+  model        RMSE 4.5512  R2 +0.0843
+  no_lineup    RMSE 4.5643  R2 +0.0790
+  no_travel    RMSE 4.5581  R2 +0.0815
+  model vs league_avg      MSE gain +1.89930 [+1.38042, +2.44864] p=0.0005
+  model vs matchup         MSE gain +0.32688 [+0.06521, +0.59399] p=0.0140
+  model vs linear          MSE gain +0.44704 [+0.21545, +0.68719] p=0.0005
+  H: lineup helps          MSE gain +0.11957 [+0.00512, +0.23660] p=0.0390
+  H: travel/rest helps     MSE gain +0.06280 [-0.01699, +0.13690] p=0.1160
+
+== y_gf  SEALED 2025-26  (n=2624, sd=1.600)
+  league_avg   RMSE 1.6005  R2 -0.0005
+  matchup      RMSE 1.5958  R2 +0.0054
+  linear       RMSE 1.5907  R2 +0.0118
+  model        RMSE 1.5847  R2 +0.0191
+  no_lineup    RMSE 1.5868  R2 +0.0165
+  no_travel    RMSE 1.5848  R2 +0.0190
+  model vs league_avg      MSE gain +0.05024 [+0.01851, +0.08303] p=0.0010
+  model vs matchup         MSE gain +0.03531 [+0.00597, +0.06306] p=0.0160
+  model vs linear          MSE gain +0.01892 [-0.00131, +0.03986] p=0.0720
+  H: lineup helps          MSE gain +0.00678 [-0.00166, +0.01521] p=0.1050
+  H: travel/rest helps     MSE gain +0.00033 [-0.00585, +0.00645] p=0.9440
+exit 0
