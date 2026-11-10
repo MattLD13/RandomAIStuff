@@ -11,6 +11,7 @@ for f, h in man['sha256'].items():
 cut = os.environ.get('TEST_CUTOFF') or man['cutoff']
 DECISION = '2027-04-16'     # TEST_CUTOFF is for local pipeline tests only; the workflow never sets it
 df = pd.read_parquet('shots_feat2.parquet')
+df['type'] = df['type'].astype(str).replace({'unknown': np.nan, 'None': np.nan, 'nan': np.nan})
 for c in CAT: df[c] = df[c].astype('category')
 ne = df[df.en == 0].sort_values(['dnum', 'game', 'so']).copy()
 def recal(p, W=35):
@@ -18,9 +19,34 @@ def recal(p, W=35):
     c = np.log((day.g.rolling(W, min_periods=10).sum().shift(1) + 20) / (day.p.rolling(W, min_periods=10).sum().shift(1) + 20)).fillna(0)
     return 1 / (1 + np.exp(-(np.log(p / (1 - p)) + ne.dnum.map(c).values)))
 for name, spec in man['shot_models'].items():
-    f = f"{FZ}/{spec['file']}"
-    m = lgb.Booster(model_str=gzip.open(f, 'rt').read()) if f.endswith('.gz') else lgb.Booster(model_file=f)
-    p = m.predict(ne[spec['features']]); ne['p_' + name] = recal(p) if spec['calibrated'] else p
+    zs = []
+    for fn in spec.get('files', [spec.get('file')]):     # several files = a seed ensemble: average the log-odds
+        f = f"{FZ}/{fn}"
+        m = lgb.Booster(model_str=gzip.open(f, 'rt').read()) if f.endswith('.gz') else lgb.Booster(model_file=f)
+        q = m.predict(ne[spec['features']]); zs.append(np.log(q / (1 - q)))
+    p = 1 / (1 + np.exp(-np.mean(zs, 0))); ne['p_' + name] = recal(p) if spec['calibrated'] else p
+# retraining rules (frozen recipes, not frozen models): at the start of every month refit on the previous window_days,
+# using only shots from before that date, and predict that month. Months before the cutoff use the same rule, so the
+# rolling calibration has history to work with.
+for name, spec in man.get('refit_policies', {}).items():
+    p = np.full(len(ne), np.nan); dt = pd.to_datetime(ne.date)
+    first = pd.Timestamp(cut) - pd.DateOffset(days=spec.get('warmup_days', 70))
+    months = sorted(set(pd.Timestamp(y, m_, 1) for y, m_ in zip(dt.dt.year, dt.dt.month)))
+    months = [x for x in months if x >= first.replace(day=1)]
+    for i, st in enumerate(months):
+        a_ = st.toordinal(); b_ = months[i + 1].toordinal() if i + 1 < len(months) else 10 ** 9
+        tr = ne[(ne.dnum < a_) & (ne.dnum >= a_ - spec['window_days'])]
+        msk = ((ne.dnum >= a_) & (ne.dnum < b_)).values
+        if not msk.any() or len(tr) < 50000: continue
+        w = 0.5 ** ((a_ - tr.dnum.values) / spec['half_life_days']) if spec.get('half_life_days') else None
+        zs = []
+        for seed in spec.get('seeds', [1]):
+            m = lgb.train(dict(P, deterministic=True, num_threads=4, seed=seed, **spec.get('params', {})), lgb.Dataset(tr[spec['features']], tr.goal, weight=w), spec['rounds'])
+            q = m.predict(ne.loc[msk, spec['features']]); zs.append(np.log(q / (1 - q)))
+        p[msk] = 1 / (1 + np.exp(-np.mean(zs, 0)))
+    ok = ~np.isnan(p); p[~ok] = np.nanmean(p[ok]) if ok.any() else 0.07
+    ne['p_' + name] = recal(p) if spec.get('calibrated', True) else p
+    man['shot_models'][name] = spec      # report it alongside the frozen models
 rk = json.load(open(f"{FZ}/{man['rinkside_file']}"))
 z = rk_X(ne) @ np.array(rk['coef']) + rk['intercept']; ne['p_rinkside'] = recal(1 / (1 + np.exp(-z)))
 d = ne[ne.date >= cut].copy()

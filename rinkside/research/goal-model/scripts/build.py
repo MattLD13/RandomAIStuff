@@ -68,7 +68,7 @@ for season in sorted(os.listdir(RAW)):
                 r = dict(season=int(season), game=g['id'], date=g['date'], so=so, eid=eid, period=per, t=t,
                          team=team, home=int(ishome), shooter=shooter, goalie=goalie, goal=int(typ == 'goal'),
                          ongoal=int(typ != 'missed-shot'), miss_reason=d.get('reason', ''),
-                         type=d.get('shotType', 'unknown'), zone=d.get('zoneCode', ''),
+                         type=d.get('shotType') or None, zone=d.get('zoneCode', ''),
                          x=xn, y=yn, dist=dist, angle=ang, behind=int(fx < 0),
                          own=own, opp=opp, en=en, pulled=int(own_g == 0),
                          sdiff=score[team] - score[other], venue=g.get('venue') or '', home_team=home)

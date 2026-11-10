@@ -1,0 +1,35 @@
+## Shot model: 106 games, 8729 shots, 643 goals
+
+| Model | Log loss | AUC | Predicted goals |
+|---|---|---|---|
+| sgp_monthly | 0.22211 | 0.790 | 626 |
+| sgp | 0.22219 | 0.790 | 629 |
+| moneypuck | 0.22402 | 0.778 | 641 |
+| sgp_no_change | 0.22460 | 0.781 | 629 |
+| standard | 0.22591 | 0.777 | 627 |
+| rinkside | 0.23659 | 0.746 | 625 |
+
+SGP vs each model (log loss x 10,000, + = SGP better, 95% game-level bootstrap):
+
+| vs | Gain | 95% interval | Resamples SGP better |
+|---|---|---|---|
+| sgp_no_change | +24.2 | +14.0 to +34.2 | 100% |
+| standard | +37.2 | +19.9 to +55.0 | 100% |
+| sgp_monthly | -0.8 | -5.5 to +3.7 | 37% |
+| rinkside | +144.1 | +102.9 to +184.8 | 100% |
+| moneypuck | +18.3 | -7.6 to +43.2 | 92% |
+
+Excluding the 49 shots MoneyPuck marks with 0 s defender time on ice (a stoppage artifact that leaks the result): SGP vs MoneyPuck +35.8 (+16.8 to +56.7). Indicative only, since that field is related to the outcome.
+
+By strength (log loss):
+
+| | Shots | sgp | sgp_no_change | standard | sgp_monthly | rinkside | moneypuck |
+|---|---|---|---|---|---|---|---|
+| 5v5 | 6664 | 0.19533 | 0.19779 | 0.19872 | 0.19543 | 0.20884 | 0.19693 |
+| other strengths | 2065 | 0.30884 | 0.31114 | 0.31365 | 0.30822 | 0.32615 | 0.31145 |
+
+MoneyPuck's xG is known to use outcome-related fields on some shots (e.g. power-play goals); compare at 5v5 for the cleanest read.
+Coverage: MoneyPuck 99.0% of shots; our inputs: shift data 100.0%, handedness 100.0%, shot speed 96.3%.
+
+Goalie goals-against error (RMSE, 26 goalies with 150+ shots): sgp 3.23, sgp_no_change 3.31, standard 3.30, sgp_monthly 3.23, rinkside 3.63, moneypuck 3.48
+

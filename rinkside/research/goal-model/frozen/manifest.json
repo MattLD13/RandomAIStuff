@@ -1,16 +1,22 @@
 {
- "version": 2,
- "frozen_at": "2026-11-10 14:45 UTC",
+ "version": "2.1",
+ "frozen_at": "2026-11-10 21:10 UTC",
  "cutoff": "2026-11-11",
  "season": 2026,
  "training_window": [
   2024,
   2025
  ],
- "note": "Scored only on regular-season games on or after the cutoff. Do not edit; a new freeze needs a new cutoff.",
+ "note": "v2.1. Scored only on regular-season games on or after the cutoff. Do not edit; a new freeze needs a new cutoff.",
  "shot_models": {
   "sgp": {
-   "file": "sgp.txt.gz",
+   "files": [
+    "sgp_s1.txt.gz",
+    "sgp_s2.txt.gz",
+    "sgp_s3.txt.gz",
+    "sgp_s4.txt.gz",
+    "sgp_s5.txt.gz"
+   ],
    "features": [
     "dist",
     "angle",
@@ -62,7 +68,13 @@
    "calibrated": true
   },
   "sgp_no_change": {
-   "file": "sgp_no_change.txt.gz",
+   "files": [
+    "sgp_no_change_s1.txt.gz",
+    "sgp_no_change_s2.txt.gz",
+    "sgp_no_change_s3.txt.gz",
+    "sgp_no_change_s4.txt.gz",
+    "sgp_no_change_s5.txt.gz"
+   ],
    "features": [
     "dist",
     "angle",
@@ -112,7 +124,13 @@
    "calibrated": true
   },
   "standard": {
-   "file": "standard.txt.gz",
+   "files": [
+    "standard_s1.txt.gz",
+    "standard_s2.txt.gz",
+    "standard_s3.txt.gz",
+    "standard_s4.txt.gz",
+    "standard_s5.txt.gz"
+   ],
    "features": [
     "dist",
     "angle",
@@ -321,10 +339,86 @@
   "chances_y_hd.txt": "cf8033bc8a81716bab57fd42ebf24a71da3780cdc5103536e9eba430a9712f6a",
   "chances_y_xgf.txt": "553dae41fa51e1fbee157596177fa231da70a68c75abbd4778c3fdb91a83db1b",
   "rinkside_lr.json": "09e9ba6d62ff217897940704777559bb855ca49f71627bd6fdc02218d094dbd0",
-  "sgp.txt.gz": "869da34697d22d5a76c005cd224ea51abb7084350a9bd07e07b05b3a3a1c7353",
-  "sgp_no_change.txt.gz": "e2c4d89ff314dc492149f921a0c60bed96ae02ade5c7522770e66f14c2b313f1",
+  "sgp_no_change_s1.txt.gz": "9f8eaecbe2c7c9ebbd01bdb8f16d9e6c93a570ffd54818516abf1bff4c14df4b",
+  "sgp_no_change_s2.txt.gz": "9ea999689d9524526aa88040a8f54a433d4dadfbc31d48f786c7f2ed817bb6ca",
+  "sgp_no_change_s3.txt.gz": "d85aa97bd19afff9f3a0eb95b2b220b708637ec3d1aba6f5bf5cd93f46de5fbc",
+  "sgp_no_change_s4.txt.gz": "48168fc13d33956f759d2e5d0d8e13d9e00ca3a6d3dcfc1046338698b293eedf",
+  "sgp_no_change_s5.txt.gz": "9b1b18f061e498320d2a3ed5faea32794ed4184ba056f7f2831fab514f91f2c7",
+  "sgp_s1.txt.gz": "4e096c1abaada3fba6b4a155820c53bad4e016e611a9c9a35c532fea5131be5d",
+  "sgp_s2.txt.gz": "0f1ecb4b2f651d1b152b67e398d9720d5c3d3e321ab33dd07d8fcdda757c64ce",
+  "sgp_s3.txt.gz": "64d746cff840460cde0eb288da57a6352ca2cd0185823042f1b8145308baee87",
+  "sgp_s4.txt.gz": "e5e60d614dc7eea4d7c175c327b4698816ad08afa59e1801ac2d05926f2341fb",
+  "sgp_s5.txt.gz": "992c9d1686f5262dbad97447a40bda82f039a7ffc4427534dd24ba18b80f272c",
   "stage1.txt": "1c6d2d1911cce6c0f494227a38dc101ac8e6338408b8179d912973eb700ab449",
-  "standard.txt.gz": "0bf5942014cbd4a36896316b5edb1cdbbb0bdc4b146aa559b3459eb5108fc0bb",
+  "standard_s1.txt.gz": "674e494f5f89170e1dee5dbce80cf5916dea3ee0f190bde52c93a13d758a3f95",
+  "standard_s2.txt.gz": "26d60ada4f5292d64ece09d2987160aad33c74c16c9d000087d1b7a73c785993",
+  "standard_s3.txt.gz": "f1f25b9f4c6028fe981324799d8b349a66e83972a8ddb6be1adafe4c26e61893",
+  "standard_s4.txt.gz": "bea152134b362609c13df3d1bc86eaab8ee6f3d48c5d0526eb32575b329717ce",
+  "standard_s5.txt.gz": "6621649a6b053a4ad2623acf0e1c81ccdab36040d9a227fd9052c1cbd0fafff9",
   "xg_base.parquet": "14c52ddf731d534ff6d1ba862b8dcaea189574986ba7823a58a0bd53ee65b1fd"
+ },
+ "refit_policies": {
+  "sgp_monthly": {
+   "features": [
+    "dist",
+    "angle",
+    "x",
+    "y",
+    "behind",
+    "type",
+    "prev_type",
+    "prev_same",
+    "prev_dt",
+    "prev_dist",
+    "prev_speed",
+    "prev_x",
+    "prev_y",
+    "rebound",
+    "reb_angle",
+    "reb_speed",
+    "rush",
+    "cross",
+    "since_fo",
+    "fo_ozone",
+    "flurry",
+    "own",
+    "opp",
+    "skdiff",
+    "pulled",
+    "sdiff",
+    "period",
+    "t",
+    "home",
+    "hand",
+    "offwing",
+    "spos",
+    "ghand",
+    "g_faced",
+    "lg_env",
+    "sh_shift",
+    "tm_shift_mean",
+    "op_shift_mean",
+    "op_shift_max",
+    "n_d_on",
+    "n_f_on",
+    "tm_shift_min",
+    "op_shift_min",
+    "sh_edge_avg",
+    "sh_edge_top",
+    "sh_edge_hard"
+   ],
+   "rounds": 1000,
+   "window_days": 730,
+   "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "calibrated": true,
+   "warmup_days": 70,
+   "note": "challenger: refit on the 1st of each month on the previous 730 days, only earlier games"
+  }
  }
 }
