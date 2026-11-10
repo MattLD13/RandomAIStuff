@@ -82,7 +82,8 @@
     const list = $('exam-list');
     list.textContent = '';
     for (const ex of DATA.exams.filter((exam) => !exam.legacy)) {
-      const tries = store.history.filter((h) => h.examId === ex.id && h.mode === 'exam');
+      const ids = [ex.id, ...(ex.lineage || [])];
+      const tries = store.history.filter((h) => ids.includes(h.examId) && h.mode === 'exam');
       const best = tries.length ? Math.max(...tries.map((h) => h.score)) : null;
       const counts = {};
       ex.questions.forEach((q) => (counts[q.section] = (counts[q.section] || 0) + 1));

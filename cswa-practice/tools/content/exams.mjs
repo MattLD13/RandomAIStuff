@@ -371,7 +371,7 @@ const drill = {
     text('d9', '<p>In an assembly, which standard mate keeps two cylindrical faces on the same axis?</p>', ['Coincident', 'Concentric', 'Tangent', 'Parallel'], 1, '<b>Concentric</b> places two cylindrical (or conical) faces on a common axis.'),
     text('d10', '<p>Which mate centres a part between two faces of another part, so it stays in the middle when sizes change?</p>', ['Width mate', 'Distance mate', 'Lock mate', 'Path mate'], 0, 'The <b>Width</b> mate (an advanced mate) centres a tab between two faces of a groove.'),
     text('d11', '<p>The exam asks for a centre of mass relative to a point that is not the origin. What is the most reliable method?</p>',
-      ['Move the part origin with the Move/Copy Body tool', 'Create a coordinate system at the point and select it in Mass Properties', 'Subtract the coordinates by hand from the Measure tool', 'Change the document units'], 1,
+      ['Move the bodies with Move/Copy Body so that point lands on the origin', 'Create a coordinate system at the point and select it in Mass Properties', 'Redefine the Front, Top and Right planes so they pass through the point', 'Switch the document units so Mass Properties reports from the corner'], 1,
       'Insert a <b>Coordinate System</b> at the point, then choose it under "Report coordinate values relative to" in Mass Properties.'),
     text('d12', '<p>Which feature bevels an edge using a distance and an angle (for example 2 × 45°)?</p>', ['Fillet', 'Chamfer', 'Draft', 'Dome'], 1, '<b>Chamfer</b> cuts an angled face along an edge; fillet rounds it.'),
     text('d13', '<p>Six holes are equally spaced around the axis of a flange. Which pattern is the best fit?</p>', ['Linear Pattern', 'Circular Pattern', 'Curve Driven Pattern', 'Mirror'], 1, '<b>Circular Pattern</b> repeats a feature around an axis with equal spacing.'),
@@ -453,4 +453,13 @@ orderedConcepts.forEach((exam, index) => {
   exam.difficultyRank = index + 1;
   exam.difficultyLabel = 'Suggested concept-study order; topic familiarity varies.';
 });
+// Exams whose answer options change get a new revision id. The previous versions stay in
+// legacy-exams.json, so saved attempts (which store option positions) still review correctly;
+// `lineage` lets the home screen carry best scores across revisions.
+const REVISION = 'r3';
+for (const exam of [...orderedMocks, ...orderedConcepts]) {
+  const base = exam.id.replace(/-r\d+$/, '');
+  exam.lineage = base === exam.id ? [base] : [base, exam.id];
+  exam.id = `${base}-${REVISION}`;
+}
 export const EXAMS = [...orderedMocks, ...orderedConcepts];

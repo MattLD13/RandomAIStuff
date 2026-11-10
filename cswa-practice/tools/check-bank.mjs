@@ -13,7 +13,9 @@ const exams = allExams.filter(e => !e.legacy);
 const errors = [];
 const imageModels = new Map();
 if (exams.length !== 15 || EXAMS.length !== 15) errors.push('Expected 10 mocks and 5 concept exams');
-if (allExams.filter(e => e.legacy).length !== 7) errors.push('Expected seven saved-attempt versions');
+if (allExams.filter(e => e.legacy).length !== 22) errors.push('Expected 22 saved-attempt versions');
+if (new Set(allExams.map(e => e.id)).size !== allExams.length) errors.push('Exam ids must be unique across live and saved versions');
+for (const e of exams) for (const old of e.lineage || []) if (!allExams.some(x => x.legacy && x.id === old)) errors.push(`${e.id}: lineage ${old} has no saved version`);
 if (exams.slice(0, 10).flatMap(e => e.questions).filter(q => q.section === 'asm' && q.parts).length !== 40) {
   errors.push('Expected an assembly download in all 40 assembly questions');
 }

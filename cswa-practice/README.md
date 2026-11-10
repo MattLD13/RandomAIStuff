@@ -53,6 +53,8 @@ npm install
 npx playwright install chromium
 node build.mjs              # renders site/img/*.png and writes site/data/exams.js
 node build.mjs --no-images  # answers only, keeps the existing images
+node check-bank.mjs          # structure, images and downloads of every exam
+node audit-bank.mjs          # fails if a right answer can be spotted by pattern instead of modelling
 node check-bank.mjs         # validate exam structure and referenced files
 python3 -m venv .venv && .venv/bin/pip install cadquery
 .venv/bin/python parts.py            # exact STEP parts -> site/parts/*.zip (checks volumes)

@@ -140,16 +140,61 @@ const PARTS = {
 const f2 = (x) => (Math.abs(x) < 0.005 ? 0 : x).toFixed(2);
 const fmtCom = (c) => `X = ${f2(c[0])} mm, Y = ${f2(c[1])} mm, Z = ${f2(c[2])} mm`;
 
-function buildChoices(q, correct, makeAlt, distinct, fmt) {
-  const opts = [correct];
-  for (const d of q.distract) {
-    let alt = makeAlt(d);
-    let tries = 0;
-    while (opts.some((o) => !distinct(o, alt)) && tries++ < 5) alt = makeAlt({ ...d, nudge: tries });
-    opts.push(alt);
+// Wrong options start from realistic mistakes (other angles, flipped mates, a forgotten
+// coordinate system...) and are then adjusted so the right one cannot be picked by pattern:
+// in every coordinate the four values are either all identical or all different, the right
+// value is at least `gap` from every wrong one, and its sorted position is random.
+function rng(seed) {
+  let s = seed >>> 0 || 1;
+  return () => ((s = (Math.imul(s, 1103515245) + 12345) >>> 0) / 4294967296);
+}
+function deleak(id, opts, gapFor) {
+  const r = rng(hash(id + '|deleak'));
+  const out = opts.map((o) => o.slice());
+  for (let k = 0; k < out[0].length; k++) {
+    const c = out[0][k];
+    const gap = gapFor(c);
+    let d = out.slice(1).map((o) => o[k] - c);
+    if (d.every((x) => Math.abs(x) < 0.005)) continue; // same for all four options: no information
+    // keep realistic offsets, but never closer than gap
+    d = d.map((x) => {
+      const mag = Math.abs(x) >= gap ? Math.abs(x) : gap * (1.2 + 1.6 * r());
+      return (x > 0 || (x === 0 && r() < 0.5) ? 1 : -1) * mag;
+    });
+    // random sorted position for the right answer: `below` wrong options under it
+    const below = Math.floor(r() * 4);
+    const order = d.map((x, i) => i).sort((a, b) => Math.abs(d[a]) - Math.abs(d[b]));
+    let neg = d.filter((x) => x < 0).length;
+    for (const i of order) {
+      if (neg > below && d[i] < 0) { d[i] = -d[i]; neg--; }
+      else if (neg < below && d[i] > 0) { d[i] = -d[i]; neg++; }
+    }
+    // wrong options must also differ from each other
+    const idx = d.map((x, i) => i).sort((a, b) => d[a] - d[b]);
+    for (let j = 1; j < idx.length; j++) {
+      const a = idx[j - 1], b = idx[j];
+      if (Math.sign(d[a]) === Math.sign(d[b]) && d[b] - d[a] < gap * 0.6) {
+        if (d[b] > 0) d[b] = d[a] + gap * (0.7 + 0.6 * r());
+        else d[a] = d[b] - gap * (0.7 + 0.6 * r());
+      }
+    }
+    d.forEach((x, i) => (out[i + 1][k] = c + x));
   }
+  return out;
+}
+
+function buildChoices(q, correct, makeAlt, distinct, fmt, gapFor) {
+  const scalar = !Array.isArray(correct);
+  let opts = [scalar ? [correct] : correct];
+  for (const dd of q.distract) {
+    let alt = makeAlt(dd);
+    let tries = 0;
+    while (opts.some((o) => !distinct(scalar ? o[0] : o, alt)) && tries++ < 5) alt = makeAlt({ ...dd, nudge: tries });
+    opts.push(scalar ? [alt] : alt);
+  }
+  opts = deleak(q.id, opts, gapFor);
   const order = shuffle([0, 1, 2, 3], hash(q.id));
-  return { options: order.map((i) => fmt(opts[i])), answer: order.indexOf(0) };
+  return { options: order.map((i) => fmt(scalar ? opts[i][0] : opts[i])), answer: order.indexOf(0) };
 }
 
 // ---- main ----------------------------------------------------------------------------------
@@ -173,7 +218,7 @@ async function main() {
       let images = [];
       if (q.svg) images = [{ src: `img/draft-${q.svg}.svg`, title: 'Drawing' }];
       if (q.model) images = await renderPart(q.model.fn, q.model.params, q.id);
-      else if (q.assembly) images = await renderAssembly(q.assembly.fn, q.assembly.params, q.id, exam.id);
+      else if (q.assembly) images = await renderAssembly(q.assembly.fn, q.assembly.params, q.id, exam.id.replace(/-r\d+$/, ""));
       o.images = images;
       if (q.assembly && PARTS[q.assembly.fn]) o.parts = PARTS[q.assembly.fn];
 
@@ -194,7 +239,7 @@ async function main() {
             if (d.params) return partResult(q.model.fn, d.params, q.material).mass * (1 + (d.nudge || 0) * 0.013);
             return res.mass;
           };
-          Object.assign(o, buildChoices(q, res.mass, alt, (a, b) => Math.abs(a - b) / a > 0.02, (m) => `${m.toFixed(2)} g`));
+          Object.assign(o, buildChoices(q, res.mass, alt, (a, b) => Math.abs(a - b) / a > 0.02, (m) => `${m.toFixed(2)} g`, (m) => 0.025 * m));
           o.explain += `<p class="calc">${calc}</p>`;
         } else if (q.kind === 'mc-com') {
           o.type = 'mc';
@@ -207,7 +252,7 @@ async function main() {
             if (d.nudge) c = c.map((x, i) => x + (i === 1 ? 2.7 : -1.9) * d.nudge);
             return c;
           };
-          Object.assign(o, buildChoices(q, res.com, alt, (a, b) => Math.max(...a.map((x, i) => Math.abs(x - b[i]))) > 1, fmtCom));
+          Object.assign(o, buildChoices(q, res.com, alt, (a, b) => Math.max(...a.map((x, i) => Math.abs(x - b[i]))) > 1, fmtCom, () => 2));
           o.explain += `<p class="calc">Centre of mass: ${fmtCom(res.com)} (part mass ${r2(res.mass).toFixed(2)} g).</p>`;
         }
       } else if (q.assembly) {
@@ -232,7 +277,7 @@ async function main() {
             if (d.nudge) c = c.map((x, i) => x + (i === 0 ? 2.3 : -1.7) * d.nudge);
             return c;
           };
-          Object.assign(o, buildChoices(q, res.rel, alt, (a, b) => Math.max(...a.map((x, i) => Math.abs(x - b[i]))) > 1, fmtCom));
+          Object.assign(o, buildChoices(q, res.rel, alt, (a, b) => Math.max(...a.map((x, i) => Math.abs(x - b[i]))) > 1, fmtCom, () => 2));
           o.explain += `<p class="calc">Centre of mass${res.cs ? ' relative to Coordinate System1' : ''}: ${fmtCom(res.rel)}${res.cs ? `<br>(relative to the assembly origin: ${fmtCom(res.comOrigin)})` : ''}</p>` + table;
         }
       }
@@ -241,7 +286,7 @@ async function main() {
     }
     const total = qs.reduce((s, q) => s + q.points, 0);
     out.exams.push({
-      id: exam.id, title: exam.title, blurb: exam.blurb,
+      id: exam.id, lineage: exam.lineage, title: exam.title, blurb: exam.blurb,
       difficultyRank: exam.difficultyRank, difficultyLabel: exam.difficultyLabel,
       timeMinutes: exam.timeMinutes || 180,
       total,
