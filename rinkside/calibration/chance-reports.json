@@ -1,0 +1,48 @@
+{
+  "about": "Published scoring-chance reports (Clear Sight Analytics) used to fit the danger zones in site/chance-zones.json. Counts exclude empty-net shots. goals per zone are non-empty-net goals; null = not reported / not recorded. Add a game by appending an entry, then run: node scripts/fit-chance-zones.mjs --write",
+  "reports": [
+    {
+      "game": 2026020267,
+      "date": "2026-11-07",
+      "matchup": "NYR @ SEA",
+      "team": "NYR",
+      "chances": 24,
+      "hi": 8,
+      "mid": null,
+      "low": null,
+      "dumps": 2
+    },
+    {
+      "game": 2026020283,
+      "date": "2026-11-09",
+      "matchup": "NYR @ EDM",
+      "team": "NYR",
+      "chances": 27,
+      "hi": 7,
+      "mid": 5,
+      "low": 15,
+      "dumps": 3,
+      "noShots": 1,
+      "xg": 3.03,
+      "hiGoals": 1,
+      "midGoals": 0,
+      "lowGoals": 0
+    },
+    {
+      "game": 2026020283,
+      "date": "2026-11-09",
+      "matchup": "NYR @ EDM",
+      "team": "EDM",
+      "chances": 18,
+      "hi": 2,
+      "mid": 4,
+      "low": 12,
+      "dumps": 1,
+      "noShots": 2,
+      "xg": 1.23,
+      "hiGoals": 1,
+      "midGoals": 0,
+      "lowGoals": 1
+    }
+  ]
+}

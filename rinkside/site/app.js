@@ -1570,7 +1570,7 @@
       case 'live': return livePop(d);
       case 'xginfo':
         return `<div class="pk">How this works</div><div class="pt"><span>Scoring chances &amp; xG</span></div>` +
-          note('Chances: shots on goal from the offensive zone. High danger within 20 ft, mid within 30 ft. xG: the odds each shot scores.');
+          note(((Z) => `Chances: shots on goal from the offensive zone. High danger within ${Z.hiDist} ft of the net and ${Z.hiAng}° of straight on, mid within ${Z.midDist} ft. xG: the odds each shot scores.`)((typeof core !== 'undefined' && core?.ZONES) || { hiDist: 23, hiAng: 60, midDist: 27 }));
       case 'line': {
         const k = +arg, v = d.playoffLine.history[k], prev = d.playoffLine.history[k - 1], g = playedGame(d, k);
         return `<div class="pk">Playoff line · after game ${k}</div><div class="pt"><span class="big m">${sign(v)}</span><span>${v >= 0 ? 'points clear of the line' : 'points behind the line'}</span></div>` +

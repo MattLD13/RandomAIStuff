@@ -4,7 +4,7 @@
 // (individual expected goals per shooter, goals saved above expected per goalie).
 // Percentiles compare forwards with forwards and defensemen with defensemen (minimum games
 // played), so a 90% EV Offense means better than 90% of qualified NHL players at that position.
-import { xg as xgOf, danger } from './chances.mjs';
+import { xg as xgOf, danger, isDump } from './chances.mjs';
 
 const STATS = 'https://api.nhle.com/stats/rest/en';
 const REPORTS = ['summary', 'timeonice', 'percentages', 'penalties', 'realtime', 'powerplay', 'penaltykill', 'scoringRates', 'goalsForAgainst', 'faceoffpercentages', 'summaryshooting'];
@@ -30,7 +30,7 @@ export function shotTotals(games, w) {
   const shooters = {}, goalies = {};
   for (const g of games.values()) for (const s of g.shots) {
     if (s.en) continue;
-    const v = xgOf(w, s), hd = danger(s) === 'hi' && s.zone === 'O' && s.fx <= 58;
+    const v = xgOf(w, s), hd = danger(s) === 'hi' && !isDump(s);
     if (s.shooter) { const t = (shooters[s.shooter] ??= { shots: 0, goals: 0, ixg: 0, hd: 0 }); t.shots++; t.goals += s.goal; t.ixg += v; t.hd += hd ? 1 : 0; }
     if (s.goalie) { const t = (goalies[s.goalie] ??= { sa: 0, ga: 0, xga: 0, hdSa: 0, hdGa: 0 }); t.sa++; t.ga += s.goal; t.xga += v; if (hd) { t.hdSa++; t.hdGa += s.goal; } }
   }

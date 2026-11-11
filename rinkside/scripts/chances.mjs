@@ -5,7 +5,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { reduce, features, xg, side, officialStats } from '../site/chances-core.mjs';
 
-export { xg, danger, report } from '../site/chances-core.mjs';
+export { xg, danger, isDump, report } from '../site/chances-core.mjs';
 
 // Fetch (or read from cache) every listed game.
 export async function loadGames(gameIds, get, cacheDir, { concurrency = 8 } = {}) {

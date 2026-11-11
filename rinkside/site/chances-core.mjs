@@ -2,13 +2,13 @@
 // browser (live games). Pure functions only: no Node or DOM APIs.
 //
 // A scoring chance is a shot on goal (or goal) from the offensive zone with the goalie in net.
-// Danger zones (feet from the goal line, feet either side of center):
-//   high: up to 20 ft out (or just behind the line), within 19 ft of center
-//   mid:  up to 30 ft out, within 30 ft of center
-//   low:  anywhere else in the offensive zone
-// Shots on goal from outside the zone, or more than 58 ft from the goal line, count as "dumps".
-// These boundaries were calibrated against a published scoring-chances report for NYR @ SEA on
-// 2026-11-07 (24 chances, 8 high-danger and 2 dumps for NYR, matched exactly).
+// Danger zones are cones around the net: distance from the net (ft) and angle from straight on (degrees).
+//   high: within ZONES.crease ft at any angle, or within ZONES.hiDist ft and ZONES.hiAng degrees;  mid: within ZONES.midDist ft and ZONES.midAng degrees;
+//   low: anywhere else in the offensive zone.
+// Shots on goal from outside the zone, or more than ZONES.dump ft from the goal line, count as "dumps".
+// ZONES is fitted to published scoring-chance reports (calibration/chance-reports.json) by
+// scripts/fit-chance-zones.mjs, which rewrites the line below; add reports as they come out and refit.
+export const ZONES = {"crease":0,"dump":58,"hiDist":23,"hiAng":60,"midDist":27,"midAng":75};   // fitted on 3 team-games (2 games), count error 7
 
 const SHOT_TYPES = ['wrist', 'snap', 'slap', 'backhand', 'tip-in', 'deflected', 'wrap-around'];
 const secs = (t) => { const [m, s] = String(t || '0:0').split(':').map(Number); return m * 60 + s; };
@@ -113,10 +113,12 @@ export function features(s) {
 export const xg = (w, s) => 1 / (1 + Math.exp(-features(s).reduce((a, v, j) => a + v * w[j], 0)));
 
 export function danger(s) {
-  if (s.fx >= -3 && s.fx <= 20 && s.ay <= 19) return 'hi';
-  if (s.fx <= 30 && s.ay <= 30) return 'mid';
+  const d = Math.hypot(s.fx, s.ay), ang = (Math.atan2(s.ay, Math.max(s.fx, 0.5)) * 180) / Math.PI;
+  if (d <= (ZONES.crease || 0) || (d <= ZONES.hiDist && ang <= ZONES.hiAng)) return 'hi';
+  if (d <= ZONES.midDist && ang <= ZONES.midAng) return 'mid';
   return 'low';
 }
+export const isDump = (s) => s.zone !== 'O' || s.fx > ZONES.dump;
 
 // One team's side of a game's report.
 export function side(g, team, w) {
@@ -126,7 +128,7 @@ export function side(g, team, w) {
     if (s.team !== team) continue;
     goals += s.goal; sog++;
     if (s.en) { en += s.goal; continue; }
-    if (s.zone !== 'O' || s.fx > 58) { dumps++; dumpGoals += s.goal; continue; }   // long shots from the blue line or beyond
+    if (isDump(s)) { dumps++; dumpGoals += s.goal; continue; }   // long shots from the blue line or beyond
     const k = danger(s), v = xg(w, s);
     b[k].n++; b[k].xg += v; b[k].g += s.goal;
   }
