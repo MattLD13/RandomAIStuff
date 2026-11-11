@@ -187,18 +187,20 @@ also between GitHub Action runs, so each build only downloads new games):
   team's last attempt), rush (within 4 s of play at the other end) and power play /
   shorthanded. Across the league, xG adds up to actual goals.
 - **Scoring chances:** shots on goal from the offensive zone with the goalie in net.
-  - **High danger:** within 23 ft of the net and within 60° of straight on.
-  - **Mid danger:** within 27 ft and 75°.
+  - **High danger:** within 23 ft of the net and within 55° of straight on. Also the
+    **post crease**: within 10 ft of the net along the goal line, from 5° behind it to 10° in
+    front (wraparounds and jam plays at the post).
+  - **Mid danger:** within 27 ft and 80°.
   - **Low danger:** the rest of the zone.
   - **Dumps:** shots from more than 58 ft out, or from outside the zone.
 
   The zones are fitted to published scoring-chance reports (Clear Sight Analytics), listed in
   `calibration/chance-reports.json`, by `scripts/fit-chance-zones.mjs`. The script grid-searches
-  distance/angle cones (plus an optional crease radius) to match their chance, danger and goal
-  counts, picks the middle of the tied best settings, and checks itself by refitting with each
-  game left out. With 3 team-games so far, the fit is 7 counts off in total against 23 for the
-  earlier box (20 ft out by 19 ft wide). On a held-out game the two rules are about even
-  (24 vs 23), so the zones are a stopgap until more reports are in.
+  distance/angle cones plus a post crease to match their chance, danger and goal counts. It picks
+  the middle of the tied best settings and checks itself by refitting with each game left out.
+  With 3 team-games so far, the fit is 7 counts off in total, against 23 for the earlier box
+  (20 ft out by 19 ft wide). On a held-out game it is 19 off, against the box's 23 (the post
+  crease is what tipped that). Treat it as close-ish until more reports are in.
 
   **Adding reports is automatic:**
   1. Drop the report graphic (PNG or JPG) into `calibration/inbox/`, by uploading it on GitHub

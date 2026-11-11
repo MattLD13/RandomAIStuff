@@ -3,12 +3,13 @@
 //
 // A scoring chance is a shot on goal (or goal) from the offensive zone with the goalie in net.
 // Danger zones are cones around the net: distance from the net (ft) and angle from straight on (degrees).
-//   high: within ZONES.crease ft at any angle, or within ZONES.hiDist ft and ZONES.hiAng degrees;  mid: within ZONES.midDist ft and ZONES.midAng degrees;
+//   high: within ZONES.hiDist ft and ZONES.hiAng degrees, or in the post/goal-line crease: within ZONES.crease ft at
+//         ZONES.creaseLo..creaseHi degrees from straight on (90 = along the goal line, above 90 = behind it);  mid: within ZONES.midDist ft and ZONES.midAng degrees;
 //   low: anywhere else in the offensive zone.
 // Shots on goal from outside the zone, or more than ZONES.dump ft from the goal line, count as "dumps".
 // ZONES is fitted to published scoring-chance reports (calibration/chance-reports.json) by
 // scripts/fit-chance-zones.mjs, which rewrites the line below; add reports as they come out and refit.
-export const ZONES = {"crease":0,"dump":58,"hiDist":23,"hiAng":60,"midDist":27,"midAng":75};   // fitted on 3 team-games (2 games), count error 7
+export const ZONES = {"crease":10,"creaseLo":80,"creaseHi":95,"dump":58,"hiDist":23,"hiAng":55,"midDist":27,"midAng":80};   // fitted on 3 team-games (2 games), count error 7
 
 const SHOT_TYPES = ['wrist', 'snap', 'slap', 'backhand', 'tip-in', 'deflected', 'wrap-around'];
 const secs = (t) => { const [m, s] = String(t || '0:0').split(':').map(Number); return m * 60 + s; };
@@ -116,7 +117,7 @@ export function danger(s) {
   const d = Math.hypot(s.fx, s.ay);
   // angle from straight on; from behind the goal line it is 90° or more, so those shots are never "straight on"
   const ang = s.fx > 0 ? (Math.atan2(s.ay, s.fx) * 180) / Math.PI : 90 + (Math.atan2(-s.fx, s.ay + 1e-9) * 180) / Math.PI;
-  if (d <= (ZONES.crease || 0) || (d <= ZONES.hiDist && ang <= ZONES.hiAng)) return 'hi';
+  if ((d <= ZONES.hiDist && ang <= ZONES.hiAng) || (d <= (ZONES.crease || 0) && ang >= (ZONES.creaseLo ?? 80) && ang <= (ZONES.creaseHi ?? 95))) return 'hi';
   if (d <= ZONES.midDist && ang <= ZONES.midAng) return 'mid';
   return 'low';
 }

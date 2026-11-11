@@ -1,5 +1,6 @@
 // Fit the scoring-chance danger zones to published chance reports (calibration/chance-reports.json).
-//   high danger: within crease ft of the net at any angle, or within hiDist ft and hiAng degrees of straight on
+//   high danger: within hiDist ft and hiAng degrees of straight on, or a post/goal-line crease: within crease ft of the
+//                net at creaseLo..creaseHi degrees from straight on (90 = along the goal line, above 90 = behind it)
 //   mid danger:  within midDist ft and midAng degrees;   low: the rest of the zone
 //   dump:        a shot on goal from outside the offensive zone or more than dump ft from the goal line
 // Every combination on a grid is scored by the total count error over all reports; among the tied best, the one
@@ -21,7 +22,7 @@ for (const id of [...new Set(R.map((r) => r.game))]) {
   shots[id] = g.shots.filter((s) => !s.en).map((s) => ({ team: ab[s.team], zone: s.zone, fx: s.fx, ay: s.ay, goal: s.goal,
     dist: Math.hypot(s.fx, s.ay), ang: s.fx > 0 ? Math.atan2(s.ay, s.fx) * 180 / Math.PI : 90 + Math.atan2(-s.fx, s.ay + 1e-9) * 180 / Math.PI }));
 }
-const classify = (s, z) => (s.zone !== 'O' || s.fx > z.dump) ? 'dumps' : (s.dist <= z.crease || (s.dist <= z.hiDist && s.ang <= z.hiAng)) ? 'hi' : (s.dist <= z.midDist && s.ang <= z.midAng) ? 'mid' : 'low';
+const classify = (s, z) => (s.zone !== 'O' || s.fx > z.dump) ? 'dumps' : ((s.dist <= z.hiDist && s.ang <= z.hiAng) || (s.dist <= z.crease && s.ang >= z.creaseLo && s.ang <= z.creaseHi)) ? 'hi' : (s.dist <= z.midDist && s.ang <= z.midAng) ? 'mid' : 'low';
 function err(z, reps) {
   let e = 0;
   for (const r of reps) {
@@ -32,14 +33,14 @@ function err(z, reps) {
   return e;
 }
 const grid = [];
-for (const crease of [0, 6, 8, 10, 12]) for (let dump = 50; dump <= 64; dump += 2) for (let hiDist = 12; hiDist <= 30; hiDist += 1) for (let hiAng = 25; hiAng <= 80; hiAng += 5)
-  for (let midDist = hiDist + 2; midDist <= 46; midDist += 2) for (let midAng = hiAng; midAng <= 90; midAng += 5) grid.push({ crease, dump, hiDist, hiAng, midDist, midAng });
+for (const crease of [0, 6, 8, 10, 12]) for (const [creaseLo, creaseHi] of (crease ? [[80, 95], [75, 95], [80, 100], [85, 95], [75, 100]] : [[80, 95]])) for (let dump = 50; dump <= 64; dump += 2) for (let hiDist = 12; hiDist <= 30; hiDist += 1) for (let hiAng = 25; hiAng <= 80; hiAng += 5)
+  for (let midDist = hiDist + 2; midDist <= 46; midDist += 2) for (let midAng = hiAng; midAng <= 90; midAng += 5) grid.push({ crease, creaseLo, creaseHi, dump, hiDist, hiAng, midDist, midAng });
 function fit(reps) {
   let best = Infinity, tied = [];
   for (const z of grid) { const e = err(z, reps); if (e < best) { best = e; tied = [z]; } else if (e === best) tied.push(z); }
   const keys = Object.keys(tied[0]), med = {};
   for (const k of keys) { const v = tied.map((z) => z[k]).sort((a, b) => a - b); med[k] = v[Math.floor(v.length / 2)]; }
-  const span = Object.fromEntries(keys.map((k) => [k, Math.max(1, Math.max(...tied.map((z) => z[k])) - Math.min(...tied.map((z) => z[k])))]));
+  const span = Object.fromEntries(keys.map((k) => { const v = tied.map((z) => z[k]); return [k, Math.max(1, v.reduce((a, b) => Math.max(a, b)) - v.reduce((a, b) => Math.min(a, b)))]; }));
   const pick = tied.reduce((a, z) => { const d = keys.reduce((s, k) => s + ((z[k] - med[k]) / span[k]) ** 2, 0); return d < a[0] ? [d, z] : a; }, [Infinity, null])[1];
   return { z: pick, err: best, tied: tied.length };
 }
