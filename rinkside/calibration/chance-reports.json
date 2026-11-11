@@ -46,5 +46,11 @@
       "lowGoals": 1,
       "sha": "309af88c4700f440"
     }
-  ]
+  ],
+  "fixed": {
+    "crease": 12,
+    "creaseLo": 80,
+    "creaseHi": 180,
+    "why": "crease shape set by hand (sketch: from 10 deg in front of the goal line, around the back of the net, about 12 ft out); the reports have too few shots near or behind the goal line to fit it"
+  }
 }

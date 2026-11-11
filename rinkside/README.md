@@ -188,8 +188,10 @@ also between GitHub Action runs, so each build only downloads new games):
   shorthanded. Across the league, xG adds up to actual goals.
 - **Scoring chances:** shots on goal from the offensive zone with the goalie in net.
   - **High danger:** within 23 ft of the net and within 55° of straight on. Also the
-    **post crease**: within 10 ft of the net along the goal line, from 5° behind it to 10° in
-    front (wraparounds and jam plays at the post).
+    **crease around the net**: within 12 ft of the net, from 10° in front of the goal line all the
+    way around the back (wraparounds, jam plays, plays from behind the net). Its shape is set by
+    hand in `calibration/chance-reports.json` (`fixed`), because the reports have too few shots
+    near or behind the goal line to fit it; the fit tunes everything else around it.
   - **Mid danger:** within 27 ft and 80°.
   - **Low danger:** the rest of the zone.
   - **Dumps:** shots from more than 58 ft out, or from outside the zone.
@@ -199,8 +201,8 @@ also between GitHub Action runs, so each build only downloads new games):
   distance/angle cones plus a post crease to match their chance, danger and goal counts. It picks
   the middle of the tied best settings and checks itself by refitting with each game left out.
   With 3 team-games so far, the fit is 7 counts off in total, against 23 for the earlier box
-  (20 ft out by 19 ft wide). On a held-out game it is 19 off, against the box's 23 (the post
-  crease is what tipped that). Treat it as close-ish until more reports are in.
+  (20 ft out by 19 ft wide). On a held-out game it is 19 off, against the box's 23 (the crease is
+  what tipped that). Treat it as close-ish until more reports are in.
 
   **Adding reports is automatic:**
   1. Drop the report graphic (PNG or JPG) into `calibration/inbox/`, by uploading it on GitHub

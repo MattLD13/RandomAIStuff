@@ -9,7 +9,7 @@
 // Shots on goal from outside the zone, or more than ZONES.dump ft from the goal line, count as "dumps".
 // ZONES is fitted to published scoring-chance reports (calibration/chance-reports.json) by
 // scripts/fit-chance-zones.mjs, which rewrites the line below; add reports as they come out and refit.
-export const ZONES = {"crease":10,"creaseLo":80,"creaseHi":95,"dump":58,"hiDist":23,"hiAng":55,"midDist":27,"midAng":80};   // fitted on 3 team-games (2 games), count error 7
+export const ZONES = {"crease":12,"creaseLo":80,"creaseHi":180,"dump":58,"hiDist":23,"hiAng":55,"midDist":27,"midAng":80};   // fitted on 3 team-games (2 games), count error 7
 
 const SHOT_TYPES = ['wrist', 'snap', 'slap', 'backhand', 'tip-in', 'deflected', 'wrap-around'];
 const secs = (t) => { const [m, s] = String(t || '0:0').split(':').map(Number); return m * 60 + s; };

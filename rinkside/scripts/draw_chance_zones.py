@@ -2,7 +2,7 @@ import json, math, numpy as np, matplotlib
 matplotlib.use('Agg'); import matplotlib.pyplot as plt
 from matplotlib.patches import Arc, Circle, Rectangle, FancyBboxPatch
 from matplotlib.colors import ListedColormap
-Z = dict(dump=58, hiDist=23, hiAng=55, midDist=27, midAng=80, crease=10, creaseLo=80, creaseHi=95)
+Z = dict(dump=58, hiDist=23, hiAng=55, midDist=27, midAng=80, crease=12, creaseLo=80, creaseHi=180)
 INK, SEC, SURF, LINE = '#14202c', '#4c5b69', '#fbfdfe', '#b9c6d1'
 HI, MID, LOW, DUMP = '#4caf6e', '#e9b73c', '#e2736b', '#c7cfd6'
 def cls(x, y):
@@ -38,7 +38,7 @@ for team, mk, col, lab in ((3, 'o', '#1f4fa3', 'Rangers'), (22, 's', '#d0612a', 
 ax.scatter([], [], marker='o', s=70, facecolor='#1f4fa3', edgecolor='#1f4fa3', label='filled = goal')
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
-handles = [Patch(color=HI, alpha=.55, label=f'High danger: within {Z["hiDist"]} ft and {Z["hiAng"]}°, or the post crease ({Z["crease"]} ft, 5° behind to 10° in front of the goal line)'),
+handles = [Patch(color=HI, alpha=.55, label=f'High danger: within {Z["hiDist"]} ft and {Z["hiAng"]}°, or the crease: within {Z["crease"]} ft, from 10° in front of the goal line around the back of the net'),
            Patch(color=MID, alpha=.55, label=f'Mid danger: within {Z["midDist"]} ft and {Z["midAng"]}°'),
            Patch(color=LOW, alpha=.55, label='Low danger: the rest of the zone'),
            Patch(color=DUMP, alpha=.55, label=f'Dump: more than {Z["dump"]} ft from the goal line'),

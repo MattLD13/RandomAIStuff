@@ -10,7 +10,8 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { reduce } from '../site/chances-core.mjs';
 const here = new URL('..', import.meta.url).pathname;
-const R = JSON.parse(readFileSync(here + 'calibration/chance-reports.json', 'utf8')).reports;
+const CAL = JSON.parse(readFileSync(here + 'calibration/chance-reports.json', 'utf8')), R = CAL.reports;
+const FIXED = Object.fromEntries(Object.entries(CAL.fixed || {}).filter(([k]) => k !== 'why'));   // settings held by hand, not fitted
 const cache = here + '.cache/calib'; mkdirSync(cache, { recursive: true });
 const shots = {};
 for (const id of [...new Set(R.map((r) => r.game))]) {
@@ -33,8 +34,12 @@ function err(z, reps) {
   return e;
 }
 const grid = [];
-for (const crease of [0, 6, 8, 10, 12]) for (const [creaseLo, creaseHi] of (crease ? [[80, 95], [75, 95], [80, 100], [85, 95], [75, 100]] : [[80, 95]])) for (let dump = 50; dump <= 64; dump += 2) for (let hiDist = 12; hiDist <= 30; hiDist += 1) for (let hiAng = 25; hiAng <= 80; hiAng += 5)
+for (const crease of ('crease' in FIXED ? [] : [0, 6, 8, 10, 12, 14])) for (const [creaseLo, creaseHi] of (crease ? [[80, 95], [75, 95], [80, 100], [85, 95], [75, 100], [80, 120], [80, 150], [80, 180], [75, 180]] : [[80, 95]])) for (let dump = 50; dump <= 64; dump += 2) for (let hiDist = 12; hiDist <= 30; hiDist += 1) for (let hiAng = 25; hiAng <= 80; hiAng += 5)
   for (let midDist = hiDist + 2; midDist <= 46; midDist += 2) for (let midAng = hiAng; midAng <= 90; midAng += 5) grid.push({ crease, creaseLo, creaseHi, dump, hiDist, hiAng, midDist, midAng });
+const keep = grid.filter((z) => Object.entries(FIXED).every(([k, v]) => z[k] === v)); grid.length = 0; grid.push(...keep);
+if (!grid.length) for (let dump = 50; dump <= 64; dump += 2) for (let hiDist = 12; hiDist <= 30; hiDist += 1) for (let hiAng = 25; hiAng <= 80; hiAng += 5)
+  for (let midDist = hiDist + 2; midDist <= 46; midDist += 2) for (let midAng = hiAng; midAng <= 90; midAng += 5) grid.push({ ...FIXED, dump, hiDist, hiAng, midDist, midAng });
+if (Object.keys(FIXED).length) console.log('held fixed:', JSON.stringify(FIXED));
 function fit(reps) {
   let best = Infinity, tied = [];
   for (const z of grid) { const e = err(z, reps); if (e < best) { best = e; tied = [z]; } else if (e === best) tied.push(z); }
