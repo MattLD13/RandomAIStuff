@@ -18,8 +18,8 @@ for (const id of [...new Set(R.map((r) => r.game))]) {
   if (existsSync(f)) pbp = JSON.parse(readFileSync(f, 'utf8'));
   else { pbp = await (await fetch(`https://api-web.nhle.com/v1/gamecenter/${id}/play-by-play`)).json(); writeFileSync(f, JSON.stringify(pbp)); }
   const g = reduce(pbp), ab = { [pbp.homeTeam.id]: pbp.homeTeam.abbrev, [pbp.awayTeam.id]: pbp.awayTeam.abbrev };
-  shots[id] = g.shots.filter((s) => !s.en).map((s) => ({ team: ab[s.team], zone: s.zone, fx: s.fx, goal: s.goal,
-    dist: Math.hypot(s.fx, s.ay), ang: Math.atan2(s.ay, Math.max(s.fx, 0.5)) * 180 / Math.PI }));
+  shots[id] = g.shots.filter((s) => !s.en).map((s) => ({ team: ab[s.team], zone: s.zone, fx: s.fx, ay: s.ay, goal: s.goal,
+    dist: Math.hypot(s.fx, s.ay), ang: s.fx > 0 ? Math.atan2(s.ay, s.fx) * 180 / Math.PI : 90 + Math.atan2(-s.fx, s.ay + 1e-9) * 180 / Math.PI }));
 }
 const classify = (s, z) => (s.zone !== 'O' || s.fx > z.dump) ? 'dumps' : (s.dist <= z.crease || (s.dist <= z.hiDist && s.ang <= z.hiAng)) ? 'hi' : (s.dist <= z.midDist && s.ang <= z.midAng) ? 'mid' : 'low';
 function err(z, reps) {
@@ -51,7 +51,7 @@ const oldErr = R.reduce((e, r) => e + err0(r), 0);
 function err0(r) {   // the previous rule: a box (20 ft out, 19 ft wide; mid 30 x 30), dumps beyond 58 ft
   const c = { chances: 0, hi: 0, mid: 0, low: 0, dumps: 0, hiGoals: 0, midGoals: 0, lowGoals: 0 };
   for (const s of shots[r.game]) if (s.team === r.team) {
-    const ay = s.dist * Math.sin(s.ang * Math.PI / 180);
+    const ay = s.ay;
     const k = (s.zone !== 'O' || s.fx > 58) ? 'dumps' : (s.fx >= -3 && s.fx <= 20 && ay <= 19) ? 'hi' : (s.fx <= 30 && ay <= 30) ? 'mid' : 'low';
     c[k]++; if (k !== 'dumps') { c.chances++; c[k + 'Goals'] += s.goal; }
   }

@@ -113,7 +113,9 @@ export function features(s) {
 export const xg = (w, s) => 1 / (1 + Math.exp(-features(s).reduce((a, v, j) => a + v * w[j], 0)));
 
 export function danger(s) {
-  const d = Math.hypot(s.fx, s.ay), ang = (Math.atan2(s.ay, Math.max(s.fx, 0.5)) * 180) / Math.PI;
+  const d = Math.hypot(s.fx, s.ay);
+  // angle from straight on; from behind the goal line it is 90° or more, so those shots are never "straight on"
+  const ang = s.fx > 0 ? (Math.atan2(s.ay, s.fx) * 180) / Math.PI : 90 + (Math.atan2(-s.fx, s.ay + 1e-9) * 180) / Math.PI;
   if (d <= (ZONES.crease || 0) || (d <= ZONES.hiDist && ang <= ZONES.hiAng)) return 'hi';
   if (d <= ZONES.midDist && ang <= ZONES.midAng) return 'mid';
   return 'low';

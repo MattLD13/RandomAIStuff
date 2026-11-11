@@ -1,0 +1,48 @@
+name: Scoring-chance zones
+
+# When a Clear Sight Analytics report graphic lands in rinkside/calibration/inbox/, read it (OCR), add its counts to
+# rinkside/calibration/chance-reports.json, refit the danger zones (ZONES in rinkside/site/chances-core.mjs) and commit.
+# The site's next scheduled build picks the new zones up.
+on:
+  push:
+    branches: [main]
+    paths: ["rinkside/calibration/inbox/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: chance-zones
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rinkside
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install OCR
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tesseract-ocr
+          pip install --quiet Pillow
+
+      - name: Read reports and refit
+        run: python3 scripts/ingest_chance_reports.py
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A calibration site/chances-core.mjs
+          git diff --cached --quiet && exit 0
+          git commit -m "Scoring-chance zones: ingest report(s) and refit"
+          git push

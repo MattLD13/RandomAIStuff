@@ -200,9 +200,17 @@ also between GitHub Action runs, so each build only downloads new games):
   earlier box (20 ft out by 19 ft wide). On a held-out game the two rules are about even
   (24 vs 23), so the zones are a stopgap until more reports are in.
 
-  **To add a report:** append its counts to `calibration/chance-reports.json`, then run
-  `node scripts/fit-chance-zones.mjs --write`. That rewrites the `ZONES` line in
-  `site/chances-core.mjs`.
+  **Adding reports is automatic:**
+  1. Drop the report graphic (PNG or JPG) into `calibration/inbox/`, by uploading it on GitHub
+     or sending it to Claude.
+  2. The **Scoring-chance zones** GitHub job then reads the graphic with OCR
+     (`scripts/read_chance_report.py`) and finds the NHL game from the date and teams.
+  3. It checks that each side adds up (chances = high + mid + low), appends both teams' counts
+     and refits (`scripts/ingest_chance_reports.py`), then commits.
+  4. A graphic it can't read cleanly stays in the inbox, with the reason in
+     `calibration/inbox/NEEDS_REVIEW.txt`.
+
+  The zones on the ice, with one game's shots: `docs/chance-zones.png`.
 
   xG values differ from the reports', since every xG model is different.
 

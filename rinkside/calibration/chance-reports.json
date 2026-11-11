@@ -26,7 +26,8 @@
       "xg": 3.03,
       "hiGoals": 1,
       "midGoals": 0,
-      "lowGoals": 0
+      "lowGoals": 0,
+      "sha": "309af88c4700f440"
     },
     {
       "game": 2026020283,
@@ -42,7 +43,8 @@
       "xg": 1.23,
       "hiGoals": 1,
       "midGoals": 0,
-      "lowGoals": 1
+      "lowGoals": 1,
+      "sha": "309af88c4700f440"
     }
   ]
 }
