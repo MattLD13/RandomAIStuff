@@ -6,7 +6,8 @@
   "scripts": {
     "build": "node scripts/build-data.mjs",
     "wallpaper": "node scripts/render-wallpaper.mjs",
-    "serve": "python3 -m http.server 8080 --directory site"
+    "serve": "python3 -m http.server 8080 --directory site",
+    "sports": "node scripts/build-sports.mjs"
   },
   "devDependencies": {
     "playwright": "1.49.1"

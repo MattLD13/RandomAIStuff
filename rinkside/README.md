@@ -375,6 +375,84 @@ picker) shows the whole league:
 
 Every team links to its own board. The build writes this to `site/data/league.json`.
 
+## Other sports
+
+The same board covers the other US major leagues. Each league has its own name:
+
+| Board | League | Example |
+|---|---|---|
+| **Courtside** | NBA | https://hockey.mattdicks.org/nba/knicks |
+| **Sideline** | NFL | https://hockey.mattdicks.org/nfl/giants |
+| **Dugout** | MLB | https://hockey.mattdicks.org/mlb/yankees |
+| **Pitchside** | MLS | https://hockey.mattdicks.org/mls/nycfc |
+
+Team folders use the nickname (`/nba/lakers`, `/nfl/chiefs`, `/mlb/dodgers`). MLS clubs use
+their short name (`/mls/lafc`, `/mls/seattle`). `/nba/` alone opens the last team you chose.
+To switch leagues or teams, open the picker (tap the team band or press `t`). The hockey
+picker links to the other leagues too.
+
+**What each sport gets**
+- **Wording:**
+  - NBA, NFL and MLB records read W-L. NFL ties show as W-L-T.
+  - MLS reads W-D-L with points, and calls games "matches".
+  - Bar heights are the point, run or goal margin.
+- **The season chart:**
+  - The NFL is laid out by week, so the bye shows as a gap.
+  - MLB shows all 162 games.
+  - Draws are tan.
+- **The line chart:** how far the team is from the cut line on each date of the season.
+
+  | League | Line | Measured in |
+  |---|---|---|
+  | NBA | Play-in line (10th) | games |
+  | NFL | Playoff line (7th) | games |
+  | MLB | Postseason line (6th) | games |
+  | MLS | Playoff line (9th) | points |
+
+  The NFL and MLB put division leaders in first. Ties are not broken by the leagues'
+  tiebreakers.
+- **Standings:** the team's own conference or league, with its division first. Columns differ
+  by sport:
+
+  | League | Columns |
+  |---|---|
+  | NBA | GB, L10 |
+  | NFL | T, PF, PA |
+  | MLB | GB, run differential |
+  | MLS | GF, GA, GD, PTS |
+- **Playoff picture:** ESPN's real seeds, with cut lines at each league's format.
+  - NBA: top 6, then play-in to 10th.
+  - NFL: 7 seeds.
+  - MLB: 6 seeds.
+  - MLS: top 7, plus a wild-card game for 8th and 9th.
+- **Stat boxes:** ranked against the league.
+
+  | League | Stats |
+  |---|---|
+  | NBA | FG %, 3-pt %, rebounds, turnovers, and more |
+  | NFL | yards, 3rd down %, red-zone TD %, turnover margin, sacks |
+  | MLB | OPS, home runs, ERA, WHIP, K per 9 |
+  | MLS | clean sheets, home and away points per match |
+
+  ESPN has no team stats for MLS. Those boxes are worked out from the match results.
+- **Team leaders:** named players with headshots.
+  - NBA: points, rebounds and assists per game.
+  - NFL: passing, rushing and receiving yards, each with the player's stat line.
+  - MLB: home runs, batting average and ERA.
+  - MLS: goals, assists and saves.
+- **Next 5 / Last 5:** with TV networks. After the regular season, a **Postseason** panel shows
+  each playoff game, and the header says how it ended (for example "out in the ALDS").
+- **Live:** while the team is playing, the header and the game card show the live score from
+  ESPN's scoreboard. It refreshes every 30 s.
+
+**How it is built**
+- `scripts/build-sports.mjs` reads ESPN's public site API. Each league takes a few seconds.
+- It writes `site/<league>/data/<ABBR>.json` and a folder for each team.
+- The league settings are in `sports/leagues.json`: name, columns, stats, leaders and line seed.
+- The page is `site/sports/board.js` with `board.css` on top of Rinkside's `style.css`.
+- The Rinkside workflow runs it on every build. If ESPN fails, the build continues, and the
+  hockey board still deploys.
+
 ## Live games
 
 When the team's game is on, the page polls the NHL every 15 seconds and shows it live:

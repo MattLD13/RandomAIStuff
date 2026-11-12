@@ -3,6 +3,7 @@ node_modules/
 site/*/
 !site/fonts/
 !site/alt/
+!site/sports/
 site/wallpaper.png
 __pycache__/
 .cache/

@@ -40,6 +40,11 @@ jobs:
       - name: Fetch NHL data
         run: node scripts/build-data.mjs
 
+      # Courtside (NBA), Sideline (NFL), Dugout (MLB), Pitchside (MLS): ESPN data, same board
+      - name: Fetch other leagues
+        continue-on-error: true
+        run: node scripts/build-sports.mjs
+
       - name: Render phone wallpaper
         continue-on-error: true
         run: |
