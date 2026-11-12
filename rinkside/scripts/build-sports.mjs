@@ -9,7 +9,7 @@ import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SITE = path.join(ROOT, 'site');
-const { leagues: LEAGUES } = JSON.parse(await readFile(path.join(ROOT, 'sports/leagues.json'), 'utf8'));
+const { leagues: LEAGUES, hockey: HOCKEY } = JSON.parse(await readFile(path.join(ROOT, 'sports/leagues.json'), 'utf8'));
 const SITEAPI = 'https://site.api.espn.com/apis/site/v2/sports';
 const COREAPI = 'https://sports.core.api.espn.com/v2/sports';
 
@@ -162,6 +162,37 @@ async function matchStats(cfg, games) {
   return out;
 }
 
+// ---------- MLS playoffs ----------
+// ESPN's MLS team schedules stop at the regular season; the playoffs are only on the daily scoreboards.
+// Scan from the day after the last regular-season match to 45 days on (finished days are cached).
+async function soccerPostseason(cfg, games) {
+  const last = Object.values(games).flat().map((g) => g.date).sort().pop();
+  if (!last) return {};
+  const start = new Date(last), out = {};
+  const days = Array.from({ length: 46 }, (_, k) => new Date(start.getTime() + (k + 1) * 864e5).toISOString().slice(0, 10).replace(/-/g, ''));
+  await mkdir(CACHE, { recursive: true });
+  const evs = (await pool(days, 6, async (day) => {
+    const file = path.join(CACHE, `${cfg.espn.replace('/', '_')}_post_${day}.json`);
+    try { return JSON.parse(await readFile(file, 'utf8')); } catch {}
+    const sb = await get(`${SITEAPI}/${cfg.espn}/scoreboard?dates=${day}`, { optional: true });
+    const list = (sb?.events || []).filter((e) => /playoff|cup|wild|final/i.test(e.season?.slug || ''));
+    if (list.length && list.every((e) => e.competitions[0].status?.type?.completed) && day < new Date().toISOString().slice(0, 10).replace(/-/g, '')) await writeFile(file, JSON.stringify(list));
+    return list;
+  })).flat();
+  const roundOf = (slug) => (slug || '').replace(/^(eastern|western)-conference-playoffs-+/, '').replace(/-+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()).replace(/^Mls/, 'MLS');
+  const seen = new Set();
+  for (const e of evs) {
+    if (seen.has(e.id)) continue; seen.add(e.id);
+    for (const c of e.competitions[0].competitors) {
+      const g = parseGame(e, c.team.id); if (!g) continue;
+      g.round = roundOf(e.season?.slug);
+      (out[c.team.id] ??= []).push(g);
+    }
+  }
+  for (const k in out) out[k].sort((a, b) => a.date.localeCompare(b.date));
+  return out;
+}
+
 // ---------- one league ----------
 async function buildLeague(key) {
   const cfg = LEAGUES[key];
@@ -193,11 +224,21 @@ async function buildLeague(key) {
       if (t) t.altLogo = `alt/${key}/${f}`;
     }
   } catch {}
-  // a folder name per team: the nickname (knicks, giants, yankees); MLS clubs by their usual short name
-  const used = new Set();
+  // a folder name per team: the team name (knicks, giants, yankees, sounders); sports/leagues.json "slugs" can set one.
+  // Other spellings (abbreviation, city, full name) become alias folders that open the same board.
+  const RESERVED = new Set(['league', 'data', 'guide', 'sports', 'brand', 'alt', 'fonts']);
+  const used = new Set(RESERVED);
   for (const t of teams) {
-    const cands = [cfg.sport === 'soccer' ? slugify(t.short) : slugify(t.nick), slugify(t.abbr), slugify(t.name)];
-    t.slug = cands.find((c) => c && !used.has(c)); used.add(t.slug);
+    const cands = [cfg.slugs?.[t.abbr], slugify(t.nick), slugify(t.abbr), slugify(t.name)].filter(Boolean);
+    t.slug = cands.find((c) => !used.has(c)); used.add(t.slug);
+  }
+  for (const t of teams) {
+    // a city alias only when one team has that city (not New York, Los Angeles or Chicago in leagues with two)
+    const cityOf = (x) => ({ la: 'losangeles', ny: 'newyork' })[slugify(x.location || '')] || slugify(x.location || '');
+    const city = cityOf(t), cityTeams = teams.filter((x) => cityOf(x) === city).length;
+    t.aliases = [...new Set([slugify(t.abbr), slugify(t.short), slugify(t.nick), slugify(t.name), cityTeams === 1 && city !== slugify(t.name) ? city : ''])]
+      .filter((a) => a && a.length > 1 && !used.has(a));
+    t.aliases.forEach((a) => used.add(a));
   }
 
   // per team: schedule (falls back to last season when the new one has not started), statistics, roster
@@ -206,7 +247,10 @@ async function buildLeague(key) {
     const st = cfg.sport === 'soccer' ? '' : '?seasontype=2';
     let sch = await get(`${SITEAPI}/${cfg.espn}/teams/${t.id}/schedule${st}`);
     let gs = (sch.events || []).map((e) => parseGame(e, t.id)).filter(Boolean);
+    let nextSeason = null;
     if (!gs.some((g) => g.state === 'final')) {
+      // the new season hasn't started (MLB now): show last season, and keep the new one's first games for "Next 5"
+      nextSeason = { name: sch.requestedSeason?.displayName ?? sch.season?.displayName, games: gs.filter((g) => g.state === 'pre').sort((a, b) => a.date.localeCompare(b.date)).slice(0, 10) };
       const y = sch.requestedSeason?.year ?? sch.season?.year;
       const prev = await get(`${SITEAPI}/${cfg.espn}/teams/${t.id}/schedule?season=${y - 1}${st ? '&seasontype=2' : ''}`, { optional: true });
       if (prev?.events?.length) { sch = prev; gs = prev.events.map((e) => parseGame(e, t.id)).filter(Boolean); }
@@ -225,9 +269,13 @@ async function buildLeague(key) {
       post = (ps?.events || []).map((e) => { const g = parseGame(e, t.id); if (g) g.round = e.competitions[0].notes?.[0]?.headline || null; return g; })
         .filter(Boolean).sort((a, b) => a.date.localeCompare(b.date));
     }
-    return { post, games: gs, seasonYear: sch.requestedSeason?.year ?? sch.season?.year, seasonName: sch.requestedSeason?.displayName ?? sch.season?.displayName, stats, roster };
+    return { post, nextSeason, games: gs, seasonYear: sch.requestedSeason?.year ?? sch.season?.year, seasonName: sch.requestedSeason?.displayName ?? sch.season?.displayName, stats, roster };
   });
   const games = Object.fromEntries(teams.map((t, i) => [t.id, per[i].games]));
+  if (cfg.sport === 'soccer') {
+    const post = await soccerPostseason(cfg, games);
+    teams.forEach((t, i) => { per[i].post = (post[t.id] || []); });
+  }
 
   // ---------- MLS match stats (possession, shots) from the daily scoreboards ----------
   const match = cfg.stats.some((d) => d[2] === 'match') ? await matchStats(cfg, games) : {};
@@ -317,7 +365,7 @@ async function buildLeague(key) {
 
   // ---------- standings for the whole league ----------
   const outDir = path.join(SITE, key);
-  await rm(path.join(outDir, 'data'), { recursive: true, force: true });
+  await rm(outDir, { recursive: true, force: true });   // team folders too, so renamed teams don't leave old ones
   await mkdir(path.join(outDir, 'data'), { recursive: true });
   const standRows = (t) => {
     const s = sById[t.id];
@@ -384,7 +432,8 @@ async function buildLeague(key) {
     standCols: cfg.standings.cols.map(([h]) => h),
     stats: cfg.stats.map(([k, label]) => [k, label]), boxes: cfg.boxes,
     leaders: cfg.leaders.map(([k, label]) => [k.split('|')[0], label]), leaderRows: cfg.leaderRows,
-    leagues: [{ key: 'nhl', brand: 'Rinkside', league: 'NHL' }, ...Object.entries(LEAGUES).map(([k, l]) => ({ key: k, brand: l.brand, league: l.league }))] };
+    domain: cfg.domain || null,
+    leagues: [{ key: 'nhl', brand: 'Rinkside', league: 'NHL', domain: HOCKEY?.domain || null }, ...Object.entries(LEAGUES).map(([k, l]) => ({ key: k, brand: l.brand, league: l.league, domain: l.domain || null }))] };
   // the number itself: ESPN's league leaders sometimes give a whole stat line ("135-581, 45 HR, ...") as the display value
   const shortVal = (l, k = '') => {
     const d = String(l.displayValue ?? ''); if (cfg.sport !== 'soccer' && d && d.length <= 7) return d;
@@ -394,7 +443,7 @@ async function buildLeague(key) {
   const person = (l, ld) => { const id = athleteId(l.athlete?.$ref); return ld?.people.get(id) || extra.get(id) || {}; };
   const leagueIndex = { key, brand: cfg.brand, league: cfg.league, sport: cfg.sport, defaultTeam: cfg.defaultTeam,
     updated: new Date().toISOString(), season: per[0].seasonName, cfg: cfgOut,
-    teams: teams.map((t) => ({ abbr: t.abbr, id: t.id, name: t.name, short: t.short, slug: t.slug, logo: t.logo, color: t.color,
+    teams: teams.map((t) => ({ abbr: t.abbr, id: t.id, name: t.name, short: t.short, slug: t.slug, aliases: t.aliases, logo: t.logo, color: t.color,
       conference: t.conference, confShort: t.confShort, division: t.division })),
     conferences, power,
     leaders: leagueCats.map((c) => ({ key: c.key, label: c.label, rows: c.rows.map((l) => {
@@ -438,6 +487,7 @@ async function buildLeague(key) {
       line: hist[t.id],
       games: games[t.id].map((g) => ({ ...g, oppLogo: tById[g.oppId]?.logo || null })),
       post: per[i].post.map((g) => ({ ...g, oppLogo: tById[g.oppId]?.logo || null })),
+      nextSeason: per[i].nextSeason && { name: per[i].nextSeason.name, games: per[i].nextSeason.games.map((g) => ({ ...g, oppLogo: tById[g.oppId]?.logo || null })) },
       stats, leaders,
     };
     await writeFile(path.join(outDir, 'data', `${t.abbr}.json`), JSON.stringify(data));
@@ -449,10 +499,11 @@ async function buildLeague(key) {
   await writeFile(path.join(outDir, 'index.html'), page(1, ''));
   await mkdir(path.join(outDir, 'league'), { recursive: true });   // the whole league: /nba/league/
   await writeFile(path.join(outDir, 'league', 'index.html'), page(2, '', 'league').replace('data-team=""', 'data-team="" data-page="league"'));
-  for (const t of teams) {
-    await mkdir(path.join(outDir, t.slug), { recursive: true });
-    await writeFile(path.join(outDir, t.slug, 'index.html'), page(2, t.abbr));
+  for (const t of teams) for (const name of [t.slug, ...t.aliases]) {
+    await mkdir(path.join(outDir, name), { recursive: true });
+    await writeFile(path.join(outDir, name, 'index.html'), page(2, t.abbr));
   }
+  built.push({ key, cfg, teams });
   console.log(`${cfg.brand} (${cfg.league}): ${teams.length} teams, season ${per[0].seasonName}, ${((Date.now() - t0) / 1000).toFixed(0)} s`);
 }
 
@@ -490,8 +541,66 @@ const PAGE = `<!doctype html>
 `;
 
 const want = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(LEAGUES);
+const built = [];
 let failed = 0;
 for (const k of want) {
   try { await buildLeague(k); } catch (e) { failed++; console.error(`${k}: ${e.stack || e}`); }
+}
+if (want.length === Object.keys(LEAGUES).length) await writeGuide();
+
+// ---------- the guide: every league's address and every team's (site/guide/) ----------
+// Each league is reachable two ways: its own subdomain (soccer.mattdicks.org/sounders) once the Cloudflare Worker in
+// deploy/subdomains-worker.js is set up, and always under the hockey site (hockey.mattdicks.org/mls/sounders/).
+async function writeGuide() {
+  const esc = (x) => String(x ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  let hockey = [];
+  try { hockey = JSON.parse(await readFile(path.join(SITE, 'data', 'teams.json'), 'utf8')).teams.map((t) => ({ name: t.name, slug: t.slug, logo: t.logo, conference: t.conference + ' Conference' })); } catch {}
+  const sections = [{ key: 'nhl', brand: 'Rinkside', league: 'NHL', domain: HOCKEY.domain, path: '', teams: hockey, leaguePath: 'nhl/' },
+    ...built.map(({ key, cfg, teams }) => ({ key, brand: cfg.brand, league: cfg.league, domain: cfg.domain, path: `${key}/`, leaguePath: `${key}/league/`,
+      teams: teams.map((t) => ({ name: t.name, slug: t.slug, logo: t.logo, conference: t.conference })) }))];
+  const sec = (s) => {
+    const confs = [...new Set(s.teams.map((t) => t.conference))].sort();
+    const sub = s.key !== 'nhl';
+    return `<section id="${s.key}"><div class="gh"><img src="brand/${s.brand.toLowerCase()}.svg" width="44" height="44" alt=""><div><h2>${esc(s.brand)} <span>${esc(s.league)}</span></h2>
+      <div class="dom"><a href="https://${esc(s.domain)}/">${esc(s.domain)}</a> · whole league: <a href="${sub ? `https://${esc(s.domain)}/` : `https://${esc(s.domain)}/nhl/`}">${esc(s.domain)}${sub ? '' : '/nhl'}</a>${sub ? ` · also <a href="${esc(s.leaguePath)}">hockey.mattdicks.org/${esc(s.leaguePath)}</a>` : ''}</div></div></div>
+      ${confs.map((c) => `<h3>${esc(c)}</h3><div class="gl">${s.teams.filter((t) => t.conference === c).sort((a, b) => a.name.localeCompare(b.name)).map((t) =>
+        `<a href="${esc(s.path + t.slug)}/" data-sub="https://${esc(s.domain)}/${esc(t.slug)}"><img src="${esc(t.logo)}" alt="" loading="lazy"><span><b>${esc(t.name)}</b><small>${esc(s.domain)}/${esc(t.slug)}</small></span></a>`).join('')}</div>`).join('')}</section>`;
+  };
+  const html = `<!doctype html>
+<html lang="en"><head><base href="../"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guide · every league and team</title><link rel="icon" href="brand/rinkside.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow+Semi+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root { color-scheme: dark; --gold: #d4b26a; --muted: #9a9a9a; --card: #161616; }
+body { margin: 0; background: #000; color: #f4f4f4; font-family: 'Barlow Semi Condensed', sans-serif; }
+main { max-width: 1060px; margin: 0 auto; padding: 24px 20px 40px; }
+h1 { font: 700 40px 'Barlow Condensed', sans-serif; margin: 0; }
+.lead { color: #cfcfcf; margin: 6px 0 14px; font-size: 16px; line-height: 1.45; }
+nav { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 2px solid var(--gold); }
+nav a { display: flex; align-items: center; gap: 8px; padding: 7px 12px 7px 8px; background: var(--card); border-radius: 5px; color: #f4f4f4; text-decoration: none; font: 700 16px 'Barlow Condensed', sans-serif; }
+nav img { width: 26px; height: 26px; }
+section { margin-top: 30px; }
+.gh { display: flex; gap: 12px; align-items: center; }
+.gh h2 { margin: 0; font: 700 28px 'Barlow Condensed', sans-serif; } .gh h2 span { color: var(--muted); font-size: 20px; margin-left: 4px; }
+.dom { color: var(--muted); font-size: 14px; } .dom a { color: var(--gold); text-decoration: none; }
+h3 { margin: 18px 0 8px; font: 600 12px 'Barlow Semi Condensed', sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid #262626; padding-bottom: 5px; }
+.gl { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
+.gl a { display: flex; align-items: center; gap: 10px; padding: 7px 9px; background: var(--card); border-radius: 4px; color: #f4f4f4; text-decoration: none; border: 1px solid transparent; }
+.gl a:hover { border-color: #555; }
+.gl img { width: 30px; height: 30px; object-fit: contain; flex: none; }
+.gl b { display: block; font: 700 16px 'Barlow Condensed', sans-serif; } .gl small { color: var(--muted); font-size: 12.5px; }
+</style></head><body><main>
+<h1>Every league, every team</h1>
+<p class="lead">Each league has its own address, and each team's board is the league's address plus the team's name, like <b>soccer.mattdicks.org/sounders</b> or <b>basketball.mattdicks.org/knicks</b>. A league's address on its own opens the whole league. Every board also works under hockey.mattdicks.org (for example <b>hockey.mattdicks.org/mls/sounders</b>), and abbreviations and city names work too (<b>/sea</b>, <b>/seattle</b>).</p>
+<nav>${sections.map((s) => `<a href="guide/#${s.key}"><img src="brand/${s.brand.toLowerCase()}.svg" alt="">${esc(s.brand)} · ${esc(s.league)}</a>`).join('')}</nav>
+${sections.map(sec).join('')}
+</main>
+<script>
+// on a league's own subdomain, link straight to the short addresses
+if (/^(basketball|football|baseball|soccer)\./.test(location.hostname)) document.querySelectorAll('a[data-sub]').forEach((a) => (a.href = a.dataset.sub));
+</script></body></html>`;
+  await mkdir(path.join(SITE, 'guide'), { recursive: true });
+  await writeFile(path.join(SITE, 'guide', 'index.html'), html);
+  console.log('Guide: site/guide/index.html');
 }
 if (failed === want.length) process.exit(1);

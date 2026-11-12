@@ -379,15 +379,29 @@ Every team links to its own board. The build writes this to `site/data/league.js
 
 The same board covers the other US major leagues. Each league has its own name:
 
-| Board | League | Example |
-|---|---|---|
-| **Courtside** | NBA | https://hockey.mattdicks.org/nba/knicks |
-| **Sideline** | NFL | https://hockey.mattdicks.org/nfl/giants |
-| **Dugout** | MLB | https://hockey.mattdicks.org/mlb/yankees |
-| **Pitchside** | MLS | https://hockey.mattdicks.org/mls/nycfc |
+| Board | League | Address | Example |
+|---|---|---|---|
+| **Rinkside** | NHL | hockey.mattdicks.org | hockey.mattdicks.org/rangers |
+| **Courtside** | NBA | basketball.mattdicks.org | basketball.mattdicks.org/knicks |
+| **Sideline** | NFL | football.mattdicks.org | football.mattdicks.org/giants |
+| **Dugout** | MLB | baseball.mattdicks.org | baseball.mattdicks.org/yankees |
+| **Pitchside** | MLS | soccer.mattdicks.org | soccer.mattdicks.org/sounders |
 
-Team folders use the nickname (`/nba/lakers`, `/nfl/chiefs`, `/mlb/dodgers`). MLS clubs use
-their short name (`/mls/lafc`, `/mls/seattle`). `/nba/` alone opens the last team you chose.
+The league subdomains need a one-time Cloudflare Worker set-up: see
+[docs/subdomains.md](docs/subdomains.md). Until then, and after it too, every board also works under
+the hockey site. Examples:
+- hockey.mattdicks.org/nba/knicks
+- hockey.mattdicks.org/mls/sounders
+- hockey.mattdicks.org/mls/league (the whole league)
+
+Every league and team address is listed at **hockey.mattdicks.org/guide/**.
+
+Team addresses use the team name:
+- NBA, NFL and MLB use the nickname: `knicks`, `chiefs`, `dodgers`.
+- MLS uses the name fans use: `sounders`, `intermiami`, `redbulls`, `lafc`.
+
+Abbreviations, full names and one-team cities also work as aliases, for example `/sea`,
+`/seattlesoundersfc` or `/seattle`. `/nba/` alone opens the last team you chose.
 To switch leagues or teams, open the picker (tap the team band or press `t`). The hockey
 picker links to the other leagues too.
 

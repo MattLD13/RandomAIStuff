@@ -53,13 +53,13 @@ window.SB = (() => {
         const ts = d.rows.map((r) => index.teams.find((t) => t.abbr === r.abbr)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
         const sep = c.divisions.length > 1 ? `<div class="pdv">${esc(shortDiv(d.name))}</div>` : '';
         return `${sep}<div class="pgl">${ts.map((t) =>
-          `<a class="pt${t.abbr === current ? ' on' : ''}" href="${key}/${t.slug}/" data-abbr="${esc(t.abbr)}">${logo(t.logo)}<span>${esc(t.name)}</span></a>`).join('')}</div>`;
+          `<a class="pt${t.abbr === current ? ' on' : ''}" href="${href.team(t.slug)}" data-abbr="${esc(t.abbr)}">${logo(t.logo)}<span>${esc(t.name)}</span></a>`).join('')}</div>`;
       }).join('');
       return `<div class="pg"><div class="pgt">${esc(c.name)}</div>${divs}</div>`;
     }).join('');
-    picker.innerHTML = `<div class="sheet"><div class="ph"><span>Choose a team</span>${extra}<button class="x" aria-label="Close">×</button></div>
-      <div class="ltabs">${L.leagues.map((l) => `<a class="lt${l.key === key ? ' on' : ''}" href="${l.key === 'nhl' ? './' : `${l.key}/`}">${brandIcon(l.brand, 26)}<b>${esc(l.brand)}</b><span>${esc(l.league)}</span></a>`).join('')}</div>
-      <div class="pg"><div class="pgl"><a class="pt whole${current === 'LEAGUE' ? ' on' : ''}" href="${key}/league/">${brandIcon(L.brand, 30)}<span>${esc(L.league)} · whole league</span></a></div></div>
+    picker.innerHTML = `<div class="sheet"><div class="ph"><span>Choose a team</span><a class="gd" href="guide/">All addresses</a>${extra}<button class="x" aria-label="Close">×</button></div>
+      <div class="ltabs">${L.leagues.map((l) => `<a class="lt${l.key === key ? ' on' : ''}" href="${l.key === key ? href.league() : href.other(l)}">${brandIcon(l.brand, 26)}<b>${esc(l.brand)}</b><span>${esc(l.league)}</span></a>`).join('')}</div>
+      <div class="pg"><div class="pgl"><a class="pt whole${current === 'LEAGUE' ? ' on' : ''}" href="${href.league()}">${brandIcon(L.brand, 30)}<span>${esc(L.league)} · whole league</span></a></div></div>
       ${confs}</div>`;
     picker.addEventListener('click', (e) => {
       const a = e.target.closest('a.pt[data-abbr]'); if (a) { teamStore.set(a.dataset.abbr); return; }
@@ -70,7 +70,16 @@ window.SB = (() => {
     return picker;
   }
 
-  const loadIndex = async () => (await fetch(`${key}/data/league.json`, { cache: 'no-cache' })).json();
+  // Links work at both addresses: on the league's own subdomain (soccer.mattdicks.org/sounders/) and under the hockey
+  // site (hockey.mattdicks.org/mls/sounders/). See deploy/subdomains-worker.js.
+  let cfg = null;
+  const onSub = () => !!cfg?.domain && location.hostname === cfg.domain;
+  const href = {
+    team: (slug) => (onSub() ? `/${slug}/` : `${key}/${slug}/`),
+    league: () => (onSub() ? '/' : `${key}/league/`),
+    other: (l) => (onSub() && l.domain ? `https://${l.domain}/` : l.key === 'nhl' ? './' : `${l.key}/league/`),
+  };
+  const loadIndex = async () => { const idx = await (await fetch(`${key}/data/league.json`, { cache: 'no-cache' })).json(); cfg = idx.cfg; return idx; };
 
-  return { key, esc, logo, ord, fmt, brandIcon, storage, teamStore, shortDiv, remix, board, stage, modeNow, fit, openPicker, closePicker, get picker() { return picker; }, loadIndex };
+  return { key, esc, logo, ord, fmt, brandIcon, storage, teamStore, shortDiv, remix, board, stage, modeNow, fit, openPicker, closePicker, get picker() { return picker; }, loadIndex, href };
 })();

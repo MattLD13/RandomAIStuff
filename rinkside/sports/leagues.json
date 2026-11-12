@@ -1,5 +1,5 @@
 {
- "about": "Every per-league setting for the multi-sport boards lives here. scripts/build-sports.mjs reads it and copies what the page needs into each team's data (cfg), so site/sports/board.js has no league settings of its own. Rinkside (NHL) is separate.",
+ "about": "Every per-league setting for the multi-sport boards lives here. scripts/build-sports.mjs reads it and copies what the page needs into each team's data (cfg), so site/sports/board.js has no league settings of its own. Rinkside (NHL) is separate. Each league can live on its own subdomain (domain): see docs/subdomains.md.",
  "leagues": {
   "nba": {
    "brand": "Courtside",
@@ -200,7 +200,8 @@
     "pointsPerGame",
     "reboundsPerGame",
     "assistsPerGame"
-   ]
+   ],
+   "domain": "basketball.mattdicks.org"
   },
   "nfl": {
    "brand": "Sideline",
@@ -411,7 +412,11 @@
     "passingYards",
     "rushingYards",
     "receivingYards"
-   ]
+   ],
+   "domain": "football.mattdicks.org",
+   "slugs": {
+    "WSH": "commanders"
+   }
   },
   "mlb": {
    "brand": "Dugout",
@@ -636,7 +641,8 @@
     "homeRuns",
     "avg",
     "ERA"
-   ]
+   ],
+   "domain": "baseball.mattdicks.org"
   },
   "mls": {
    "brand": "Pitchside",
@@ -815,7 +821,45 @@
     "goals",
     "assists",
     "saves"
-   ]
+   ],
+   "domain": "soccer.mattdicks.org",
+   "slugs": {
+    "ATL": "atlantaunited",
+    "ATX": "austinfc",
+    "MTL": "cfmontreal",
+    "CLT": "charlottefc",
+    "CHI": "chicagofire",
+    "COL": "rapids",
+    "CLB": "crew",
+    "DC": "dcunited",
+    "CIN": "fccincinnati",
+    "DAL": "fcdallas",
+    "HOU": "dynamo",
+    "MIA": "intermiami",
+    "LA": "lagalaxy",
+    "LAFC": "lafc",
+    "MIN": "minnesotaunited",
+    "NSH": "nashvillesc",
+    "NE": "revolution",
+    "NYC": "nycfc",
+    "ORL": "orlandocity",
+    "PHI": "union",
+    "POR": "timbers",
+    "RSL": "realsaltlake",
+    "RBNY": "redbulls",
+    "SD": "sandiegofc",
+    "SJ": "earthquakes",
+    "SEA": "sounders",
+    "SKC": "sportingkc",
+    "STL": "stlouiscity",
+    "TOR": "torontofc",
+    "VAN": "whitecaps"
+   }
   }
+ },
+ "hockey": {
+  "brand": "Rinkside",
+  "league": "NHL",
+  "domain": "hockey.mattdicks.org"
  }
 }

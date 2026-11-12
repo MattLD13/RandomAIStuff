@@ -1,0 +1,11 @@
+# Deploys deploy/subdomains-worker.js and attaches it to the four league subdomains.
+# From this folder: npx wrangler login, then npx wrangler deploy (see docs/subdomains.md).
+name = "league-subdomains"
+main = "subdomains-worker.js"
+compatibility_date = "2026-11-01"
+routes = [
+  { pattern = "basketball.mattdicks.org", custom_domain = true },
+  { pattern = "football.mattdicks.org", custom_domain = true },
+  { pattern = "baseball.mattdicks.org", custom_domain = true },
+  { pattern = "soccer.mattdicks.org", custom_domain = true },
+]

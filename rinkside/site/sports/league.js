@@ -55,7 +55,7 @@
   function standings() {
     const cols = L.standCols;
     const table = (title, rows, cuts, seeds) => `<div class="lst"><div class="lsth"><span class="t">${esc(title)}</span>${cols.map((c) => `<span class="c">${c}</span>`).join('')}${seeds ? '<span class="c e">± LINE</span>' : ''}</div>${rows.map((r, i) =>
-      `${cuts.includes(i) ? '<div class="cutline"></div>' : ''}<a class="lsr" href="${key}/${index.teams.find((t) => t.abbr === r.abbr)?.slug}/"><span class="sd">${seeds ? r.seed ?? '' : ''}</span>${logo(r.logo)}<span class="ab">${esc(r.abbr)}</span>${r.clinch ? `<sup>${esc(r.clinch)}</sup>` : ''}${r.cols.map((v) => `<span class="c mono">${esc(v)}</span>`).join('')}${seeds ? `<span class="c e mono">${signed(r.edge)}</span>` : ''}</a>`).join('')}</div>`;
+      `${cuts.includes(i) ? '<div class="cutline"></div>' : ''}<a class="lsr" href="${SB.href.team(index.teams.find((t) => t.abbr === r.abbr)?.slug)}"><span class="sd">${seeds ? r.seed ?? '' : ''}</span>${logo(r.logo)}<span class="ab">${esc(r.abbr)}</span>${r.clinch ? `<sup>${esc(r.clinch)}</sup>` : ''}${r.cols.map((v) => `<span class="c mono">${esc(v)}</span>`).join('')}${seeds ? `<span class="c e mono">${signed(r.edge)}</span>` : ''}</a>`).join('')}</div>`;
     const conf = (c) => view === 'seeds'
       ? table(shortDiv(c.name), c.picture, L.cuts, true)
       : c.divisions.map((d) => table(shortDiv(d.name), d.rows, [], false)).join('');
@@ -68,10 +68,10 @@
   function power() {
     const dev = Math.max(...index.power.map((p) => Math.abs(p.strength - 50)), 1);
     return `<div class="sechead"><h2>Power ranking</h2><span class="small">STRENGTH · ${esc(L.margin.toUpperCase())} PER ${esc(L.game.toUpperCase())} · RECORD · LAST 10</span></div><div class="lpwr">${index.power.map((p, i) =>
-      `<a class="pwrow" href="${key}/${index.teams.find((t) => t.abbr === p.abbr)?.slug}/"><span class="n">${i + 1}</span>${logo(p.logo)}<span class="ab">${esc(p.abbr)}</span>
+      `<a class="pwrow" href="${SB.href.team(index.teams.find((t) => t.abbr === p.abbr)?.slug)}"><span class="n">${i + 1}</span>${logo(p.logo)}<span class="ab">${esc(p.abbr)}</span>
         <span class="bar"><i style="${p.strength >= 50 ? 'left:50%' : 'right:50%'};width:${Math.abs(p.strength - 50) / dev * 50}%;background:${esc(p.color)}"></i></span><span class="v mono">${p.strength.toFixed(1)}</span><span class="mg mono">${signed(p.margin)}</span><span class="rec">${esc(p.rec)}</span>
         <span class="frm">${[...p.form].map((r) => `<i class="${r}"></i>`).join('')}</span></a>`).join('')}</div>
-      <div class="snote">Strength: half win % (points per ${esc(L.game)} in MLS), half ${esc(L.margin)} per ${esc(L.game)}, standardized across the league. 50 is average.</div>`;
+      <div class="snote">Strength: half ${L.draws ? `points per ${esc(L.game)}` : 'win %'}, half ${esc(L.margin)} per ${esc(L.game)}, each standardized across the league. 50 is average.</div>`;
   }
 
   function leaders() {

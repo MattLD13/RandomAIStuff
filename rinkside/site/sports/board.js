@@ -6,6 +6,11 @@
   let index, D, L, MODE;
   const W = { board: 921, stack: 500 };
   const finals = () => D.games.filter((g) => g.state === 'final');
+  // games still to play, playoffs included; results for the lists, playoffs included (the charts stay regular season)
+  const upcoming = () => [...D.games, ...(D.post || [])].filter((g) => g.state === 'pre' || g.state === 'live').sort((a, b) => a.date.localeCompare(b.date));
+  const results = () => [...finals(), ...(D.post || []).filter((g) => g.state === 'final')].sort((a, b) => a.date.localeCompare(b.date));
+  const oppText = (g) => /^TBD/i.test(g.opp) ? 'TBD' : g.opp;
+  const timeText = (g) => (/T0[45]:00Z$/.test(g.date) ? 'TBD' : fmt(g.date, { hour: 'numeric', minute: '2-digit' }).replace(' ', '').toLowerCase());
   const sched = () => D.games.filter((g) => g.state !== 'off');
   const myConf = () => index.conferences.find((c) => c.name === D.team.conference);
   const otherConf = () => index.conferences.find((c) => c.name !== D.team.conference) || myConf();
@@ -42,14 +47,18 @@
     return last.res === 'W' && /World Series|NBA Finals|Super Bowl|MLS Cup/i.test(round) ? `Won the ${round}` : last.res === 'L' ? `Out in the ${round}` : round;
   }
   function summary() {
-    const pl = postLine(); if (pl) return `<b>${esc(pl)}</b>`;
-    const g = D.games.find((x) => x.state === 'pre' || x.state === 'live');
+    const g = upcoming()[0];
     if (g) {
       const tbd = /T0[45]:00Z$/.test(g.date);
-      const when = `${fmt(g.date, { weekday: 'short' })}${tbd ? '' : ' ' + fmt(g.date, { hour: 'numeric', minute: '2-digit' }).replace(' ', '').toLowerCase()}`;
-      return `Next: <b>${esc(when)} ${g.home ? 'vs' : '@'} ${esc(teamName(g.opp))}</b>${g.tv ? ` on ${esc(g.tv)}` : ''}`;
+      const when = `${fmt(g.date, { weekday: 'short' })}${tbd ? '' : ' ' + timeText(g)}`;
+      const opp = oppText(g) === 'TBD' ? 'opponent TBD' : `${g.home ? 'vs' : '@'} ${teamName(g.opp)}`;
+      return `${g.round ? `${esc(g.round)}: ` : 'Next: '}<b>${esc(when)} ${esc(opp)}</b>${g.tv ? ` on ${esc(g.tv)}` : ''}`;
     }
-    return `<b>${D.record.seed > L.lineSeed ? 'Missed the playoffs' : 'Regular season over'}</b>`;
+    const pl = postLine(); if (pl) return `<b>${esc(pl)}</b>`;
+    const ns = D.nextSeason?.games?.[0];
+    const over = D.record.seed > L.lineSeed ? 'Missed the playoffs' : 'Season over';
+    if (ns) return `<b>${over}</b> · Opening Day ${esc(fmt(ns.date, { month: 'short', day: 'numeric' }))} ${ns.home ? 'vs' : '@'} ${esc(teamName(ns.opp))}`;
+    return `<b>${over}</b>`;
   }
   function header() {
     const t = D.team, r = D.record;
@@ -69,6 +78,7 @@
   // ---------- charts ----------
   // x position of a game (NFL by week, so the bye shows) and of a date (where this team's schedule had got to)
   function xAxis(w) {
+    w -= 46;   // leave the right edge for the axis labels
     const gs = sched();
     const slots = L.byWeek ? Math.max(18, ...gs.map((g) => g.week || 0)) : gs.length;
     const sw = w / Math.max(slots, 1);
@@ -125,7 +135,7 @@
     rank: ['Conference rank', (w, h) => {
       const pts = (D.line || []).filter((p) => p[2]).map(([d, , r]) => [d, r]);
       const n = myConf().picture.length, now = pts.length ? pts[pts.length - 1][1] : null;
-      const { xDate } = xAxis(w), y = (r) => 6 + (r - 1) / Math.max(1, n - 1) * (h - 20);
+      const { xDate } = xAxis(w), y = (r) => 9 + (r - 1) / Math.max(1, n - 1) * (h - 18);
       let svg = `<line x1="0" x2="${w - 40}" y1="${y(L.lineSeed + 0.5)}" y2="${y(L.lineSeed + 0.5)}" stroke="#8a8a8a" stroke-dasharray="4 3"/>`;
       for (const r of [1, Math.ceil(n / 2), n]) svg += `<text x="${w - 18}" y="${y(r) + 4}" class="ax">${ord(r)}</text>`;
       if (pts.length) {
@@ -141,7 +151,7 @@
     const max = Math.max(1e-9, ...pts.map((p) => Math.abs(p[1])));
     const step = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25, 50, 100, 250].find((s) => max / s <= 4) || 500;
     const top = Math.ceil(max / step) * step;
-    const y = (v) => mid - v / top * (mid - 4);
+    const y = (v) => mid - v / top * (mid - 9);
     let svg = `<line x1="0" x2="${w - 40}" y1="${mid}" y2="${mid}" stroke="#3a3a3a" stroke-dasharray="3 4"/>`;
     for (const v of [top, top / 2, 0, -top / 2, -top]) svg += `<text x="${w - 18}" y="${y(v) + 4}" class="ax">${tick(v)}</text>`;
     if (!pts.length) return svg;
@@ -163,10 +173,10 @@
   // ---------- tables (left column) ----------
   function stTable(groups, w, h) {
     const cols = L.standCols, nRows = groups.reduce((a, g) => a + g.rows.length, 0);
-    const rowH = Math.max(18, Math.min(25, Math.floor((h - groups.length * 33) / nRows)));
+    const rowH = Math.max(18, Math.min(25, Math.floor((h - groups.length * 34 - 2) / nRows)));
     const head = (g) => `<div class="sthead"><span class="t">${esc(shortDiv(g.name))}</span>${cols.map((c) => `<span class="c">${c}</span>`).join('')}</div>`;
     const row = (r, i, g) => `${g.cut?.includes(i) ? '<div class="cutline"></div>' : ''}<div class="strow${r.abbr === D.team.abbr ? ' me' : ''}">${logo(r.logo)}<span class="ab">${esc(r.abbr)}</span>${r.clinch ? `<sup>${esc(r.clinch)}</sup>` : ''}${r.cols.map((v) => `<span class="c mono">${esc(v)}</span>`).join('')}</div>`;
-    return `<div class="sts" style="--ncol:${cols.length};--rowh:${rowH}px">${groups.map((g) => `<div class="stdiv">${head(g)}${g.rows.map((r, i) => row(r, i, g)).join('')}</div>`).join('')}</div>`;
+    return `<div class="sts${cols.length >= 7 ? ' dense' : ''}" style="--ncol:${cols.length};--rowh:${rowH}px">${groups.map((g) => `<div class="stdiv">${head(g)}${g.rows.map((r, i) => row(r, i, g)).join('')}</div>`).join('')}</div>`;
   }
   const byDivision = (conf, mineFirst) => {
     const ds = [...conf.divisions];
@@ -199,11 +209,12 @@
   // ---------- middle column ----------
   function pictureOf(conf, w, h, mineToo) {
     const n = L.lineSeed;
-    const rows = conf.picture.filter((r) => r.seed != null).slice(0, Math.min(conf.picture.length, n + 2, Math.floor((h - 60) / 26)));
+    const fit = Math.floor((h - 78) / 26);
     const me = conf.picture.find((r) => r.abbr === D.team.abbr);
-    if (mineToo && me && !rows.includes(me)) rows.push(me);
+    let rows = conf.picture.filter((r) => r.seed != null).slice(0, Math.min(conf.picture.length, n + 2, fit));
+    if (mineToo && me && !rows.includes(me)) rows = [...rows.slice(0, fit - 1), me];
     let html = `<div class="colhead"><span class="t">Playoff picture</span><span class="r small">${esc(conf.short.toUpperCase())}</span></div>
-      <div class="sub first"><span>${esc(L.note)}</span><span class="gp">GP</span><span class="pts">± LINE</span></div>`;
+      <div class="pnote">${esc(L.note)}</div><div class="sub"><span>SEED</span><span class="gp">GP</span><span class="pts">± LINE</span></div>`;
     rows.forEach((r, i) => {
       if (i && L.cuts.includes(rows[i - 1].seed) && r.seed > rows[i - 1].seed) html += '<div class="cutline"></div>';
       html += `<div class="prow${r.abbr === D.team.abbr ? ' me' : ''}"><span class="lbl">${r.seed ?? ''}</span>${logo(r.logo)}<span class="ab">${esc(r.abbr)}</span><span class="gp">${r.gp ?? (r.w + r.l + (r.t || 0))}</span><span class="pts">${r.edge == null ? '' : signed(r.edge)}</span></div>`;
@@ -214,7 +225,7 @@
     return gs.slice(0, n).map((g) => {
       const right = g.state === 'final' ? `<span class="res ${g.res === 'T' ? 'OT' : g.res}">${g.res === 'T' ? (L.draws ? 'D' : 'T') : g.res}</span><span class="sc mono">${g.us}–${g.them}</span>`
         : `<span class="tm">${/T0[45]:00Z$/.test(g.date) ? 'TBD' : fmt(g.date, { hour: 'numeric', minute: '2-digit' }).replace(' ', '').toLowerCase()}</span>`;
-      return `<div class="gl"><span class="dt">${L.byWeek && g.week ? `Wk ${g.week}` : fmt(g.date, { month: 'short', day: 'numeric' })}</span><span class="ha">${g.home ? 'vs' : '@'}</span>${logo(g.oppLogo)}<span class="ab">${esc(g.opp)}</span>${right}</div>`;
+      return `<div class="gl"><span class="dt">${L.byWeek && g.week ? `Wk ${g.week}` : fmt(g.date, { month: 'short', day: 'numeric' })}</span><span class="ha">${g.home ? 'vs' : '@'}</span>${oppText(g) === 'TBD' ? '' : logo(g.oppLogo)}<span class="ab">${esc(oppText(g))}</span>${right}</div>`;
     }).join('');
   }
   const MIDDLE = {
@@ -225,26 +236,29 @@
       return `<div class="colhead"><span class="t">Team stats</span><span class="r small">RANK</span></div><div class="tstats">${D.stats.slice(0, n).map((s) =>
         `<div class="ts"><span class="k">${esc(s.label)}</span><span class="v mono">${esc(s.value)}</span><span class="rk${s.rank <= 5 ? ' top' : s.rank > s.of - 5 ? ' low' : ''}">${ord(s.rank)}</span></div>`).join('')}</div>`;
     }],
-    next10: ['Next 10', (w, h) => `<div class="colhead"><span class="t">Next 10</span><span class="r small">EASTERN TIME</span></div><div class="glist">${gameRows(D.games.filter((g) => g.state === 'pre' || g.state === 'live'), Math.min(10, Math.floor((h - 34) / 30))) || `<div class="note">No ${L.games} scheduled.</div>`}</div>`],
-    last10: ['Last 10 results', (w, h) => `<div class="colhead"><span class="t">Last 10</span></div><div class="glist">${gameRows(finals().slice(-10).reverse(), Math.min(10, Math.floor((h - 34) / 30)))}</div>`],
+    next10: ['Next 10', (w, h) => `<div class="colhead"><span class="t">Next 10</span><span class="r small">EASTERN TIME</span></div><div class="glist">${gameRows(upcoming(), Math.min(10, Math.floor((h - 34) / 30))) || `<div class="note">No ${L.games} scheduled.</div>`}</div>`],
+    last10: ['Last 10 results', (w, h) => `<div class="colhead"><span class="t">Last 10</span></div><div class="glist">${gameRows(results().slice(-10).reverse(), Math.min(10, Math.floor((h - 34) / 30)))}</div>`],
     power: ['Power ranking', (w, h) => powerList(w, h, Math.floor((h - 34) / 24))],
   };
 
   // ---------- right column ----------
-  function nextCards(n) {
-    const up = D.games.filter((g) => g.state === 'pre' || g.state === 'live').slice(0, n);
-    if (!up.length && D.post?.length) return null;
-    const cards = up.map((g) => {
-      const tbd = /T0[45]:00Z$/.test(g.date);
-      const time = tbd ? 'TBD' : fmt(g.date, { hour: 'numeric', minute: '2-digit' }).replace(' ', '').toLowerCase();
-      return `<div class="ncard" data-game="${esc(g.id)}"><div class="date"><div class="dow">${fmt(g.date, { weekday: 'short' }).toUpperCase()}</div><div class="day">${fmt(g.date, { day: 'numeric' })}</div></div>
-        <div class="at">${g.home ? 'vs' : '@'}${g.tv ? `<small>${esc(g.tv)}</small>` : ''}</div>${logo(g.oppLogo)}<div class="time">${time}</div></div>`;
-    }).join('');
-    return cards || `<div class="note" style="margin-top:12px">No ${L.games} scheduled. ${esc(D.season)} is done.</div>`;
+  const card = (g) => `<div class="ncard" data-game="${esc(g.id)}"><div class="date"><div class="dow">${fmt(g.date, { weekday: 'short' }).toUpperCase()}</div><div class="day">${fmt(g.date, { day: 'numeric' })}</div></div>
+      <div class="at">${g.home ? 'vs' : '@'}${g.tv ? `<small>${esc(g.tv)}</small>` : ''}</div>${oppText(g) === 'TBD' ? '<span class="tbd">TBD</span>' : logo(g.oppLogo)}<div class="time">${timeText(g)}</div></div>`;
+  // Next 5: what's coming (playoffs included); after the season, the playoff run or next season's opening games
+  function nextPanel(n) {
+    const up = upcoming().slice(0, n);
+    if (up.length) {
+      const title = up[0].round ? 'Playoffs' : L.byWeek ? 'Next up' : `Next ${Math.min(n, up.length) === 1 ? 'game' : 5}`;
+      return `<div class="colhead big"><span class="t">${title}</span><span class="r small">${esc((up[0].round || 'EASTERN TIME').toUpperCase())}</span></div><div class="nlist">${up.map(card).join('')}</div>`;
+    }
+    if (D.post?.length) return postPanel();
+    if (D.nextSeason?.games?.length) return `<div class="colhead big"><span class="t">Opening Day</span><span class="r small">${esc(D.nextSeason.name)} SEASON</span></div><div class="nlist">${D.nextSeason.games.slice(0, n).map(card).join('')}</div>`;
+    return `<div class="colhead big"><span class="t">Next 5</span></div><div class="note" style="margin-top:12px">No ${L.games} scheduled yet.</div>`;
   }
   const postPanel = () => `<div class="colhead big"><span class="t">Postseason</span><span class="r small">${esc(postLine().toUpperCase())}</span></div><div class="pglist">${(D.post || []).slice(-6).map((g) =>
-    `<div class="pgrow"><span class="rd">${esc((g.round || '').replace(' - Game ', ' G'))}</span>${logo(g.oppLogo)}<span class="res ${g.res}">${g.res}</span><span class="sc mono">${g.us}–${g.them}</span></div>`).join('') || '<div class="note">No postseason games.</div>'}</div>`;
-  const lastRows = (n) => finals().slice(-n).reverse().map((g) => `<div class="lgrow">${logo(g.oppLogo)}<span class="res ${g.res === 'T' ? 'OT' : g.res}">${g.res === 'T' ? (L.draws ? 'D' : 'T') : g.res}</span><span class="sc mono">${g.us}–${g.them}</span><span class="wk">${L.byWeek && g.week ? `Wk ${g.week}` : fmt(g.date, { month: 'short', day: 'numeric' })}</span></div>`).join('');
+    `<div class="pgrow"><span class="rd">${esc((g.round || '').replace(' - Game ', ' G').replace(/^Round /, 'Rd '))}</span>${oppText(g) === 'TBD' ? '<span class="tbd">TBD</span>' : logo(g.oppLogo)}${g.state === 'final'
+      ? `<span class="res ${g.res}">${g.res === 'T' ? 'D' : g.res}</span><span class="sc mono">${g.us}–${g.them}</span>` : `<span class="when">${esc(fmt(g.date, { month: 'short', day: 'numeric' }))} · ${timeText(g)}</span>`}</div>`).join('') || '<div class="note">No postseason games.</div>'}</div>`;
+  const lastRows = (n, regular = false) => (regular ? finals() : results()).slice(-n).reverse().map((g) => `<div class="lgrow">${logo(g.oppLogo)}<span class="res ${g.res === 'T' ? 'OT' : g.res}">${g.res === 'T' ? (L.draws ? 'D' : 'T') : g.res}</span><span class="sc mono">${g.us}–${g.them}</span><span class="wk">${g.round ? esc(g.round.replace(/ - Game (\d+)/, ' G$1')) : L.byWeek && g.week ? `Wk ${g.week}` : fmt(g.date, { month: 'short', day: 'numeric' })}</span></div>`).join('');
   const unitCap = () => { const u = L.margin.replace(' margin', '') + 's'; return u[0].toUpperCase() + u.slice(1); };
   function splits() {
     const f = finals(), r = D.record;
@@ -256,22 +270,29 @@
     return `<div class="colhead big"><span class="t">Splits</span></div><div class="splits">${rows.map(([k, v]) => `<div><span>${esc(k)}</span><b class="mono">${esc(v || '–')}</b></div>`).join('')}</div>`;
   }
   const RIGHT = {
-    next5: ['Next 5', () => { const c = nextCards(5); return c == null ? postPanel() : `<div class="colhead big"><span class="t">${L.byWeek ? 'Next up' : 'Next 5'}</span><span class="r small">EASTERN TIME</span></div><div class="nlist">${c}</div>`; }],
-    last5: ['Last 5', () => `<div class="colhead big"><span class="t">Last 5</span></div><div class="llist">${lastRows(5)}</div>`],
+    next5: ['Next 5', () => nextPanel(5)],
+    // when the postseason panel is showing, Last 5 is the regular season's end, so the two don't repeat
+    last5: ['Last 5', () => { const reg = !upcoming().length && D.post?.length && layout.upper === 'next5';
+      return `<div class="colhead big"><span class="t">Last 5</span>${reg ? '<span class="r small">REGULAR SEASON</span>' : ''}</div><div class="llist">${lastRows(5, reg)}</div>`; }],
     post: ['Postseason', postPanel],
     splits: ['Splits', splits],
-    nextList: ['Next games (list)', (w, h) => `<div class="colhead big"><span class="t">Coming up</span></div><div class="glist">${gameRows(D.games.filter((g) => g.state === 'pre' || g.state === 'live'), Math.floor((h - 34) / 30)) || '<div class="note">Nothing scheduled.</div>'}</div>`],
+    nextList: ['Next games (list)', (w, h) => `<div class="colhead big"><span class="t">Coming up</span></div><div class="glist">${gameRows(upcoming(), Math.floor((h - 34) / 30)) || '<div class="note">Nothing scheduled.</div>'}</div>`],
   };
 
   // ---------- stat boxes and leader rows ----------
   const statBy = (k) => D.stats.find((s) => s.key === k);
-  const box = (k) => { const s = statBy(k); return s ? `<div class="box"><div class="k">${esc(s.label)}</div><div class="rk">${ord(s.rank)} of ${s.of}</div><div class="v">${esc(s.value)}</div></div>` : `<div class="box"><div class="k">${esc(k)}</div><div class="rk">no data</div></div>`; };
+  const box = (k) => { const s = statBy(k); return s ? `<div class="box"><div class="k${s.label.length > 10 ? ' sm' : ''}">${esc(s.label)}</div><div class="rk">${ord(s.rank)} of ${s.of}</div><div class="v">${esc(s.value)}</div></div>` : `<div class="box"><div class="k">${esc(k)}</div><div class="rk">no data</div></div>`; };
+  const shownLeaders = () => {
+    const have = (k) => D.leaders.some((x) => x.key === k);
+    const spare = L.leaders.map(([k]) => k).filter((k) => have(k) && !layout.leaders.includes(k));
+    return layout.leaders.map((k) => (have(k) ? k : spare.shift() || k));
+  };
   const leaderRow = (k) => {
     const l = D.leaders.find((x) => x.key === k);
     if (!l) return `<div class="lrow"><div class="who"><div class="k">${esc(L.leaders.find((x) => x[0] === k)?.[1] || k)}</div><div class="s">no data yet</div></div></div>`;
     return `<div class="lrow"><div class="face">${l.face ? `<img src="${esc(l.face)}" alt="" loading="lazy">` : `<span class="jn">${esc(l.jersey || '')}</span>`}</div>
-      <div class="who"><div class="k">${esc(l.label)}</div><div class="n">${esc(l.short || l.name)}</div><div class="s">${esc(l.sub || [l.jersey && `#${l.jersey}`, l.pos].filter(Boolean).join(' · '))}</div></div>
-      <div class="v${String(l.value).length > 4 ? ' long' : ''}">${esc(l.value)}</div></div>`;
+      <div class="who"><div class="k">${esc(l.label)}</div><div class="n${(l.short || l.name || '').length > 17 ? ' xs' : (l.short || l.name || '').length > 15 ? ' sm' : ''}">${esc(l.short || l.name)}</div><div class="s">${esc(l.sub || [l.jersey && `#${l.jersey}`, l.pos].filter(Boolean).join(' · '))}</div></div>
+      <div class="v${String(l.value).length > 5 ? ' xlong' : String(l.value).length > 4 ? ' long' : ''}">${esc(l.value)}</div></div>`;
   };
 
   // ---------- slots ----------
@@ -316,7 +337,7 @@
     html += `<section class="abs stgrid" style="left:${G.boxes[0]}px;top:${G.boxes[1]}px;width:${G.boxes[2]}px;--per:4">${layout.boxes.map((k, i) =>
       `<div class="slot boxslot" data-slot="box${i}"><button class="swap" aria-label="Change">⇄</button>${box(k)}</div>`).join('')}</section>`;
     html += slot('pic', G.pic, (MIDDLE[layout.pic] || MIDDLE.picture)[1](G.pic[2], G.pic[3]));
-    html += `<section class="abs" style="left:${G.leaders[0]}px;top:${G.leaders[1]}px;width:${G.leaders[2]}px"><div class="colhead"><span class="t">Team leaders</span></div><div class="leaders">${layout.leaders.map((k, i) =>
+    html += `<section class="abs" style="left:${G.leaders[0]}px;top:${G.leaders[1]}px;width:${G.leaders[2]}px"><div class="colhead"><span class="t">Team leaders</span></div><div class="leaders">${shownLeaders().map((k, i) =>
       `<div class="slot leadslot" data-slot="lead${i}"><button class="swap" aria-label="Change">⇄</button>${leaderRow(k)}</div>`).join('')}</div></section>`;
     html += slot('upper', G.upper, (RIGHT[layout.upper] || RIGHT.next5)[1](G.upper[2], G.upper[3]));
     html += slot('lower', G.lower, (RIGHT[layout.lower] || RIGHT.last5)[1](G.lower[2], G.lower[3]));
@@ -458,7 +479,7 @@
     D = await (await fetch(`${key}/data/${t.abbr}.json`, { cache: 'no-cache' })).json();
     L = D.cfg;
     loadLayout();
-    document.title = `${D.team.short} · ${D.brand}`;
+    document.title = `${D.team.name} · ${D.brand}`;
     render();
     live();
   })().catch((e) => { board.innerHTML = `<div class="msg">Couldn't load this board. ${esc(e.message)}</div>`; });
