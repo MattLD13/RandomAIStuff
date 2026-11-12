@@ -391,6 +391,50 @@ their short name (`/mls/lafc`, `/mls/seattle`). `/nba/` alone opens the last tea
 To switch leagues or teams, open the picker (tap the team band or press `t`). The hockey
 picker links to the other leagues too.
 
+**Logos.** Each board has a simple mark: a white sport glyph on a rounded tile in the board's color.
+- Rinkside: blue, stick and puck
+- Courtside: orange, basketball
+- Sideline: red, football
+- Dugout: blue, baseball
+- Pitchside: green, soccer ball
+
+The marks are in `site/brand/*.svg`. They are used as the favicons, in the picker's league tabs and
+in the footers.
+
+**Whole league.** Each league has a league page, like hockey's `/nhl/`: `/nba/league/`,
+`/nfl/league/`, `/mlb/league/` and `/mls/league/`. The picker lists it first as
+"NBA · whole league". The page has these sections:
+- **Games:** yesterday, today and the next three days (the NFL uses last, this and next week), from
+  ESPN's scoreboard. Live games refresh every 30 s.
+- **Standings:** both conferences side by side.
+  - **Playoff seeds** shows the dashed separators at each league's cuts and a ± LINE column.
+  - **Divisions** shows one table per division.
+- **Power ranking:** every team by margin per game, with its record and last-10 form.
+- **Leaders:** the league's top 5 in six categories, with headshots and teams.
+
+The team picker groups teams by conference, then by division with a separator line between divisions.
+
+**Customize.** This works as on Rinkside. Tap the team band and choose **Customize board**, or press
+`c`. Every panel gets a ⇄ button: tap a panel to pick what it shows. Choices are saved in your
+browser. **Copy link** shares the layout (`?layout=…`), and **Reset** goes back to the default.
+
+| Slot | Options |
+|---|---|
+| Top and middle charts | Game by game, playoff line, running differential, rolling form, conference rank over time |
+| Left column | Your conference by division, your conference as one table, the other conference, power ranking |
+| Middle panel | Playoff picture (yours or the other conference), team stats with ranks, next 10, last 10, power ranking |
+| Eight stat boxes | Any of 12–18 stats per league, ranked |
+| Three leader rows | Any of 8–14 categories per league |
+| Right column (two slots) | Next 5, last 5, postseason, splits (home, road, vs good teams, close games, last 10, scoring), coming-up list |
+
+There are four presets:
+- **Classic:** the default layout.
+- **Playoff race:** the playoff line and conference rank charts, your conference as one table, and splits.
+- **Stats:** the running-differential and form charts, the power ranking, and team stats with ranks.
+- **Schedule:** the next 10 games and the form chart.
+
+To change the defaults for everyone, edit `boxes` and `leaderRows` in `sports/leagues.json`.
+
 **What each sport gets.** Nothing on a board repeats another part of it. The standings hold the
 record, PCT, streak and points, so the other panels show something else.
 - **Header:** the record in large type, then the next game (day, time, opponent, TV) or how the

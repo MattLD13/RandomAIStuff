@@ -95,6 +95,53 @@
      "avgBlocks",
      "Blocks",
      "defensive"
+    ],
+    [
+     "avgPoints",
+     "Points",
+     "offensive"
+    ],
+    [
+     "fieldGoalPct",
+     "FG %",
+     "offensive"
+    ],
+    [
+     "twoPointFieldGoalPct",
+     "2-pt %",
+     "offensive"
+    ],
+    [
+     "avgThreePointFieldGoalsMade",
+     "3s made",
+     "offensive"
+    ],
+    [
+     "avgOffensiveRebounds",
+     "Off. rebounds",
+     "offensive"
+    ],
+    [
+     "avgAssists",
+     "Assists",
+     "offensive"
+    ],
+    [
+     "avgSteals",
+     "Steals",
+     "defensive"
+    ],
+    [
+     "avgTurnovers",
+     "Turnovers",
+     "offensive",
+     true
+    ],
+    [
+     "avgFouls",
+     "Fouls",
+     "general",
+     true
     ]
    ],
    "leaders": [
@@ -109,7 +156,50 @@
     [
      "assistsPerGame",
      "Assists per game"
+    ],
+    [
+     "stealsPerGame",
+     "Steals per game"
+    ],
+    [
+     "blocksPerGame",
+     "Blocks per game"
+    ],
+    [
+     "3PointMadePerGame|3PointsMadePerGame",
+     "3s per game"
+    ],
+    [
+     "fieldGoalPercentage",
+     "Field goal %"
+    ],
+    [
+     "PER",
+     "PER"
+    ],
+    [
+     "doubleDouble",
+     "Double-doubles"
+    ],
+    [
+     "minutesPerGame",
+     "Minutes per game"
     ]
+   ],
+   "boxes": [
+    "pace",
+    "offRating",
+    "defRating",
+    "threePointFieldGoalPct",
+    "freeThrowPct",
+    "avgRebounds",
+    "assistTurnoverRatio",
+    "avgBlocks"
+   ],
+   "leaderRows": [
+    "pointsPerGame",
+    "reboundsPerGame",
+    "assistsPerGame"
    ]
   },
   "nfl": {
@@ -210,6 +300,52 @@
      "sacks",
      "Sacks",
      "defensive"
+    ],
+    [
+     "totalPointsPerGame",
+     "Points / game",
+     "passing"
+    ],
+    [
+     "yardsPerGame",
+     "Yards / game",
+     "passing"
+    ],
+    [
+     "completionPct",
+     "Completion %",
+     "passing"
+    ],
+    [
+     "yardsPerPassAttempt",
+     "Yds / pass",
+     "passing"
+    ],
+    [
+     "yardsPerRushAttempt",
+     "Yds / rush",
+     "rushing"
+    ],
+    [
+     "fourthDownConvPct",
+     "4th down %",
+     "miscellaneous"
+    ],
+    [
+     "totalTakeaways",
+     "Takeaways",
+     "miscellaneous"
+    ],
+    [
+     "interceptions",
+     "Interceptions",
+     "defensiveInterceptions"
+    ],
+    [
+     "totalPenaltyYards",
+     "Penalty yds",
+     "miscellaneous",
+     true
     ]
    ],
    "leaders": [
@@ -227,7 +363,54 @@
      "receivingYards",
      "Receiving yards",
      "receivingLeader"
+    ],
+    [
+     "passingTouchdowns",
+     "Passing TDs"
+    ],
+    [
+     "rushingTouchdowns",
+     "Rushing TDs"
+    ],
+    [
+     "receivingTouchdowns",
+     "Receiving TDs"
+    ],
+    [
+     "receptions",
+     "Receptions"
+    ],
+    [
+     "quarterbackRating",
+     "Passer rating"
+    ],
+    [
+     "sacks",
+     "Sacks"
+    ],
+    [
+     "totalTackles",
+     "Tackles"
+    ],
+    [
+     "interceptions",
+     "Interceptions"
     ]
+   ],
+   "boxes": [
+    "yardsPerPlay",
+    "passingYardsPerGame",
+    "rushingYardsPerGame",
+    "thirdDownConvPct",
+    "redzoneTouchdownPct",
+    "possessionTime",
+    "turnOverDifferential",
+    "sacks"
+   ],
+   "leaderRows": [
+    "passingYards",
+    "rushingYards",
+    "receivingYards"
    ]
   },
   "mlb": {
@@ -325,6 +508,60 @@
      "oneRunGames",
      "1-run games",
      "calc"
+    ],
+    [
+     "avgPointsFor",
+     "Runs / game",
+     "standings"
+    ],
+    [
+     "avgPointsAgainst",
+     "Runs allowed",
+     "standings",
+     true
+    ],
+    [
+     "onBasePct",
+     "On-base %",
+     "batting"
+    ],
+    [
+     "slugAvg",
+     "Slugging",
+     "batting"
+    ],
+    [
+     "strikeouts",
+     "Batter Ks",
+     "batting",
+     true
+    ],
+    [
+     "walks",
+     "Walks",
+     "batting"
+    ],
+    [
+     "saves",
+     "Saves",
+     "pitching"
+    ],
+    [
+     "qualityStarts",
+     "Quality starts",
+     "pitching"
+    ],
+    [
+     "opponentAvg",
+     "Opp. avg",
+     "pitching",
+     true
+    ],
+    [
+     "errors",
+     "Errors",
+     "fielding",
+     true
     ]
    ],
    "leaders": [
@@ -339,7 +576,66 @@
     [
      "ERA",
      "ERA"
+    ],
+    [
+     "RBIs",
+     "RBIs"
+    ],
+    [
+     "OPS",
+     "OPS"
+    ],
+    [
+     "WARBR",
+     "WAR"
+    ],
+    [
+     "runs",
+     "Runs"
+    ],
+    [
+     "stolenBases",
+     "Stolen bases"
+    ],
+    [
+     "hits",
+     "Hits"
+    ],
+    [
+     "wins",
+     "Pitcher wins"
+    ],
+    [
+     "strikeouts",
+     "Strikeouts"
+    ],
+    [
+     "saves",
+     "Saves"
+    ],
+    [
+     "WHIP",
+     "WHIP"
+    ],
+    [
+     "qualityStarts",
+     "Quality starts"
     ]
+   ],
+   "boxes": [
+    "avg",
+    "OPS",
+    "homeRuns",
+    "stolenBases",
+    "ERA",
+    "WHIP",
+    "strikeoutsPerNineInnings",
+    "oneRunGames"
+   ],
+   "leaderRows": [
+    "homeRuns",
+    "avg",
+    "ERA"
    ]
   },
   "mls": {
@@ -445,6 +741,28 @@
      "awayPointsPerMatch",
      "Away PPM",
      "calc"
+    ],
+    [
+     "goalsPerGame",
+     "Goals / match",
+     "calc"
+    ],
+    [
+     "goalsAgainstPerGame",
+     "Allowed / match",
+     "calc",
+     true
+    ],
+    [
+     "pointsPerMatch",
+     "Points / match",
+     "calc"
+    ],
+    [
+     "failedToScore",
+     "Blanked",
+     "calc",
+     true
     ]
    ],
    "leaders": [
@@ -461,7 +779,42 @@
     [
      "saves",
      "Saves"
+    ],
+    [
+     "shotsOnTarget",
+     "Shots on target"
+    ],
+    [
+     "totalShots",
+     "Shots"
+    ],
+    [
+     "accuratePasses",
+     "Accurate passes"
+    ],
+    [
+     "foulsSuffered",
+     "Fouls won"
+    ],
+    [
+     "yellowCards",
+     "Yellow cards"
     ]
+   ],
+   "boxes": [
+    "possessionPct",
+    "shotsPerMatch",
+    "onTargetPerMatch",
+    "shotsAllowedPerMatch",
+    "conversionPct",
+    "cleanSheets",
+    "homePointsPerMatch",
+    "awayPointsPerMatch"
+   ],
+   "leaderRows": [
+    "goals",
+    "assists",
+    "saves"
    ]
   }
  }

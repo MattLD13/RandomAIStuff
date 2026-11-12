@@ -112,7 +112,7 @@ function lineHistory(cfg, teams, games) {
       for (const t of ct) {
         const ref = inSet.includes(t) ? firstOut : lastIn;
         if (!ref) continue;
-        hist[t.id].push([d, Math.round((diff(rec[t.id]) - diff(rec[ref.id])) * half * 10) / 10]);
+        hist[t.id].push([d, Math.round((diff(rec[t.id]) - diff(rec[ref.id])) * half * 10) / 10, ranked.indexOf(t) + 1]);
       }
     }
   }
@@ -254,6 +254,10 @@ async function buildLeague(key) {
       if (name === 'oneRunGames') { const o = g.filter((x) => Math.abs(x.us - x.them) === 1), w = o.filter((x) => x.res === 'W').length;
         return o.length ? [w / o.length, `${w}-${o.length - w}`] : null; }
       if (name === 'cleanSheets') return g.filter((x) => x.them === 0).length;
+      if (name === 'failedToScore') return g.filter((x) => x.us === 0).length;
+      if (name === 'goalsPerGame') return g.reduce((a, x) => a + x.us, 0) / gp;
+      if (name === 'goalsAgainstPerGame') return g.reduce((a, x) => a + x.them, 0) / gp;
+      if (name === 'pointsPerMatch') return g.reduce((a, x) => a + pts3(x), 0) / gp;
       if (name === 'homePointsPerMatch' || name === 'awayPointsPerMatch') {
         const h = g.filter((x) => x.home === (name === 'homePointsPerMatch')); return h.length ? h.reduce((a, x) => a + pts3(x), 0) / h.length : null; }
       return null;
@@ -269,8 +273,8 @@ async function buildLeague(key) {
   const statTable = cfg.stats.map((def) => teams.map((_, i) => statOf(i, def)));
   const fmtStat = (v, [name]) => {
     if (Array.isArray(v)) return v[1];
+    if (/^(avg|OPS|onBasePct|slugAvg|opponentAvg)$/.test(name)) return v.toFixed(3).replace(/^0/, '');
     if (/Pct$|^threePoint|^freeThrow/.test(name)) return v > 1 ? v.toFixed(1) : (v * 100).toFixed(1);
-    if (/^(avg|OPS)$/.test(name)) return v.toFixed(3).replace(/^0/, '');
     if (/^(ERA|WHIP|strikeoutsPerNineInnings|assistTurnoverRatio)$/.test(name)) return v.toFixed(2);
     if (Number.isInteger(v) && !/^avg|PerGame|PerMatch|PerPlay|^pace|Rating$/.test(name)) return (v > 0 && /ifferential/.test(name) ? '+' : '') + v;
     return (v > 0 && /ifferential/.test(name) ? '+' : '') + v.toFixed(1);
@@ -278,43 +282,40 @@ async function buildLeague(key) {
   const rankVal = (v) => (Array.isArray(v) ? v[0] : v);
 
   // ---------- leaders (named players) ----------
+  // a category key can name ESPN's team and league spellings at once: "3PointMadePerGame|3PointsMadePerGame"
+  const catFind = (cats, key) => { const ks = key.split('|'); return cats?.find((c) => ks.includes(c.name)); };
+  const year0 = per[0].seasonYear, coreLeague = `${COREAPI}/${cfg.espn.replace('/', '/leagues/')}/seasons/${year0}/types/${cfg.sport === 'soccer' ? 1 : 2}`;
+  const leagueLead = await get(`${coreLeague}/leaders?limit=${cfg.sport === 'soccer' ? 200 : 5}`, { optional: true });
   const leaderData = await pool(teams, 6, async (t, i) => {
-    const year = per[i].seasonYear;
     const people = new Map();
     const addPeople = (list) => { for (const a of list || []) {
       if (a.items) { addPeople(a.items); continue; }
       people.set(a.id, { name: a.displayName, short: a.shortName, jersey: a.jersey, pos: a.position?.abbreviation, face: a.headshot?.href });
     } };
     addPeople(per[i].roster?.athletes);
-    let cats = [];
-    if (cfg.sport === 'soccer') cats = null;  // filled from the league leaders below
-    else {
-      const d = await get(`${COREAPI}/${cfg.espn.replace('/', '/leagues/')}/seasons/${year}/types/2/teams/${t.id}/leaders`, { optional: true });
-      cats = d?.categories || [];
-    }
+    let cats;
+    if (cfg.sport === 'soccer') cats = (leagueLead?.categories || []).map((c) => ({ name: c.name, leaders: c.leaders.filter((l) => teamIdFromRef(l.team?.$ref) === t.id) }));
+    else cats = (await get(`${COREAPI}/${cfg.espn.replace('/', '/leagues/')}/seasons/${per[i].seasonYear}/types/2/teams/${t.id}/leaders`, { optional: true }))?.categories || [];
     return { people, cats };
   });
-  if (cfg.sport === 'soccer') {
-    const year = per[0].seasonYear;
-    const d = await get(`${COREAPI}/${cfg.espn.replace('/', '/leagues/')}/seasons/${year}/types/1/leaders?limit=200`, { optional: true });
-    for (const [i, t] of teams.entries()) {
-      leaderData[i].cats = (d?.categories || []).map((c) => ({ name: c.name, leaders: c.leaders.filter((l) => teamIdFromRef(l.team?.$ref) === t.id) }));
-    }
-  }
+  // league leaders: the top 5 in the first categories of the list
+  const leagueCats = cfg.leaders.slice(0, 6).map(([k, label, sub]) => {
+    const c = catFind(leagueLead?.categories, k);
+    return { key: k.split('|')[0], label, sub, rows: (c?.leaders || []).slice(0, 5) };
+  });
   const missing = new Map();
-  for (const ld of leaderData) for (const c of ld.cats) for (const l of c.leaders.slice(0, 1)) {
-    const id = athleteId(l.athlete?.$ref);
-    if (id && !ld.people.has(id)) missing.set(id, l.athlete.$ref);
-  }
+  const want = (l, ld) => { const id = athleteId(l.athlete?.$ref); if (id && !ld?.people.has(id)) missing.set(id, l.athlete.$ref); };
+  for (const ld of leaderData) for (const [k] of cfg.leaders) { const l = catFind(ld.cats, k)?.leaders?.[0]; if (l) want(l, ld); }
+  for (const c of leagueCats) for (const l of c.rows) want(l, null);
   const extra = new Map((await pool([...missing], 6, async ([id, ref]) => {
     const a = await get(ref.replace('http:', 'https:'), { optional: true });
-    return [id, a && { name: a.displayName, short: a.shortName, jersey: a.jersey, pos: a.position?.abbreviation, face: a.headshot?.href }];
+    return [id, a && { name: a.displayName, short: a.shortName, jersey: a.jersey, pos: a.position?.abbreviation, face: a.headshot?.href, teamId: teamIdFromRef(a.team?.$ref) }];
   })).filter(([, a]) => a));
 
   // ---------- playoff line through the season ----------
   const hist = lineHistory(cfg, teams, games);
 
-  // ---------- write ----------
+  // ---------- standings for the whole league ----------
   const outDir = path.join(SITE, key);
   await rm(path.join(outDir, 'data'), { recursive: true, force: true });
   await mkdir(path.join(outDir, 'data'), { recursive: true });
@@ -324,54 +325,80 @@ async function buildLeague(key) {
       seed: num(sd(s, 'playoffSeed')) ?? num(sd(s, 'rank')), clinch: sd(s, 'clincher') || null,
       w: sv(s, 'wins'), l: sv(s, 'losses'), t: sv(s, 'ties') ?? 0, pts: sv(s, 'points'), pct: sv(s, 'winPercent'), gp: sv(s, 'gamesPlayed') };
   };
-  const leagueIndex = { key, brand: cfg.brand, league: cfg.league, sport: cfg.sport, defaultTeam: cfg.defaultTeam,
-    updated: new Date().toISOString(), season: per[0].seasonName,
-    teams: teams.map((t) => ({ abbr: t.abbr, name: t.name, slug: t.slug, logo: t.logo, color: t.color, conference: t.conference, confShort: t.confShort, division: t.division })) };
-  await writeFile(path.join(outDir, 'data', 'league.json'), JSON.stringify(leagueIndex));
+  const m = (r) => cfg.draws ? r.pts : (r.w - r.l);
+  const conferences = [...new Set(teams.map((t) => t.conference))].map((conf) => {
+    const ct = teams.filter((x) => x.conference === conf);
+    const pic = ct.map(standRows).sort((a, b) => (a.seed ?? 99) - (b.seed ?? 99));
+    // each seed's distance from the line: inside, ahead of the first team out; outside, behind the last team in
+    const N = cfg.picture.lineSeed, firstOut = pic[N], lastIn = pic[N - 1];
+    for (const [k, r] of pic.entries()) {
+      const ref = k < N ? firstOut : lastIn;
+      r.edge = ref ? (cfg.draws ? 1 : 0.5) * (m(r) - m(ref)) : null;
+      // a division leader stays in by keeping the division or by the wild-card margin, whichever is bigger
+      if (cfg.picture.divWinners && k < N) {
+        const mates = pic.filter((x) => tById[x.id].division === tById[r.id].division);
+        const [top, next] = [...mates].sort((x, y) => (y.pct ?? 0) - (x.pct ?? 0) || m(y) - m(x));
+        if (top === r && next) r.edge = Math.max(r.edge ?? -Infinity, 0.5 * (m(r) - m(next)));
+      }
+    }
+    const byId = Object.fromEntries(pic.map((r) => [r.id, r]));
+    const divisions = [...new Set(ct.map((x) => x.division))].map((dv) => ({ name: dv,
+      rows: ct.filter((x) => x.division === dv).map((x) => byId[x.id]).sort((a, b) => cfg.draws ? (b.pts - a.pts) : ((b.pct ?? 0) - (a.pct ?? 0)) || (a.seed ?? 99) - (b.seed ?? 99)) }));
+    return { name: conf, short: ct[0].confShort, divisions, picture: pic };
+  });
+  // power ranking: margin per game, with record and form
+  const power = teams.map((t) => {
+    const f = games[t.id].filter((g) => g.state === 'final'), n = f.length || 1;
+    const s = sById[t.id];
+    return { abbr: t.abbr, logo: t.logo, color: t.color, conf: t.confShort,
+      margin: Math.round(10 * f.reduce((a, g) => a + g.us - g.them, 0) / n) / 10,
+      rec: cfg.draws ? `${sv(s, 'wins')}-${sv(s, 'ties')}-${sv(s, 'losses')}` : splitRec(f), pct: cfg.draws ? sv(s, 'points') : sd(s, 'winPercent'),
+      form: f.slice(-10).map((g) => g.res).join('') };
+  }).sort((a, b) => b.margin - a.margin);
 
   // "good" teams for the header's record against them
   const ppm = (id) => { const s = sById[id]; const gp = sv(s, 'gamesPlayed') || (sv(s, 'wins') + sv(s, 'losses') + (sv(s, 'ties') || 0)); return gp ? sv(s, 'points') / gp : 0; };
   const medPpm = cfg.draws ? teams.map((x) => ppm(x.id)).sort((a, b) => a - b)[Math.floor(teams.length / 2)] : 0;
   const good = new Set(teams.filter((x) => cfg.draws ? ppm(x.id) >= medPpm : (sv(sById[x.id], 'winPercent') ?? 0) >= 0.5).map((x) => x.id));
-  const cfgOut = { brand: cfg.brand, league: cfg.league, espn: cfg.espn, draws: !!cfg.draws, ...cfg.words, ...cfg.chart,
+  const cfgOut = { brand: cfg.brand, league: cfg.league, espn: cfg.espn, sport: cfg.sport, draws: !!cfg.draws, ...cfg.words, ...cfg.chart,
     lineSeed: cfg.picture.lineSeed, lineName: cfg.picture.lineName, cuts: cfg.picture.cuts, note: cfg.picture.note,
     goodLabel: cfg.draws ? 'top-half clubs' : '.500+ teams',
     standCols: cfg.standings.cols.map(([h]) => h),
+    stats: cfg.stats.map(([k, label]) => [k, label]), boxes: cfg.boxes,
+    leaders: cfg.leaders.map(([k, label]) => [k.split('|')[0], label]), leaderRows: cfg.leaderRows,
     leagues: [{ key: 'nhl', brand: 'Rinkside', league: 'NHL' }, ...Object.entries(LEAGUES).map(([k, l]) => ({ key: k, brand: l.brand, league: l.league }))] };
+  // the number itself: ESPN's league leaders sometimes give a whole stat line ("135-581, 45 HR, ...") as the display value
+  const shortVal = (l, k = '') => {
+    const d = String(l.displayValue ?? ''); if (cfg.sport !== 'soccer' && d && d.length <= 7) return d;
+    const v = l.value; if (v == null) return d;
+    return Number.isInteger(v) ? v.toLocaleString('en-US') : v < 1 || /^(avg|OPS|onBasePct|slugAvg)$/.test(k) ? v.toFixed(3).replace(/^0/, '') : v.toFixed(2);
+  };
+  const person = (l, ld) => { const id = athleteId(l.athlete?.$ref); return ld?.people.get(id) || extra.get(id) || {}; };
+  const leagueIndex = { key, brand: cfg.brand, league: cfg.league, sport: cfg.sport, defaultTeam: cfg.defaultTeam,
+    updated: new Date().toISOString(), season: per[0].seasonName, cfg: cfgOut,
+    teams: teams.map((t) => ({ abbr: t.abbr, id: t.id, name: t.name, short: t.short, slug: t.slug, logo: t.logo, color: t.color,
+      conference: t.conference, confShort: t.confShort, division: t.division })),
+    conferences, power,
+    leaders: leagueCats.map((c) => ({ key: c.key, label: c.label, rows: c.rows.map((l) => {
+      const p = person(l, null), tid = teamIdFromRef(l.team?.$ref) || p.teamId;
+      return { name: p.name || '?', short: p.short || p.name || '?', pos: p.pos, face: p.face, team: tById[tid]?.abbr || '', teamLogo: tById[tid]?.logo || null,
+        value: shortVal(l, c.key) };
+    }) })) };
+  await writeFile(path.join(outDir, 'data', 'league.json'), JSON.stringify(leagueIndex));
 
   for (const [i, t] of teams.entries()) {
     const s = sById[t.id];
-    const confTeams = teams.filter((x) => x.conference === t.conference);
-    const divisions = [t.division, ...new Set(confTeams.map((x) => x.division).filter((x) => x !== t.division))].map((dv) => ({
-      name: dv, short: confTeams.find((x) => x.division === dv).divShort,
-      rows: confTeams.filter((x) => x.division === dv).map(standRows)
-        .sort((a, b) => (a.seed ?? 99) - (b.seed ?? 99)).sort((a, b) => cfg.draws ? (b.pts - a.pts) : ((b.pct ?? 0) - (a.pct ?? 0))),
-    }));
-    const pic = confTeams.map(standRows).sort((a, b) => (a.seed ?? 99) - (b.seed ?? 99));
-    {
-      // each seed's distance from the line: inside, ahead of the first team out; outside, behind the last team in
-      const N = cfg.picture.lineSeed, firstOut = pic[N], lastIn = pic[N - 1];
-      const m = (r) => cfg.draws ? r.pts : (r.w - r.l);
-      for (const [k, r] of pic.entries()) {
-        const ref = k < N ? firstOut : lastIn;
-        r.edge = ref ? (cfg.draws ? 1 : 0.5) * (m(r) - m(ref)) : null;
-        // a division leader stays in by keeping the division or by the wild-card margin, whichever is bigger
-        if (cfg.picture.divWinners && k < N) {
-          const dv = tById[r.id].division, mates = pic.filter((x) => tById[x.id].division === dv);
-          const [top, next] = [...mates].sort((x, y) => (y.pct ?? 0) - (x.pct ?? 0) || m(y) - m(x));
-          if (top === r && next) r.edge = Math.max(r.edge ?? -Infinity, 0.5 * (m(r) - m(next)));
-        }
-      }
-    }
     const ld = leaderData[i];
+    // every leader category (the board shows three; Customize picks which)
     const leaders = cfg.leaders.map(([cat, label, subCat]) => {
-      const c = ld.cats.find((x) => x.name === cat); const l = c?.leaders?.[0];
+      const l = catFind(ld.cats, cat)?.leaders?.[0];
       if (!l) return null;
-      const id = athleteId(l.athlete?.$ref); const p = ld.people.get(id) || extra.get(id) || {};
-      const sub = subCat ? ld.cats.find((x) => x.name === subCat)?.leaders?.find((x) => athleteId(x.athlete?.$ref) === id)?.displayValue : null;
-      const value = cfg.sport === 'soccer' ? String(l.value) : l.displayValue;
-      return { label, value, name: p.name || '?', short: p.short || p.name, jersey: p.jersey, pos: p.pos, face: p.face, sub };
+      const p = person(l, ld), id = athleteId(l.athlete?.$ref);
+      const sub = subCat ? catFind(ld.cats, subCat)?.leaders?.find((x) => athleteId(x.athlete?.$ref) === id)?.displayValue : null;
+      const value = shortVal(l, cat);
+      return { key: cat.split('|')[0], label, value, name: p.name || '?', short: p.short || p.name, jersey: p.jersey, pos: p.pos, face: p.face, sub };
     }).filter(Boolean);
+    // every stat in the list, ranked (the board shows eight; Customize picks which)
     const stats = cfg.stats.map((def, k) => {
       const raw = statTable[k][i]; if (raw == null) return null;
       const v = rankVal(raw), lower = def[3];
@@ -390,7 +417,7 @@ async function buildLeague(key) {
         pf: sv(s, 'pointsFor'), pa: sv(s, 'pointsAgainst'),
         vsGood: splitRec(games[t.id].filter((g) => good.has(g.oppId))) },
       cfg: cfgOut,
-      divisions, picture: pic, line: hist[t.id],
+      line: hist[t.id],
       games: games[t.id].map((g) => ({ ...g, oppLogo: tById[g.oppId]?.logo || null })),
       post: per[i].post.map((g) => ({ ...g, oppLogo: tById[g.oppId]?.logo || null })),
       stats, leaders,
@@ -399,9 +426,11 @@ async function buildLeague(key) {
   }
 
   // pages: site/<league>/index.html (default team) and site/<league>/<slug>/index.html
-  const page = (depth, team) => PAGE.replaceAll('{{BASE}}', '../'.repeat(depth)).replaceAll('{{LEAGUE}}', key)
-    .replaceAll('{{TEAM}}', team || '').replaceAll('{{BRAND}}', cfg.brand).replaceAll('{{ACCENT}}', cfg.accent);
+  const page = (depth, team, script = 'board') => PAGE.replaceAll('{{BASE}}', '../'.repeat(depth)).replaceAll('{{LEAGUE}}', key)
+    .replaceAll('{{TEAM}}', team || '').replaceAll('{{BRAND}}', cfg.brand).replaceAll('{{SCRIPT}}', script).replaceAll('{{ICON}}', cfg.brand.toLowerCase());
   await writeFile(path.join(outDir, 'index.html'), page(1, ''));
+  await mkdir(path.join(outDir, 'league'), { recursive: true });   // the whole league: /nba/league/
+  await writeFile(path.join(outDir, 'league', 'index.html'), page(2, '', 'league').replace('data-team=""', 'data-team="" data-page="league"'));
   for (const t of teams) {
     await mkdir(path.join(outDir, t.slug), { recursive: true });
     await writeFile(path.join(outDir, t.slug, 'index.html'), page(2, t.abbr));
@@ -419,7 +448,7 @@ const PAGE = `<!doctype html>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>{{BRAND}}</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%226%22 fill=%22%23000%22/%3E%3Crect x=%225%22 y=%2218%22 width=%225%22 height=%229%22 fill=%22{{ACCENT}}%22/%3E%3Crect x=%2213%22 y=%2210%22 width=%225%22 height=%2217%22 fill=%22{{ACCENT}}%22/%3E%3Crect x=%2221%22 y=%2214%22 width=%225%22 height=%2213%22 fill=%22%23d3233a%22/%3E%3C/svg%3E">
+  <link rel="icon" href="brand/{{ICON}}.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -436,7 +465,8 @@ const PAGE = `<!doctype html>
     <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 21.5V9.8L12 3l8.5 6.8v11.7h-6.1v-7h-4.8v7z"/></symbol>
     <symbol id="i-away" viewBox="0 0 24 24"><path transform="rotate(90 12 12)" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></symbol>
   </svg>
-  <script src="sports/board.js"></script>
+  <script src="sports/common.js"></script>
+  <script src="sports/{{SCRIPT}}.js"></script>
 </body>
 </html>
 `;

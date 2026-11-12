@@ -66,3 +66,117 @@ svg .ax.bye { fill: var(--otl); font-weight: 700; font-size: 9px; letter-spacing
 .pgrow .res { margin-left: 12px; width: 26px; height: 26px; display: grid; place-items: center; font: 700 15px var(--head); color: #fff; }
 .pgrow .res.W { background: var(--win); } .pgrow .res.L { background: var(--loss); }
 .pgrow .sc { margin-left: 12px; font-size: 20px; }
+
+/* ---------- brand logos ---------- */
+img.bicon { display: inline-block; vertical-align: -3px; border-radius: 22%; margin-right: 7px; }
+.foot .brand img.bicon { vertical-align: -3px; }
+.ltabs .lt { position: relative; padding-left: 44px; min-height: 46px; justify-content: center; }
+.ltabs .lt img.bicon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); margin: 0; }
+.picker .pdv { margin: 10px 0 5px; padding-top: 6px; border-top: 1px dashed #333; font: 600 10.5px var(--cond); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.picker .pt.whole img.bicon { margin: 0; }
+
+/* ---------- slots (Customize) ---------- */
+.slot { overflow: hidden; }
+body.editing .slot { overflow: visible; }
+.stgrid .boxslot, .leaders .leadslot { position: relative; }
+.stgrid .boxslot .box { height: 56px; }
+body.editing .stgrid .boxslot .swap, body.editing .leaders .leadslot .swap { width: 20px; height: 20px; top: -7px; right: -7px; font-size: 12px; }
+#board.stack .slot { overflow: visible; }
+
+/* power ranking */
+.pwr .pwrow, .lpwr .pwrow { display: grid; grid-template-columns: 22px 24px 46px 1fr 48px 58px; align-items: center; height: var(--rowh, 25px); column-gap: 4px; color: var(--fg); text-decoration: none; }
+.pwrow.me { background: var(--me-row); }
+.pwrow .n { font: 600 11px var(--cond); color: var(--muted); text-align: right; }
+.pwrow img.logo { width: 18px; height: 18px; transform: scale(1.35); }
+.pwrow .ab { font: 700 15px var(--head); }
+.pwrow .bar { position: relative; height: 10px; }
+.pwrow .bar::before { content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: #444; }
+.pwrow .bar i { position: absolute; top: 0; bottom: 0; border-radius: 1px; }
+.pwrow .v { text-align: right; font-size: 14.5px; }
+.pwrow .rec { text-align: right; color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+
+/* team stats list, game lists, splits */
+.tstats .ts { display: flex; align-items: center; height: 24px; border-bottom: 1px solid #1c1c1c; }
+.tstats .k { flex: 1; color: #cfcfcf; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tstats .v { width: 64px; text-align: right; font-size: 16px; }
+.tstats .rk { width: 40px; text-align: right; font: 600 12px var(--cond); color: var(--muted); }
+.tstats .rk.top { color: var(--win); } .tstats .rk.low { color: var(--loss); }
+.glist { padding-top: 6px; }
+.glist .gl { display: flex; align-items: center; height: 30px; border-bottom: 1px solid #1c1c1c; font-size: 13.5px; }
+.glist .dt { width: 50px; color: var(--muted); }
+.glist .ha { width: 22px; color: var(--muted); }
+.glist img.logo { width: 20px; height: 20px; transform: scale(1.3); }
+.glist .ab { margin-left: 8px; font: 700 15px var(--head); }
+.glist .tm { margin-left: auto; font: 700 15px var(--head); }
+.glist .res { margin-left: auto; width: 22px; height: 20px; display: grid; place-items: center; font: 700 13px var(--head); color: #fff; border-radius: 1px; }
+.glist .res.W { background: var(--win); color: var(--win-ink); } .glist .res.L { background: var(--loss); } .glist .res.OT { background: var(--otl); color: #3a2c12; }
+.glist .sc { width: 58px; text-align: right; font-size: 15px; }
+.splits { padding-top: 8px; }
+.splits div { display: flex; justify-content: space-between; align-items: baseline; height: 33px; border-bottom: 1px solid #1c1c1c; font-size: 14px; color: #cfcfcf; }
+.splits b { font: 400 19px var(--mono); color: var(--fg); }
+
+/* ---------- league page (/nba/league/ ...) ---------- */
+#board.league { max-width: 1060px; }
+.lghdr .lgname { font: 700 44px/1 var(--head); }
+.lghdr .lgt { flex: 1; min-width: 0; }
+.lghdr .lgsum { margin-top: 6px; font-size: 16px; color: #ddd; }
+.lghdr .lgband img.bicon { width: 64px; height: 64px; margin: 0; }
+#board.league section { margin-top: 22px; }
+.sechead { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--rule); padding-bottom: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.sechead h2 { margin: 0; font: 700 22px var(--head); }
+.sechead .small { font: 600 10.5px var(--cond); letter-spacing: .12em; color: var(--muted); }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.tabs .tab { border: 1px solid #3a3a3a; background: none; color: var(--muted); font: 700 11px var(--cond); letter-spacing: .1em; text-transform: uppercase; padding: 5px 9px; border-radius: 3px; cursor: pointer; }
+.tabs .tab.on { color: var(--fg); border-color: var(--gold); }
+.lgames { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.gcard { background: var(--card); border-radius: 4px; padding: 8px 10px; }
+.gcard.live { outline: 1.5px solid var(--loss); }
+.gcard .gr { display: flex; align-items: center; height: 26px; color: #bdbdbd; }
+.gcard .gr.win { color: var(--fg); }
+.gcard img.logo { width: 20px; height: 20px; transform: scale(1.3); }
+.gcard .ab { margin-left: 10px; font: 700 17px var(--head); }
+.gcard .rc { margin-left: 8px; font-size: 12px; color: var(--muted); }
+.gcard .sc { margin-left: auto; font-size: 19px; }
+.gcard .gs { display: flex; justify-content: space-between; margin-top: 4px; font-size: 12.5px; color: var(--muted); }
+.lgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; }
+.lgrid .lldr { grid-template-columns: 1fr 1fr; gap: 0 20px; }
+.lgrid .lldr .llr .who b { font-size: 14.5px; }
+.snote { font-size: 12.5px; color: var(--muted); margin: -2px 0 6px; }
+.lconfs { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; }
+.lst { margin-bottom: 12px; }
+.lsth, .lsr { display: grid; grid-template-columns: 18px 24px 44px repeat(var(--ncol), minmax(0, 1fr)); align-items: center; column-gap: 3px; }
+.lsth { height: 26px; border-bottom: 1px solid var(--rule); }
+.lsth .t { grid-column: 1 / span 3; font: 700 16px var(--head); white-space: nowrap; }
+.lsth .c { font: 600 9.5px var(--cond); letter-spacing: .06em; color: var(--muted); text-align: right; }
+.lsr { height: 24px; color: var(--fg); text-decoration: none; position: relative; }
+.lsr:hover { background: rgba(255,255,255,.04); }
+.lsr .sd { font: 600 10.5px var(--cond); color: var(--muted); text-align: right; }
+.lsr img.logo { width: 17px; height: 17px; transform: scale(1.35); justify-self: center; }
+.lsr .ab { font: 700 14.5px var(--head); }
+.lsr sup { position: absolute; left: 82px; top: 3px; font: 600 8.5px var(--cond); color: var(--otl); }
+.lsr .c { text-align: right; font-size: 13px; letter-spacing: -.03em; white-space: nowrap; }
+.lsr .c.e, .lsth .c.e { color: var(--otl); }
+.lpwr .pwrow { grid-template-columns: 22px 24px 46px 1fr 46px 56px 74px; height: 25px; }
+.lpwr .pwrow:hover { background: rgba(255,255,255,.04); }
+.pwrow .frm { display: flex; gap: 2px; justify-content: flex-end; }
+.pwrow .frm i { width: 5px; height: 12px; background: var(--future); border-radius: 1px; }
+.pwrow .frm i.W { background: var(--win); } .pwrow .frm i.L { background: var(--loss); } .pwrow .frm i.T { background: var(--otl); }
+.lldr { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px 32px; }
+.lldr .lk { font: 700 11px var(--cond); letter-spacing: .12em; text-transform: uppercase; color: var(--otl); margin: 8px 0 4px; }
+.llr { display: flex; align-items: center; height: 40px; gap: 8px; }
+.llr .n { width: 14px; text-align: right; color: var(--muted); font: 600 11px var(--cond); }
+.llr .face { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; background: #1d1d1b; flex: none; }
+.llr .face img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+.llr .who { display: flex; flex-direction: column; line-height: 1.1; min-width: 0; }
+.llr .who b { font: 700 16px var(--head); }
+.llr .who small { color: var(--muted); font-size: 11.5px; display: flex; align-items: center; gap: 4px; }
+.llr .who small img.logo { width: 13px; height: 13px; }
+.llr .v { margin-left: auto; font-size: 20px; }
+.lgfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 28px; padding-top: 10px; border-top: 1px solid var(--rule); color: #a8a8a8; font-size: 13.5px; }
+.lgfoot .brand { font: 700 13.5px var(--head); letter-spacing: .15em; color: #bdbdbd; cursor: pointer; }
+@media (max-width: 760px) {
+  .lgrid, .lconfs { grid-template-columns: 1fr; }
+  .lghdr .lgmeta { display: none; }
+  .lghdr .lgname { font-size: 34px; }
+  body.leaguepage #board { padding: 12px 14px 24px; }
+}

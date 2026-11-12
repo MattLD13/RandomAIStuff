@@ -831,8 +831,9 @@ button.lglr:hover b { text-decoration: underline; text-decoration-color: var(--g
 
 /* other sports, in the team picker: Courtside (NBA), Sideline (NFL), Dugout (MLB), Pitchside (MLS) */
 .ltabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
-.ltabs .lt { display: flex; flex-direction: column; padding: 8px; background: var(--card); border: 1px solid transparent; border-radius: 4px; color: var(--fg); text-decoration: none; }
+.ltabs .lt { display: flex; flex-direction: column; justify-content: center; position: relative; padding: 8px 8px 8px 44px; min-height: 46px; background: var(--card); border: 1px solid transparent; border-radius: 4px; color: var(--fg); text-decoration: none; }
 .ltabs .lt b { font: 700 16px var(--head); }
 .ltabs .lt span { font: 600 11px var(--cond); color: var(--muted); letter-spacing: .1em; }
 .ltabs .lt.on { border-color: var(--gold); }
 @media (max-width: 520px) { .ltabs { grid-template-columns: repeat(3, 1fr); } }
+.ltabs .lt img.bicon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); border-radius: 22%; }

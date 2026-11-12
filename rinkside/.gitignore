@@ -4,6 +4,7 @@ site/*/
 !site/fonts/
 !site/alt/
 !site/sports/
+!site/brand/
 site/wallpaper.png
 __pycache__/
 .cache/

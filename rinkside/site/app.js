@@ -1940,8 +1940,8 @@
     picker.setAttribute('role', 'dialog');
     picker.setAttribute('aria-label', 'Choose a team');
     picker.innerHTML = `<div class="sheet"><div class="ph"><span>Choose a team</span>${league ? '' : '<button class="cust" data-act="customize">Customize board</button>'}<button class="x" aria-label="Close">×</button></div>` +
-      `<div class="ltabs"><a class="lt on" href="./"><b>Rinkside</b><span>NHL</span></a>${[['nba', 'Courtside'], ['nfl', 'Sideline'], ['mlb', 'Dugout'], ['mls', 'Pitchside']]
-        .map(([k, b]) => `<a class="lt" href="${k}/"><b>${b}</b><span>${k.toUpperCase()}</span></a>`).join('')}</div>` +
+      `<div class="ltabs">${[['', 'Rinkside', 'NHL'], ['nba', 'Courtside'], ['nfl', 'Sideline'], ['mlb', 'Dugout'], ['mls', 'Pitchside']]
+        .map(([k, b, n]) => `<a class="lt${k ? '' : ' on'}" href="${k ? `${k}/` : './'}"><img class="bicon" src="brand/${b.toLowerCase()}.svg" width="26" height="26" alt=""><b>${b}</b><span>${n || k.toUpperCase()}</span></a>`).join('')}</div>` +
       `<div class="pg"><div class="pgl"><button class="pt${league ? ' on' : ''}" data-team="NHL">${logo(NHL_LOGO)}<span>NHL \u00b7 whole league</span></button></div></div>${groups
       .map(([d, ts]) => `<div class="pg"><div class="pgt">${esc(d)}</div><div class="pgl">${ts
         .map((t) => `<button class="pt${t.abbrev === team && !league ? ' on' : ''}" data-team="${esc(t.abbrev)}">${logo(t.logo)}<span>${esc(t.name)}</span></button>`)
