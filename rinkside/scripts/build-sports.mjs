@@ -346,15 +346,33 @@ async function buildLeague(key) {
       rows: ct.filter((x) => x.division === dv).map((x) => byId[x.id]).sort((a, b) => cfg.draws ? (b.pts - a.pts) : ((b.pct ?? 0) - (a.pct ?? 0)) || (a.seed ?? 99) - (b.seed ?? 99)) }));
     return { name: conf, short: ct[0].confShort, divisions, picture: pic };
   });
-  // power ranking: margin per game, with record and form
-  const power = teams.map((t) => {
+  // power ranking, as on Rinkside: strength = half win % (points per match in MLS), half margin per game, each
+  // standardized across the league, on a 50-is-average scale (one standard deviation = 10)
+  const lum = (hex) => { const c = (hex || '#000').replace('#', '').padEnd(6, '0').match(/../g).map((x) => parseInt(x, 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  // a bar color that shows on black: the team color, else its alternate, else gray
+  const nearWhite = (hex) => (hex || '').replace('#', '').match(/../g)?.every((x) => parseInt(x, 16) > 215);
+  const lighten = (hex, k) => '#' + hex.replace('#', '').match(/../g).map((x) => Math.round(parseInt(x, 16) + (255 - parseInt(x, 16)) * k).toString(16).padStart(2, '0')).join('');
+  // a bar color that shows on black: the team color (lightened if it is very dark); white teams use their alternate
+  const barColor = (t) => {
+    const c = nearWhite(t.color) && !nearWhite(t.alt) ? t.alt : t.color;
+    if (nearWhite(c)) return '#8a8a8a';
+    let out = c; for (let k = 0; lum(out) < 0.06 && k < 6; k++) out = lighten(c, 0.12 * (k + 1));
+    return out;
+  };
+  const rowsP = teams.map((t) => {
     const f = games[t.id].filter((g) => g.state === 'final'), n = f.length || 1;
     const s = sById[t.id];
-    return { abbr: t.abbr, logo: t.logo, color: t.color, conf: t.confShort,
+    const winPct = cfg.draws ? f.reduce((a, g) => a + pts3(g), 0) / n / 3 : f.reduce((a, g) => a + (g.res === 'W' ? 1 : g.res === 'T' ? 0.5 : 0), 0) / n;
+    return { abbr: t.abbr, logo: t.logo, color: barColor(t), conf: t.confShort, winPct,
       margin: Math.round(10 * f.reduce((a, g) => a + g.us - g.them, 0) / n) / 10,
-      rec: cfg.draws ? `${sv(s, 'wins')}-${sv(s, 'ties')}-${sv(s, 'losses')}` : splitRec(f), pct: cfg.draws ? sv(s, 'points') : sd(s, 'winPercent'),
+      rec: cfg.draws ? `${sv(s, 'wins')}-${sv(s, 'ties')}-${sv(s, 'losses')}` : splitRec(f),
       form: f.slice(-10).map((g) => g.res).join('') };
-  }).sort((a, b) => b.margin - a.margin);
+  });
+  const zf = (vals) => { const mu = vals.reduce((a, b) => a + b, 0) / vals.length; const sd = Math.sqrt(vals.reduce((a, b) => a + (b - mu) ** 2, 0) / vals.length) || 1; return (v) => (v - mu) / sd; };
+  const zW = zf(rowsP.map((r) => r.winPct)), zM = zf(rowsP.map((r) => r.margin));
+  const power = rowsP.map((r) => ({ ...r, strength: Math.round(10 * (50 + 10 * (0.5 * zW(r.winPct) + 0.5 * zM(r.margin)))) / 10 }))
+    .sort((a, b) => b.strength - a.strength);
 
   // "good" teams for the header's record against them
   const ppm = (id) => { const s = sById[id]; const gp = sv(s, 'gamesPlayed') || (sv(s, 'wins') + sv(s, 'losses') + (sv(s, 'ties') || 0)); return gp ? sv(s, 'points') / gp : 0; };

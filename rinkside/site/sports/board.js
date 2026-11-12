@@ -179,12 +179,21 @@
     other: ['The other conference', (w, h) => stTable(byDivision(otherConf(), false), w, h)],
     power: ['Power ranking', (w, h) => powerList(w, h, 30)],
   };
+  // strength bars grow from 50 (average); two columns when the whole league won't fit in one
   function powerList(w, h, n) {
-    const rows = index.power.slice(0, n), rowH = Math.max(17, Math.min(25, Math.floor((h - 34) / rows.length)));
-    const max = Math.max(...index.power.map((p) => Math.abs(p.margin)), 1);
-    return `<div class="colhead"><span class="t">Power ranking</span><span class="r small">${esc(L.margin.toUpperCase())} PER ${esc(L.game.toUpperCase())}</span></div>
-      <div class="pwr" style="--rowh:${rowH}px">${rows.map((p, i) => `<div class="pwrow${p.abbr === D.team.abbr ? ' me' : ''}"><span class="n">${i + 1}</span>${logo(p.logo)}<span class="ab">${esc(p.abbr)}</span>
-        <span class="bar"><i style="${p.margin >= 0 ? 'left:50%' : `right:50%`};width:${Math.abs(p.margin) / max * 50}%;background:${esc(p.color)}"></i></span><span class="v mono">${signed(p.margin)}</span><span class="rec">${esc(p.rec)}</span></div>`).join('')}</div>`;
+    const all = index.power, rows = all.slice(0, n);
+    const dev = Math.max(...all.map((p) => Math.abs(p.strength - 50)), 1);
+    const bar = (p) => `<span class="bar"><i style="${p.strength >= 50 ? 'left:50%' : 'right:50%'};width:${Math.abs(p.strength - 50) / dev * 50}%;background:${esc(p.color)}"></i></span>`;
+    const head = `<div class="colhead"><span class="t">Power ranking</span><span class="r small">STRENGTH · ${esc(L.margin.toUpperCase())}</span></div>`;
+    const oneCol = (h - 34) / rows.length >= 19;
+    if (oneCol) {
+      const rowH = Math.min(25, Math.floor((h - 34) / rows.length));
+      return head + `<div class="pwr" style="--rowh:${rowH}px">${rows.map((p, i) => `<div class="pwrow${p.abbr === D.team.abbr ? ' me' : ''}" title="${esc(p.rec)}"><span class="n">${i + 1}</span>${logo(p.logo)}<span class="ab">${esc(p.abbr)}</span>
+        ${bar(p)}<span class="v mono">${p.strength.toFixed(1)}</span><span class="rec">${signed(p.margin)}</span></div>`).join('')}</div>`;
+    }
+    const half = Math.ceil(rows.length / 2), rowH = Math.min(25, Math.floor((h - 34) / half));
+    const col = (list, off) => `<div>${list.map((p, i) => `<div class="pwrow c2${p.abbr === D.team.abbr ? ' me' : ''}" title="${esc(`${p.rec}, ${signed(p.margin)} per ${L.game}`)}"><span class="n">${off + i + 1}</span>${logo(p.logo)}<span class="ab">${esc(p.abbr)}</span>${bar(p)}<span class="v mono">${p.strength.toFixed(1)}</span></div>`).join('')}</div>`;
+    return head + `<div class="pwr two" style="--rowh:${rowH}px">${col(rows.slice(0, half), 0)}${col(rows.slice(half), half)}</div>`;
   }
 
   // ---------- middle column ----------

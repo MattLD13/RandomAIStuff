@@ -409,7 +409,11 @@ in the footers.
 - **Standings:** both conferences side by side.
   - **Playoff seeds** shows the dashed separators at each league's cuts and a ± LINE column.
   - **Divisions** shows one table per division.
-- **Power ranking:** every team by margin per game, with its record and last-10 form.
+- **Power ranking:** every team by strength, as on Rinkside (50 is average). Strength is half win %
+  (points per match in MLS) and half margin per game, each standardized across the league. The
+  ranking also shows the margin, record and last-10 form. Bars use the team color, lightened when
+  it's very dark. White teams use their alternate color. On a team board's left column, the whole
+  league fits in two columns.
 - **Leaders:** the league's top 5 in six categories, with headshots and teams.
 
 The team picker groups teams by conference, then by division with a separator line between divisions.

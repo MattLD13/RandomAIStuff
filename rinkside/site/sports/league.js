@@ -66,11 +66,12 @@
   }
 
   function power() {
-    const max = Math.max(...index.power.map((p) => Math.abs(p.margin)), 1);
-    return `<div class="sechead"><h2>Power ranking</h2><span class="small">${esc(L.margin.toUpperCase())} PER ${esc(L.game.toUpperCase())} · RECORD · LAST 10</span></div><div class="lpwr">${index.power.map((p, i) =>
+    const dev = Math.max(...index.power.map((p) => Math.abs(p.strength - 50)), 1);
+    return `<div class="sechead"><h2>Power ranking</h2><span class="small">STRENGTH · ${esc(L.margin.toUpperCase())} PER ${esc(L.game.toUpperCase())} · RECORD · LAST 10</span></div><div class="lpwr">${index.power.map((p, i) =>
       `<a class="pwrow" href="${key}/${index.teams.find((t) => t.abbr === p.abbr)?.slug}/"><span class="n">${i + 1}</span>${logo(p.logo)}<span class="ab">${esc(p.abbr)}</span>
-        <span class="bar"><i style="${p.margin >= 0 ? 'left:50%' : 'right:50%'};width:${Math.abs(p.margin) / max * 50}%;background:${esc(p.color)}"></i></span><span class="v mono">${signed(p.margin)}</span><span class="rec">${esc(p.rec)}</span>
-        <span class="frm">${[...p.form].map((r) => `<i class="${r}"></i>`).join('')}</span></a>`).join('')}</div>`;
+        <span class="bar"><i style="${p.strength >= 50 ? 'left:50%' : 'right:50%'};width:${Math.abs(p.strength - 50) / dev * 50}%;background:${esc(p.color)}"></i></span><span class="v mono">${p.strength.toFixed(1)}</span><span class="mg mono">${signed(p.margin)}</span><span class="rec">${esc(p.rec)}</span>
+        <span class="frm">${[...p.form].map((r) => `<i class="${r}"></i>`).join('')}</span></a>`).join('')}</div>
+      <div class="snote">Strength: half win % (points per ${esc(L.game)} in MLS), half ${esc(L.margin)} per ${esc(L.game)}, standardized across the league. 50 is average.</div>`;
   }
 
   function leaders() {
