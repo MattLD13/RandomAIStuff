@@ -201,7 +201,8 @@
     "reboundsPerGame",
     "assistsPerGame"
    ],
-   "domain": "basketball.mattdicks.org"
+   "domain": "basketball.mattdicks.org",
+   "leagueLogo": "https://a.espncdn.com/i/teamlogos/leagues/500-dark/nba.png"
   },
   "nfl": {
    "brand": "Sideline",
@@ -416,7 +417,8 @@
    "domain": "football.mattdicks.org",
    "slugs": {
     "WSH": "commanders"
-   }
+   },
+   "leagueLogo": "https://a.espncdn.com/i/teamlogos/leagues/500-dark/nfl.png"
   },
   "mlb": {
    "brand": "Dugout",
@@ -642,7 +644,8 @@
     "avg",
     "ERA"
    ],
-   "domain": "baseball.mattdicks.org"
+   "domain": "baseball.mattdicks.org",
+   "leagueLogo": "https://a.espncdn.com/i/teamlogos/leagues/500-dark/mlb.png"
   },
   "mls": {
    "brand": "Pitchside",
@@ -854,12 +857,14 @@
     "STL": "stlouiscity",
     "TOR": "torontofc",
     "VAN": "whitecaps"
-   }
+   },
+   "leagueLogo": "https://a.espncdn.com/i/leaguelogos/soccer/500-dark/19.png"
   }
  },
  "hockey": {
   "brand": "Rinkside",
   "league": "NHL",
-  "domain": "hockey.mattdicks.org"
+  "domain": "hockey.mattdicks.org",
+  "leagueLogo": "https://assets.nhle.com/logos/nhl/svg/NHL_light.svg"
  }
 }

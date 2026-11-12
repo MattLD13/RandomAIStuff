@@ -837,3 +837,4 @@ button.lglr:hover b { text-decoration: underline; text-decoration-color: var(--g
 .ltabs .lt.on { border-color: var(--gold); }
 @media (max-width: 520px) { .ltabs { grid-template-columns: repeat(3, 1fr); } }
 .ltabs .lt img.bicon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); border-radius: 22%; }
+.ltabs .lt img.licon { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); object-fit: contain; }

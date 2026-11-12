@@ -223,3 +223,8 @@ body.editing .stgrid .boxslot .swap, body.editing .leaders .leadslot .swap { wid
   .lgrid, .lconfs { grid-template-columns: minmax(0, 1fr); }
   .lgrid .lldr { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* league logos: picker tabs, the whole-league entry, the league page header */
+.ltabs .lt img.licon { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); object-fit: contain; margin: 0; }
+.picker .pt.whole img.licon { object-fit: contain; flex: none; }
+.lghdr .lgband img.licon { width: 60px; height: 60px; object-fit: contain; }

@@ -12,7 +12,7 @@
     const leader = [...index.conferences.flatMap((c) => c.picture)].sort((a, b) => L.draws ? b.pts - a.pts : (b.pct ?? 0) - (a.pct ?? 0))[0];
     const lt = index.teams.find((t) => t.abbr === leader?.abbr);
     const lead = lt ? `${esc(lt.name)} lead the league at ${L.draws ? `${leader.pts} points` : `${leader.w}-${leader.l}${leader.t ? `-${leader.t}` : ''}`}` : '';
-    return `<header class="lghdr"><div class="lgband sb" role="button" tabindex="0" title="Choose a team">${brandIcon(L.brand, 64)}</div>
+    return `<header class="lghdr"><div class="lgband sb" role="button" tabindex="0" title="Choose a team">${SB.leagueIcon(L, 60)}</div>
       <div class="lgt"><div class="lgname">${esc(L.league)}</div><div class="lgsum"><b id="gcount"></b>${lead}${top ? ` · best ${esc(L.margin)}: ${esc(top.abbr)} ${signed(top.margin)} per ${esc(L.game)}` : ''}</div></div>
       <div class="lgmeta">${fmt(Date.now(), { weekday: 'long', month: 'long', day: 'numeric' })}<br>${esc(index.season || '')} · tap the logo for a team</div></header>`;
   }

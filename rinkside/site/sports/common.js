@@ -6,6 +6,8 @@ window.SB = (() => {
   const ord = (n) => n + (['th', 'st', 'nd', 'rd'][(n % 100 - 20) % 10] || ['th', 'st', 'nd', 'rd'][n % 100] || 'th');
   const ET = { timeZone: 'America/New_York' };
   const fmt = (d, o) => new Intl.DateTimeFormat('en-US', { ...ET, ...o }).format(new Date(d));
+  // the league's own logo (NBA, NFL, MLB, MLS, NHL); a board's mark when there is none
+  const leagueIcon = (l, size = 28) => l.leagueLogo ? `<img class="licon" src="${esc(l.leagueLogo)}" width="${size}" height="${size}" alt="${esc(l.league)}">` : brandIcon(l.brand, size);
   const brandIcon = (brand, size = 18) => `<img class="bicon" src="brand/${esc(String(brand).toLowerCase())}.svg" width="${size}" height="${size}" alt="">`;
   const storage = (name) => ({
     get() { try { return localStorage.getItem(name); } catch { return null; } },
@@ -58,8 +60,8 @@ window.SB = (() => {
       return `<div class="pg"><div class="pgt">${esc(c.name)}</div>${divs}</div>`;
     }).join('');
     picker.innerHTML = `<div class="sheet"><div class="ph"><span>Choose a team</span><a class="gd" href="guide/">All addresses</a>${extra}<button class="x" aria-label="Close">×</button></div>
-      <div class="ltabs">${L.leagues.map((l) => `<a class="lt${l.key === key ? ' on' : ''}" href="${l.key === key ? href.league() : href.other(l)}">${brandIcon(l.brand, 26)}<b>${esc(l.brand)}</b><span>${esc(l.league)}</span></a>`).join('')}</div>
-      <div class="pg"><div class="pgl"><a class="pt whole${current === 'LEAGUE' ? ' on' : ''}" href="${href.league()}">${brandIcon(L.brand, 30)}<span>${esc(L.league)} · whole league</span></a></div></div>
+      <div class="ltabs">${L.leagues.map((l) => `<a class="lt${l.key === key ? ' on' : ''}" href="${l.key === key ? href.league() : href.other(l)}">${leagueIcon(l, 28)}<b>${esc(l.league)}</b><span>${esc(l.brand)}</span></a>`).join('')}</div>
+      <div class="pg"><div class="pgl"><a class="pt whole${current === 'LEAGUE' ? ' on' : ''}" href="${href.league()}">${leagueIcon(L, 30)}<span>${esc(L.league)} · whole league</span></a></div></div>
       ${confs}</div>`;
     picker.addEventListener('click', (e) => {
       const a = e.target.closest('a.pt[data-abbr]'); if (a) { teamStore.set(a.dataset.abbr); return; }
@@ -81,5 +83,5 @@ window.SB = (() => {
   };
   const loadIndex = async () => { const idx = await (await fetch(`${key}/data/league.json`, { cache: 'no-cache' })).json(); cfg = idx.cfg; return idx; };
 
-  return { key, esc, logo, ord, fmt, brandIcon, storage, teamStore, shortDiv, remix, board, stage, modeNow, fit, openPicker, closePicker, get picker() { return picker; }, loadIndex, href };
+  return { key, esc, logo, ord, fmt, brandIcon, leagueIcon, storage, teamStore, shortDiv, remix, board, stage, modeNow, fit, openPicker, closePicker, get picker() { return picker; }, loadIndex, href };
 })();

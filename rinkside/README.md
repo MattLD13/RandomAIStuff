@@ -412,8 +412,12 @@ picker links to the other leagues too.
 - Dugout: blue, baseball
 - Pitchside: green, soccer ball
 
-The marks are in `site/brand/*.svg`. They are used as the favicons, in the picker's league tabs and
-in the footers.
+The marks are in `site/brand/*.svg`. They are the favicons and appear in the footers.
+
+Wherever a league itself is shown, its real logo is used: the league tabs in every picker, the
+"whole league" entry, the league page headers and the guide. The NBA, NFL, MLB and MLS logos come
+from ESPN, in their versions made for dark backgrounds, and the NHL shield comes from the NHL. The
+logo addresses are `leagueLogo` in `sports/leagues.json`.
 
 **Whole league.** Each league has a league page, like hockey's `/nhl/`: `/nba/league/`,
 `/nfl/league/`, `/mlb/league/` and `/mls/league/`. The picker lists it first as

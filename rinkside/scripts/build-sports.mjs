@@ -432,8 +432,9 @@ async function buildLeague(key) {
     standCols: cfg.standings.cols.map(([h]) => h),
     stats: cfg.stats.map(([k, label]) => [k, label]), boxes: cfg.boxes,
     leaders: cfg.leaders.map(([k, label]) => [k.split('|')[0], label]), leaderRows: cfg.leaderRows,
-    domain: cfg.domain || null,
-    leagues: [{ key: 'nhl', brand: 'Rinkside', league: 'NHL', domain: HOCKEY?.domain || null }, ...Object.entries(LEAGUES).map(([k, l]) => ({ key: k, brand: l.brand, league: l.league, domain: l.domain || null }))] };
+    domain: cfg.domain || null, leagueLogo: cfg.leagueLogo || null,
+    leagues: [{ key: 'nhl', brand: 'Rinkside', league: 'NHL', domain: HOCKEY?.domain || null, leagueLogo: HOCKEY?.leagueLogo || null },
+      ...Object.entries(LEAGUES).map(([k, l]) => ({ key: k, brand: l.brand, league: l.league, domain: l.domain || null, leagueLogo: l.leagueLogo || null }))] };
   // the number itself: ESPN's league leaders sometimes give a whole stat line ("135-581, 45 HR, ...") as the display value
   const shortVal = (l, k = '') => {
     const d = String(l.displayValue ?? ''); if (cfg.sport !== 'soccer' && d && d.length <= 7) return d;
@@ -555,13 +556,13 @@ async function writeGuide() {
   const esc = (x) => String(x ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   let hockey = [];
   try { hockey = JSON.parse(await readFile(path.join(SITE, 'data', 'teams.json'), 'utf8')).teams.map((t) => ({ name: t.name, slug: t.slug, logo: t.logo, conference: t.conference + ' Conference' })); } catch {}
-  const sections = [{ key: 'nhl', brand: 'Rinkside', league: 'NHL', domain: HOCKEY.domain, path: '', teams: hockey, leaguePath: 'nhl/' },
-    ...built.map(({ key, cfg, teams }) => ({ key, brand: cfg.brand, league: cfg.league, domain: cfg.domain, path: `${key}/`, leaguePath: `${key}/league/`,
+  const sections = [{ key: 'nhl', brand: 'Rinkside', league: 'NHL', domain: HOCKEY.domain, logo: HOCKEY.leagueLogo, path: '', teams: hockey, leaguePath: 'nhl/' },
+    ...built.map(({ key, cfg, teams }) => ({ key, brand: cfg.brand, league: cfg.league, domain: cfg.domain, logo: cfg.leagueLogo, path: `${key}/`, leaguePath: `${key}/league/`,
       teams: teams.map((t) => ({ name: t.name, slug: t.slug, logo: t.logo, conference: t.conference })) }))];
   const sec = (s) => {
     const confs = [...new Set(s.teams.map((t) => t.conference))].sort();
     const sub = s.key !== 'nhl';
-    return `<section id="${s.key}"><div class="gh"><img src="brand/${s.brand.toLowerCase()}.svg" width="44" height="44" alt=""><div><h2>${esc(s.brand)} <span>${esc(s.league)}</span></h2>
+    return `<section id="${s.key}"><div class="gh"><img class="lg" src="${esc(s.logo)}" width="52" height="52" alt="${esc(s.league)}"><div><h2>${esc(s.league)} <span><img src="brand/${s.brand.toLowerCase()}.svg" width="18" height="18" alt="">${esc(s.brand)}</span></h2>
       <div class="dom"><a href="https://${esc(s.domain)}/">${esc(s.domain)}</a> · whole league: <a href="${sub ? `https://${esc(s.domain)}/` : `https://${esc(s.domain)}/nhl/`}">${esc(s.domain)}${sub ? '' : '/nhl'}</a>${sub ? ` · also <a href="${esc(s.leaguePath)}">hockey.mattdicks.org/${esc(s.leaguePath)}</a>` : ''}</div></div></div>
       ${confs.map((c) => `<h3>${esc(c)}</h3><div class="gl">${s.teams.filter((t) => t.conference === c).sort((a, b) => a.name.localeCompare(b.name)).map((t) =>
         `<a href="${esc(s.path + t.slug)}/" data-sub="https://${esc(s.domain)}/${esc(t.slug)}"><img src="${esc(t.logo)}" alt="" loading="lazy"><span><b>${esc(t.name)}</b><small>${esc(s.domain)}/${esc(t.slug)}</small></span></a>`).join('')}</div>`).join('')}</section>`;
@@ -578,10 +579,11 @@ h1 { font: 700 40px 'Barlow Condensed', sans-serif; margin: 0; }
 .lead { color: #cfcfcf; margin: 6px 0 14px; font-size: 16px; line-height: 1.45; }
 nav { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 2px solid var(--gold); }
 nav a { display: flex; align-items: center; gap: 8px; padding: 7px 12px 7px 8px; background: var(--card); border-radius: 5px; color: #f4f4f4; text-decoration: none; font: 700 16px 'Barlow Condensed', sans-serif; }
-nav img { width: 26px; height: 26px; }
+nav img { width: 26px; height: 26px; object-fit: contain; }
 section { margin-top: 30px; }
 .gh { display: flex; gap: 12px; align-items: center; }
-.gh h2 { margin: 0; font: 700 28px 'Barlow Condensed', sans-serif; } .gh h2 span { color: var(--muted); font-size: 20px; margin-left: 4px; }
+.gh h2 { margin: 0; font: 700 28px 'Barlow Condensed', sans-serif; } .gh h2 span { color: var(--muted); font-size: 18px; margin-left: 8px; display: inline-flex; align-items: center; gap: 5px; vertical-align: 3px; }
+.gh h2 span img { border-radius: 22%; } .gh img.lg { object-fit: contain; }
 .dom { color: var(--muted); font-size: 14px; } .dom a { color: var(--gold); text-decoration: none; }
 h3 { margin: 18px 0 8px; font: 600 12px 'Barlow Semi Condensed', sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid #262626; padding-bottom: 5px; }
 .gl { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
@@ -592,7 +594,7 @@ h3 { margin: 18px 0 8px; font: 600 12px 'Barlow Semi Condensed', sans-serif; let
 </style></head><body><main>
 <h1>Every league, every team</h1>
 <p class="lead">Each league has its own address, and each team's board is the league's address plus the team's name, like <b>soccer.mattdicks.org/sounders</b> or <b>basketball.mattdicks.org/knicks</b>. A league's address on its own opens the whole league. Every board also works under hockey.mattdicks.org (for example <b>hockey.mattdicks.org/mls/sounders</b>), and abbreviations and city names work too (<b>/sea</b>, <b>/seattle</b>).</p>
-<nav>${sections.map((s) => `<a href="guide/#${s.key}"><img src="brand/${s.brand.toLowerCase()}.svg" alt="">${esc(s.brand)} · ${esc(s.league)}</a>`).join('')}</nav>
+<nav>${sections.map((s) => `<a href="guide/#${s.key}"><img src="${esc(s.logo)}" alt="">${esc(s.league)} · ${esc(s.brand)}</a>`).join('')}</nav>
 ${sections.map(sec).join('')}
 </main>
 <script>
