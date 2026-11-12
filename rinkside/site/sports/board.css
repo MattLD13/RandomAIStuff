@@ -196,7 +196,7 @@ body.editing .stgrid .boxslot .swap, body.editing .leaders .leadslot .swap { wid
 .ppic .sub span:first-child { width: 60px; max-width: none; letter-spacing: .12em; font-size: 10.5px; }
 .stgrid .k.sm { font-size: 8.6px; letter-spacing: .02em; }
 .lrow .n.sm { font-size: 15.5px; max-width: 125px; }
-.lrow .n.xs { font-size: 13px; letter-spacing: -0.01em; }
+.lrow .n.xs { font-size: 12.5px; letter-spacing: -0.02em; }
 
 .hdr .band.sb img { top: 7px; height: 82px; width: 120px; left: 30px; }
 #board.stack .hdr .band.sb img { left: 8px; top: 6px; width: 92px; height: 82px; }
@@ -228,3 +228,16 @@ body.editing .stgrid .boxslot .swap, body.editing .leaders .leadslot .swap { wid
 .ltabs .lt img.licon { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); object-fit: contain; margin: 0; }
 .picker .pt.whole img.licon { object-fit: contain; flex: none; }
 .lghdr .lgband img.licon { width: 60px; height: 60px; object-fit: contain; }
+
+/* standings logos sized to their rows; clinch letters after the abbreviation, not over the logo */
+.strow img.logo { width: 19px; height: 19px; margin-left: 4px; transform: scale(1.12); object-fit: contain; }
+.strow .ab, .lsr .ab { white-space: nowrap; }
+.strow sup, .lsr sup { position: static; margin-left: 2px; vertical-align: 6px; font: 600 9px var(--cond); color: var(--otl); }
+.lsr img.logo { transform: scale(1.12); object-fit: contain; }
+
+/* logos sized to their rows everywhere (Rinkside's scale-ups are for its larger hockey rows) */
+.ppic .prow img.logo { transform: scale(1.15); object-fit: contain; }
+.lgrow img.logo { transform: scale(1.25); object-fit: contain; }
+.ncard img.logo { object-fit: contain; }
+#board.stack .foot { display: flex; flex-wrap: nowrap; }
+body.stack #board.stack .foot .brand { margin-left: auto; width: auto; }

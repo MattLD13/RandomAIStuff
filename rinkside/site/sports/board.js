@@ -146,20 +146,26 @@
     }],
   };
   // a line around zero: green above, red below
+  // a line against zero (green above, red below); the scale covers only the range the line uses, so a season spent
+  // below the line fills the chart instead of leaving the top half empty
   function zeroLine(w, h, pts, fill, tick = (v) => signed(v)) {
-    const { xDate } = xAxis(w), mid = h / 2;
-    const max = Math.max(1e-9, ...pts.map((p) => Math.abs(p[1])));
-    const step = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25, 50, 100, 250].find((s) => max / s <= 4) || 500;
-    const top = Math.ceil(max / step) * step;
-    const y = (v) => mid - v / top * (mid - 9);
-    let svg = `<line x1="0" x2="${w - 40}" y1="${mid}" y2="${mid}" stroke="#3a3a3a" stroke-dasharray="3 4"/>`;
-    for (const v of [top, top / 2, 0, -top / 2, -top]) svg += `<text x="${w - 18}" y="${y(v) + 4}" class="ax">${tick(v)}</text>`;
+    const { xDate } = xAxis(w);
+    const vals = pts.map((p) => p[1]);
+    let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
+    const span0 = hi - lo || 1;
+    const step = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25, 50, 100, 250].find((s) => span0 / s <= 4) || 500;
+    lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+    if (hi === 0) hi = step; if (lo === 0) lo = -step;   // always a little room on both sides of zero
+    const y = (v) => 8 + (hi - v) / (hi - lo) * (h - 16), y0 = y(0);
+    let svg = `<line x1="0" x2="${w - 40}" y1="${y0}" y2="${y0}" stroke="#3a3a3a" stroke-dasharray="3 4"/>`;
+    const every = (hi - lo) / step > (h < 110 ? 4 : 6) ? 2 : 1;   // fewer labels on short charts
+    for (let v = lo; v <= hi + 1e-9; v += step) if (Math.round(v / step) % every === 0) svg += `<text x="${w - 18}" y="${y(v) + 4}" class="ax">${tick(Math.round(v * 1000) / 1000)}</text>`;
     if (!pts.length) return svg;
     const xy = pts.map(([d, v]) => [Math.min(xDate(d), w - 50), y(v)]);
     const path = xy.map(([a, b], i) => `${i ? 'L' : 'M'}${a.toFixed(1)},${b.toFixed(1)}`).join('');
     const id = Math.random().toString(36).slice(2, 7);
-    const area = `${path}L${xy[xy.length - 1][0].toFixed(1)},${mid}L${xy[0][0].toFixed(1)},${mid}Z`;
-    svg += `<clipPath id="a${id}"><rect x="0" y="0" width="${w}" height="${mid}"/></clipPath><clipPath id="b${id}"><rect x="0" y="${mid}" width="${w}" height="${h}"/></clipPath>`;
+    const area = `${path}L${xy[xy.length - 1][0].toFixed(1)},${y0}L${xy[0][0].toFixed(1)},${y0}Z`;
+    svg += `<clipPath id="a${id}"><rect x="0" y="0" width="${w}" height="${y0}"/></clipPath><clipPath id="b${id}"><rect x="0" y="${y0}" width="${w}" height="${h}"/></clipPath>`;
     if (fill) svg += `<path d="${area}" fill="var(--win)" opacity=".28" clip-path="url(#a${id})"/><path d="${area}" fill="var(--loss)" opacity=".28" clip-path="url(#b${id})"/>`;
     svg += `<path d="${path}" fill="none" stroke="var(--win)" stroke-width="2" clip-path="url(#a${id})"/><path d="${path}" fill="none" stroke="var(--loss)" stroke-width="2" clip-path="url(#b${id})"/>`;
     svg += `<circle cx="${xy[xy.length - 1][0]}" cy="${xy[xy.length - 1][1]}" r="5" fill="#fff"/>`;
@@ -171,11 +177,12 @@
   }
 
   // ---------- tables (left column) ----------
+  const CLINCH = { x: 'clinched a playoff spot', y: 'clinched the division', z: 'clinched the best record in the conference', w: 'clinched a wild card', e: 'eliminated', '*': 'clinched home field' };
   function stTable(groups, w, h) {
     const cols = L.standCols, nRows = groups.reduce((a, g) => a + g.rows.length, 0);
     const rowH = Math.max(18, Math.min(25, Math.floor((h - groups.length * 34 - 2) / nRows)));
     const head = (g) => `<div class="sthead"><span class="t">${esc(shortDiv(g.name))}</span>${cols.map((c) => `<span class="c">${c}</span>`).join('')}</div>`;
-    const row = (r, i, g) => `${g.cut?.includes(i) ? '<div class="cutline"></div>' : ''}<div class="strow${r.abbr === D.team.abbr ? ' me' : ''}">${logo(r.logo)}<span class="ab">${esc(r.abbr)}</span>${r.clinch ? `<sup>${esc(r.clinch)}</sup>` : ''}${r.cols.map((v) => `<span class="c mono">${esc(v)}</span>`).join('')}</div>`;
+    const row = (r, i, g) => `${g.cut?.includes(i) ? '<div class="cutline"></div>' : ''}<div class="strow${r.abbr === D.team.abbr ? ' me' : ''}">${logo(r.logo)}<span class="ab">${esc(r.abbr)}${r.clinch ? `<sup title="${esc(CLINCH[r.clinch] || '')}">${esc(r.clinch)}</sup>` : ''}</span>${r.cols.map((v) => `<span class="c mono">${esc(v)}</span>`).join('')}</div>`;
     return `<div class="sts${cols.length >= 7 ? ' dense' : ''}" style="--ncol:${cols.length};--rowh:${rowH}px">${groups.map((g) => `<div class="stdiv">${head(g)}${g.rows.map((r, i) => row(r, i, g)).join('')}</div>`).join('')}</div>`;
   }
   const byDivision = (conf, mineFirst) => {

@@ -55,7 +55,7 @@
   function standings() {
     const cols = L.standCols;
     const table = (title, rows, cuts, seeds) => `<div class="lst"><div class="lsth"><span class="t">${esc(title)}</span>${cols.map((c) => `<span class="c">${c}</span>`).join('')}${seeds ? '<span class="c e">± LINE</span>' : ''}</div>${rows.map((r, i) =>
-      `${cuts.includes(i) ? '<div class="cutline"></div>' : ''}<a class="lsr" href="${SB.href.team(index.teams.find((t) => t.abbr === r.abbr)?.slug)}"><span class="sd">${seeds ? r.seed ?? '' : ''}</span>${logo(r.logo)}<span class="ab">${esc(r.abbr)}</span>${r.clinch ? `<sup>${esc(r.clinch)}</sup>` : ''}${r.cols.map((v) => `<span class="c mono">${esc(v)}</span>`).join('')}${seeds ? `<span class="c e mono">${signed(r.edge)}</span>` : ''}</a>`).join('')}</div>`;
+      `${cuts.includes(i) ? '<div class="cutline"></div>' : ''}<a class="lsr" href="${SB.href.team(index.teams.find((t) => t.abbr === r.abbr)?.slug)}"><span class="sd">${seeds ? r.seed ?? '' : ''}</span>${logo(r.logo)}<span class="ab">${esc(r.abbr)}${r.clinch ? `<sup>${esc(r.clinch)}</sup>` : ''}</span>${r.cols.map((v) => `<span class="c mono">${esc(v)}</span>`).join('')}${seeds ? `<span class="c e mono">${signed(r.edge)}</span>` : ''}</a>`).join('')}</div>`;
     const conf = (c) => view === 'seeds'
       ? table(shortDiv(c.name), c.picture, L.cuts, true)
       : c.divisions.map((d) => table(shortDiv(d.name), d.rows, [], false)).join('');
