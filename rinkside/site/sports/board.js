@@ -2,22 +2,9 @@
 // Same canvas and look as Rinkside; each league's wording, standings columns, playoff format and stats come from
 // the team JSON written by scripts/build-sports.mjs. Live scores come straight from ESPN's scoreboard in the browser.
 (() => {
-  const LEAGUES = {
-    nhl: { brand: 'Rinkside', name: 'NHL', path: '' },
-    nba: { brand: 'Courtside', name: 'NBA', espn: 'basketball/nba', margin: 'point margin', cap: 25, unit: 'games', game: 'game', games: 'games', draws: false },
-    nfl: { brand: 'Sideline', name: 'NFL', espn: 'football/nfl', margin: 'point margin', cap: 28, unit: 'games', game: 'game', games: 'games', draws: false, byWeek: true },
-    mlb: { brand: 'Dugout', name: 'MLB', espn: 'baseball/mlb', margin: 'run margin', cap: 8, unit: 'games', game: 'game', games: 'games', draws: false },
-    mls: { brand: 'Pitchside', name: 'MLS', espn: 'soccer/usa.1', margin: 'goal margin', cap: 4, unit: 'points', game: 'match', games: 'matches', draws: true },
-  };
-  const LINE = { nba: [10, 'Play-in line'], nfl: [7, 'Playoff line'], mlb: [6, 'Postseason line'], mls: [9, 'Playoff line'] };
-  const PICTURE = {
-    nba: { cuts: [[6, 'PLAY-IN'], [10, 'OUT']], note: 'Top 6 in, 7–10 play in' },
-    nfl: { cuts: [[7, 'OUT']], note: 'Top 4 win divisions, 5–7 wild cards' },
-    mlb: { cuts: [[6, 'OUT']], note: 'Top 3 win divisions, 4–6 wild cards' },
-    mls: { cuts: [[7, 'WILD CARD'], [9, 'OUT']], note: 'Top 7 in, 8 and 9 play a wild-card game' },
-  };
+  // every league setting arrives with the data (D.cfg, from sports/leagues.json via the builder)
   const key = document.body.dataset.league;
-  const L = LEAGUES[key];
+  let L = null;
   const board = document.getElementById('board'), stage = document.getElementById('stage');
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const logo = (src, cls = 'logo') => src ? `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy">` : '';
@@ -36,6 +23,7 @@
     const t = index.teams.find((x) => x.abbr === want) || index.teams[0];
     store.set(t.abbr);
     D = await (await fetch(`${key}/data/${t.abbr}.json`, { cache: 'no-cache' })).json();
+    L = D.cfg;
     document.title = `${D.team.short} · ${D.brand}`;
     render();
     live();
@@ -47,35 +35,31 @@
     return L.draws ? `${r.w}-${r.t}-${r.l}` : r.t ? `${r.w}-${r.l}-${r.t}` : `${r.w}-${r.l}`;
   };
   const finals = () => D.games.filter((g) => g.state === 'final');
-  function streakText() {
-    const f = finals(); if (!f.length) return '';
-    const last = f[f.length - 1].res; let n = 0;
-    for (let i = f.length - 1; i >= 0 && f[i].res === last; i--) n++;
-    const word = { W: 'won', L: 'lost', T: L.draws ? 'drawn' : 'tied' }[last];
-    return n === 1 ? (last === 'T' ? `${word} the last one` : `${word} the last one`) : `${word} ${n} straight`;
-  }
+  // The header says what the standings can't: what's next (or how the season ended),
+  // home and road, and the record against the better teams.
+  const teamName = (abbr) => index.teams.find((t) => t.abbr === abbr)?.name || abbr;
   function summary() {
-    const r = D.record, t = D.team;
-    const div = D.divisions.find((d) => d.name === t.division);
-    const pos = div ? div.rows.findIndex((x) => x.abbr === t.abbr) + 1 : null;
-    const where = L.draws ? `${ord(r.seed)} in the ${t.confShort}` : `${ord(pos)} in the ${shortDiv(t.division)}`;
-    const lead = L.draws ? `<b>${r.pts} points</b>` : `<b>${r.pct || '.000'}</b>`;
-    const s = streakText();
-    const over = D.games.length && D.games.every((g) => g.state !== 'pre' && g.state !== 'live');
     const pl = postLine();
-    return `${lead}, ${esc(where)}${s && !pl ? `, ${s}` : ''}${pl ? ` · ${esc(pl.charAt(0).toLowerCase() + pl.slice(1))}` : over ? ' · regular season over' : ''}`;
+    if (pl) return `<b>${esc(pl)}</b>`;
+    const g = D.games.find((x) => x.state === 'pre' || x.state === 'live');
+    if (g) {
+      const tbd = /T0[45]:00Z$/.test(g.date);
+      const when = `${fmt(g.date, { weekday: 'short' })}${tbd ? '' : ' ' + fmt(g.date, { hour: 'numeric', minute: '2-digit' }).replace(' ', '').toLowerCase()}`;
+      return `Next: <b>${esc(when)} ${g.home ? 'vs' : '@'} ${esc(teamName(g.opp))}</b>${g.tv ? ` on ${esc(g.tv)}` : ''}`;
+    }
+    const out = D.record.seed > L.lineSeed;
+    return `<b>${out ? 'Missed the playoffs' : 'Regular season over'}</b>`;
   }
 
   function header() {
     const t = D.team, r = D.record;
     const today = fmt(Date.now(), { weekday: 'long', month: 'long', day: 'numeric' });
-    const parts = [r.home && `Home ${r.home}`, r.road && `Road ${r.road}`, r.last10 && `Last 10 ${r.last10}`].filter(Boolean).join(' · ');
-    const left = D.games.filter((g) => g.state === 'pre').length;
+    const parts = [r.home && `Home ${r.home}`, r.road && `Road ${r.road}`, !L.standCols.includes('L10') && finals().length > 10 && r.last10 && `Last 10 ${r.last10}`].filter(Boolean).join(' · ');
     return `<header class="abs hdr" style="--team:${t.color};--team2:${t.alt}">
       <div class="band sb" role="button" tabindex="0" aria-label="Choose a team">${logo(t.logo)}</div>
       <div class="record mono" id="rec">${record()}</div>
-      <div class="summary">${summary()}</div>
-      <div class="meta"><div>${today}</div><div>${esc(parts)}</div><div id="livebox">${left ? `${left} ${left === 1 ? L.game : L.games} left` : esc(D.season)}</div></div>
+      <div class="summary" id="livebox">${summary()}</div>
+      <div class="meta"><div>${today}</div><div>${esc(parts)}</div><div>${r.vsGood ? `vs ${esc(L.goodLabel)} ${esc(r.vsGood)}` : ''}</div></div>
     </header>`;
   }
 
@@ -131,9 +115,9 @@
   // how far from the playoff line, through the season
   function lineChart(x0, y0, w) {
     const pts = D.line || [];
-    const [, name] = LINE[key];
+    const name = L.lineName;
     const now = pts.length ? pts[pts.length - 1][1] : 0;
-    const unit = L.unit === 'points' ? (Math.abs(now) === 1 ? 'point' : 'points') : (Math.abs(now) === 1 ? 'game' : 'games');
+    const unit = L.lineUnit === 'points' ? (Math.abs(now) === 1 ? 'point' : 'points') : (Math.abs(now) === 1 ? 'game' : 'games');
     const note = now > 0 ? `${now} ${unit} clear of the first team out` : now < 0 ? `${-now} ${unit} behind the last team in` : 'right on the line';
     const H = 88, mid = 44;
     const gs = D.games.filter((g) => g.state !== 'off');
@@ -170,7 +154,7 @@
   }
 
   function standings(x0, y0, w, rowH = 25) {
-    const cols = D.standCols;
+    const cols = L.standCols;
     const head = (d) => `<div class="sthead"><span class="t">${esc(shortDiv(d.name))}</span>${cols.map((c) => `<span class="c">${c}</span>`).join('')}</div>`;
     const rows = (d) => d.rows.map((r) => `<div class="strow${r.abbr === D.team.abbr ? ' me' : ''}">${logo(r.logo)}<span class="ab">${esc(r.abbr)}</span>${r.clinch ? `<sup>${esc(r.clinch)}</sup>` : ''}${r.cols.map((v) => `<span class="c mono">${esc(v)}</span>`).join('')}</div>`).join('');
     return `<section class="abs sts" style="left:${x0}px;top:${y0}px;width:${w}px;--ncol:${cols.length};--rowh:${rowH}px">${D.divisions.map((d) => `<div class="stdiv">${head(d)}${rows(d)}</div>`).join('')}</section>`;
@@ -178,16 +162,15 @@
   const shortDiv = (n) => n.replace(/^American League/, 'AL').replace(/^National League/, 'NL').replace(/ Conference$/, '');
 
   function picture(x0, y0, w) {
-    const P = PICTURE[key];
-    const [n] = LINE[key];
+    const n = L.lineSeed;
     const rows = D.picture.filter((r) => r.seed != null).slice(0, Math.min(D.picture.length, n + 2));
     const me = D.picture.find((r) => r.abbr === D.team.abbr);
     if (me && !rows.includes(me)) rows.push(me);
-    const val = (r) => L.draws ? r.pts : (r.pct != null ? r.pct.toFixed(3).replace(/^0/, '') : '');
+    const val = (r) => r.edge == null ? '' : r.edge > 0 ? `+${r.edge}` : r.edge < 0 ? `−${-r.edge}` : '0';
     let html = `<div class="colhead"><span class="t">Playoff picture</span><span class="r small">${esc(D.team.confShort.toUpperCase())}</span></div>
-      <div class="sub first"><span>${esc(P.note)}</span><span class="gp">GP</span><span class="pts">${L.draws ? 'PTS' : 'PCT'}</span></div>`;
+      <div class="sub first"><span>${esc(L.note)}</span><span class="gp">GP</span><span class="pts">± LINE</span></div>`;
     rows.forEach((r, i) => {
-      if (i && rows[i - 1].seed && P.cuts.some(([c]) => c === rows[i - 1].seed) && r.seed > rows[i - 1].seed) html += '<div class="cutline"></div>';
+      if (i && rows[i - 1].seed && L.cuts.includes(rows[i - 1].seed) && r.seed > rows[i - 1].seed) html += '<div class="cutline"></div>';
       const gp = r.gp ?? (r.w + r.l + (r.t || 0));
       html += `<div class="prow${r.abbr === D.team.abbr ? ' me' : ''}"><span class="lbl">${r.seed ?? ''}</span>${logo(r.logo)}<span class="ab">${esc(r.abbr)}</span><span class="gp">${gp}</span><span class="pts">${val(r)}</span></div>`;
     });
@@ -257,7 +240,7 @@
     const stH = nDiv * 33 + nRows * rowH;
     let html;
     if (MODE === 'board') {
-      const pRows = Math.min(D.picture.length, LINE[key][0] + 3);
+      const pRows = Math.min(D.picture.length, L.lineSeed + 3);
       const picH = 60 + pRows * 26;
       board.style.height = '1145px';
       html = header() + seasonChart(40, 112, 840) + lineChart(40, 352, 840) +
@@ -265,7 +248,7 @@
         picture(400, 485, 230) + leaders(400, 485 + picH + 14, 230) +
         nextFive(650, 485, 230) + lastFive(650, 846, 230) + foot(40, 1118, 840);
     } else {
-      const pRows = Math.min(D.picture.length, LINE[key][0] + 3);
+      const pRows = Math.min(D.picture.length, L.lineSeed + 3);
       const picH = 60 + pRows * 26;
       let y = 112;
       html = header() + seasonChart(16, y, 468) + lineChart(16, y += 240, 468);
@@ -306,7 +289,7 @@
     picker.className = 'picker';
     picker.setAttribute('role', 'dialog');
     picker.innerHTML = `<div class="sheet"><div class="ph"><span>Choose a team</span><button class="x" aria-label="Close">×</button></div>
-      <div class="ltabs">${Object.entries(LEAGUES).map(([k, l]) => `<a class="lt${k === key ? ' on' : ''}" href="${k === 'nhl' ? './' : `${k}/`}"><b>${l.brand}</b><span>${l.name}</span></a>`).join('')}</div>
+      <div class="ltabs">${L.leagues.map((l) => `<a class="lt${l.key === key ? ' on' : ''}" href="${l.key === 'nhl' ? './' : `${l.key}/`}"><b>${esc(l.brand)}</b><span>${esc(l.league)}</span></a>`).join('')}</div>
       ${groups.map(([c, ts]) => `<div class="pg"><div class="pgt">${esc(c)}</div><div class="pgl">${ts.map((t) =>
         `<a class="pt${t.abbr === D.team.abbr ? ' on' : ''}" href="${key}/${t.slug}/">${logo(t.logo)}<span>${esc(t.name)}</span></a>`).join('')}</div></div>`).join('')}</div>`;
     picker.addEventListener('click', (e) => {
@@ -339,7 +322,7 @@
           return;
         }
         if (st.state === 'post' && !D.games.some((g) => g.id === ev.id && g.state === 'final')) {
-          box.textContent = `Final: ${me.team.abbreviation} ${me.score}–${op.score} ${op.team.abbreviation}`;
+          box.innerHTML = `<b>Final: ${esc(me.team.abbreviation)} ${esc(me.score)}–${esc(op.score)} ${esc(op.team.abbreviation)}</b>`;
         }
       }
     } catch {}

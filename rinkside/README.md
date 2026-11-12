@@ -391,7 +391,12 @@ their short name (`/mls/lafc`, `/mls/seattle`). `/nba/` alone opens the last tea
 To switch leagues or teams, open the picker (tap the team band or press `t`). The hockey
 picker links to the other leagues too.
 
-**What each sport gets**
+**What each sport gets.** Nothing on a board repeats another part of it. The standings hold the
+record, PCT, streak and points, so the other panels show something else.
+- **Header:** the record in large type, then the next game (day, time, opponent, TV) or how the
+  season ended ("Out in the ALDS", "Missed the playoffs"). The right side shows the home and road
+  records, and the record against good teams: .500 or better, or for MLS, the top half of the
+  league by points per match. Last 10 appears only where the standings don't already have it.
 - **Wording:**
   - NBA, NFL and MLB records read W-L. NFL ties show as W-L-T.
   - MLS reads W-D-L with points, and calls games "matches".
@@ -417,24 +422,31 @@ picker links to the other leagues too.
   | League | Columns |
   |---|---|
   | NBA | GB, L10 |
-  | NFL | T, PF, PA |
+  | NFL | T, point differential, division record |
   | MLB | GB, run differential |
   | MLS | GF, GA, GD, PTS |
-- **Playoff picture:** ESPN's real seeds, with cut lines at each league's format.
+- **Playoff picture:** ESPN's real seeds, with cut lines at each league's format. The last
+  column is **± LINE**: how far each team is from the cut. Teams inside are measured against the
+  first team out, and teams outside against the last team in. In the NFL and MLB, a division
+  leader gets the larger of its division lead and its wild-card margin.
   - NBA: top 6, then play-in to 10th.
   - NFL: 7 seeds.
   - MLB: 6 seeds.
   - MLS: top 7, plus a wild-card game for 8th and 9th.
-- **Stat boxes:** ranked against the league.
+- **Stat boxes:** 8 per league, ranked against the league. None repeats a standings column.
 
   | League | Stats |
   |---|---|
-  | NBA | FG %, 3-pt %, rebounds, turnovers, and more |
-  | NFL | yards, 3rd down %, red-zone TD %, turnover margin, sacks |
-  | MLB | OPS, home runs, ERA, WHIP, K per 9 |
-  | MLS | clean sheets, home and away points per match |
+  | NBA | pace, offensive and defensive rating, 3-pt %, FT %, rebounds, assist/TO, blocks |
+  | NFL | yards per play, pass and rush yards, 3rd down %, red zone %, time of possession, turnover margin, sacks |
+  | MLB | batting average, OPS, home runs, steals, ERA, WHIP, K per 9, record in one-run games |
+  | MLS | possession, shots, shots on target, shots against, finishing %, clean sheets, home and away points per match |
 
-  ESPN has no team stats for MLS. Those boxes are worked out from the match results.
+  ESPN has no pace or ratings, so the builder calculates them. Possessions are estimated as
+  FGA − offensive rebounds + turnovers + 0.44 × FTA.
+
+  ESPN has no MLS team stats. Possession and shots come from each match day's scoreboard,
+  which is cached in `.cache/espn` once the day is over. The other MLS boxes come from the results.
 - **Team leaders:** named players with headshots.
   - NBA: points, rebounds and assists per game.
   - NFL: passing, rushing and receiving yards, each with the player's stat line.
@@ -448,7 +460,15 @@ picker links to the other leagues too.
 **How it is built**
 - `scripts/build-sports.mjs` reads ESPN's public site API. Each league takes a few seconds.
 - It writes `site/<league>/data/<ABBR>.json` and a folder for each team.
-- The league settings are in `sports/leagues.json`: name, columns, stats, leaders and line seed.
+- Every league setting is in `sports/leagues.json` and nowhere else:
+  - name and wording
+  - chart scale
+  - standings columns
+  - cut line, playoff note and cut lines
+  - stats and leaders
+
+  The builder copies what the page needs into each team's data (`cfg`), so `board.js` has no
+  league settings of its own.
 - The page is `site/sports/board.js` with `board.css` on top of Rinkside's `style.css`.
 - The Rinkside workflow runs it on every build. If ESPN fails, the build continues, and the
   hockey board still deploys.

@@ -36,7 +36,7 @@ svg .ax.bye { fill: var(--otl); font-weight: 700; font-size: 9px; letter-spacing
 /* stat boxes: a grid instead of Rinkside's pair */
 .stgrid { display: grid; grid-template-columns: repeat(var(--per), minmax(0, 1fr)); gap: 6px; }
 .stgrid .box { background: var(--card); border-radius: 4px; padding: 6px 7px 5px; height: 56px; }
-.stgrid .k { font: 700 10px var(--cond); letter-spacing: .08em; color: var(--otl); text-transform: uppercase; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stgrid .k { font: 700 9.5px var(--cond); letter-spacing: .05em; color: var(--otl); text-transform: uppercase; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stgrid .rk { font: 500 9.5px var(--cond); color: var(--muted); margin-top: 3px; line-height: 1; }
 .stgrid .v { font: 400 20px var(--mono); margin-top: 4px; line-height: 1; }
 

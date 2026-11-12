@@ -1,13 +1,22 @@
 {
- "about": "One entry per league on the multi-sport boards (built by scripts/build-sports.mjs from ESPN's public site API). Rinkside itself (NHL) is separate and unchanged.",
+ "about": "Every per-league setting for the multi-sport boards lives here. scripts/build-sports.mjs reads it and copies what the page needs into each team's data (cfg), so site/sports/board.js has no league settings of its own. Rinkside (NHL) is separate.",
  "leagues": {
   "nba": {
    "brand": "Courtside",
-   "sport": "basketball",
    "league": "NBA",
+   "sport": "basketball",
    "espn": "basketball/nba",
    "defaultTeam": "NY",
    "accent": "#f58426",
+   "words": {
+    "game": "game",
+    "games": "games",
+    "margin": "point margin",
+    "lineUnit": "games"
+   },
+   "chart": {
+    "cap": 25
+   },
    "standings": {
     "cols": [
      [
@@ -37,46 +46,39 @@
     ]
    },
    "picture": {
-    "groupBy": "conference",
-    "lines": [
-     [
-      6,
-      "Playoffs"
-     ],
-     [
-      10,
-      "Play-in"
-     ]
-    ],
-    "note": "Seeds 1\u20136 go to the playoffs; 7\u201310 play in for the last two spots.",
     "lineSeed": 10,
-    "lineName": "Play-in line"
+    "lineName": "Play-in line",
+    "cuts": [
+     6,
+     10
+    ],
+    "note": "Top 6 in, 7\u201310 play in"
    },
    "stats": [
     [
-     "avgPoints",
-     "Points",
-     "offensive"
+     "pace",
+     "Pace",
+     "calc"
     ],
     [
-     "avgPointsAgainst",
-     "Allowed",
-     "standings",
+     "offRating",
+     "Off. rating",
+     "calc"
+    ],
+    [
+     "defRating",
+     "Def. rating",
+     "calc",
      true
-    ],
-    [
-     "differential",
-     "Margin",
-     "standings"
-    ],
-    [
-     "fieldGoalPct",
-     "FG %",
-     "offensive"
     ],
     [
      "threePointFieldGoalPct",
      "3-pt %",
+     "offensive"
+    ],
+    [
+     "freeThrowPct",
+     "FT %",
      "offensive"
     ],
     [
@@ -85,15 +87,14 @@
      "general"
     ],
     [
-     "avgAssists",
-     "Assists",
-     "offensive"
+     "assistTurnoverRatio",
+     "Assist / TO",
+     "general"
     ],
     [
-     "avgTurnovers",
-     "Turnovers",
-     "offensive",
-     true
+     "avgBlocks",
+     "Blocks",
+     "defensive"
     ]
    ],
    "leaders": [
@@ -113,11 +114,21 @@
   },
   "nfl": {
    "brand": "Sideline",
-   "sport": "football",
    "league": "NFL",
+   "sport": "football",
    "espn": "football/nfl",
    "defaultTeam": "NYG",
    "accent": "#c9243f",
+   "words": {
+    "game": "game",
+    "games": "games",
+    "margin": "point margin",
+    "lineUnit": "games"
+   },
+   "chart": {
+    "cap": 28,
+    "byWeek": true
+   },
    "standings": {
     "cols": [
      [
@@ -137,16 +148,12 @@
       "winPercent"
      ],
      [
-      "PF",
-      "pointsFor"
-     ],
-     [
-      "PA",
-      "pointsAgainst"
-     ],
-     [
       "DIFF",
       "differential"
+     ],
+     [
+      "DIV",
+      "divisionRecord"
      ],
      [
       "STRK",
@@ -155,33 +162,23 @@
     ]
    },
    "picture": {
-    "groupBy": "conference",
-    "lines": [
-     [
-      7,
-      "Playoffs"
-     ]
-    ],
-    "note": "Seeds 1\u20134 are division winners, 5\u20137 wild cards. Only the 1 seed gets a bye.",
     "lineSeed": 7,
     "lineName": "Playoff line",
-    "divWinners": true
+    "divWinners": true,
+    "cuts": [
+     7
+    ],
+    "note": "Top 4 win divisions, 5\u20137 wild cards"
    },
    "stats": [
     [
-     "totalPointsPerGame",
-     "Points",
-     "passing"
+     "yardsPerPlay",
+     "Yards / play",
+     "calc"
     ],
     [
-     "pointsAgainstPerGame",
-     "Allowed",
-     "derived",
-     true
-    ],
-    [
-     "yardsPerGame",
-     "Yards",
+     "passingYardsPerGame",
+     "Pass yds",
      "passing"
     ],
     [
@@ -196,12 +193,17 @@
     ],
     [
      "redzoneTouchdownPct",
-     "Red zone TD %",
+     "Red zone %",
      "miscellaneous"
     ],
     [
+     "possessionTime",
+     "Possession",
+     "calc"
+    ],
+    [
      "turnOverDifferential",
-     "Turnovers +/-",
+     "TO margin",
      "miscellaneous"
     ],
     [
@@ -230,11 +232,20 @@
   },
   "mlb": {
    "brand": "Dugout",
-   "sport": "baseball",
    "league": "MLB",
+   "sport": "baseball",
    "espn": "baseball/mlb",
    "defaultTeam": "NYY",
    "accent": "#1f4fa3",
+   "words": {
+    "game": "game",
+    "games": "games",
+    "margin": "run margin",
+    "lineUnit": "games"
+   },
+   "chart": {
+    "cap": 8
+   },
    "standings": {
     "cols": [
      [
@@ -264,30 +275,15 @@
     ]
    },
    "picture": {
-    "groupBy": "conference",
-    "lines": [
-     [
-      6,
-      "Postseason"
-     ]
-    ],
-    "note": "Three division winners and three wild cards per league; seeds 1\u20132 get a bye.",
     "lineSeed": 6,
     "lineName": "Postseason line",
-    "divWinners": true
+    "divWinners": true,
+    "cuts": [
+     6
+    ],
+    "note": "Top 3 win divisions, 4\u20136 wild cards"
    },
    "stats": [
-    [
-     "avgPointsFor",
-     "Runs / game",
-     "standings"
-    ],
-    [
-     "avgPointsAgainst",
-     "Allowed / game",
-     "standings",
-     true
-    ],
     [
      "avg",
      "Batting avg",
@@ -301,6 +297,11 @@
     [
      "homeRuns",
      "Home runs",
+     "batting"
+    ],
+    [
+     "stolenBases",
+     "Steals",
      "batting"
     ],
     [
@@ -319,6 +320,11 @@
      "strikeoutsPerNineInnings",
      "K per 9",
      "pitching"
+    ],
+    [
+     "oneRunGames",
+     "1-run games",
+     "calc"
     ]
    ],
    "leaders": [
@@ -338,12 +344,21 @@
   },
   "mls": {
    "brand": "Pitchside",
-   "sport": "soccer",
    "league": "MLS",
+   "sport": "soccer",
    "espn": "soccer/usa.1",
    "defaultTeam": "NYC",
    "accent": "#2a9d5c",
    "draws": true,
+   "words": {
+    "game": "match",
+    "games": "matches",
+    "margin": "goal margin",
+    "lineUnit": "points"
+   },
+   "chart": {
+    "cap": 4
+   },
    "standings": {
     "cols": [
      [
@@ -381,57 +396,55 @@
     ]
    },
    "picture": {
-    "groupBy": "conference",
-    "lines": [
-     [
-      7,
-      "Playoffs"
-     ],
-     [
-      9,
-      "Wild card"
-     ]
-    ],
-    "note": "The top 7 in each conference qualify; 8 and 9 meet in a wild-card game.",
     "lineSeed": 9,
-    "lineName": "Playoff line"
+    "lineName": "Playoff line",
+    "cuts": [
+     7,
+     9
+    ],
+    "note": "Top 7 in, 8 and 9 play a wild-card game"
    },
    "stats": [
     [
-     "goalsPerGame",
-     "Goals / match",
-     "derived"
+     "possessionPct",
+     "Possession",
+     "match"
     ],
     [
-     "goalsAgainstPerGame",
-     "Allowed / match",
-     "derived",
+     "shotsPerMatch",
+     "Shots",
+     "match"
+    ],
+    [
+     "onTargetPerMatch",
+     "On target",
+     "match"
+    ],
+    [
+     "shotsAllowedPerMatch",
+     "Shots vs.",
+     "match",
      true
     ],
     [
-     "pointDifferential",
-     "Goal diff.",
-     "standings"
-    ],
-    [
-     "pointsPerMatch",
-     "Points / match",
-     "derived"
+     "conversionPct",
+     "Finishing %",
+     "match"
     ],
     [
      "cleanSheets",
      "Clean sheets",
-     "derived"
+     "calc"
     ],
     [
      "homePointsPerMatch",
-     "Home pts / match",
-     "derived"
+     "Home PPM",
+     "calc"
     ],
     [
      "awayPointsPerMatch",
-     "Away pts / match",
-     "derived"
+     "Away PPM",
+     "calc"
     ]
    ],
    "leaders": [

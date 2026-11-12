@@ -13,6 +13,7 @@ const { leagues: LEAGUES } = JSON.parse(await readFile(path.join(ROOT, 'sports/l
 const SITEAPI = 'https://site.api.espn.com/apis/site/v2/sports';
 const COREAPI = 'https://sports.core.api.espn.com/v2/sports';
 
+const CACHE = path.join(ROOT, '.cache', 'espn');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function get(url, { optional = false } = {}) {
   for (let i = 0; i < 4; i++) {
@@ -124,6 +125,43 @@ function splitRec(gs) {
   return c('T') ? `${c('W')}-${c('T')}-${c('L')}` : `${c('W')}-${c('L')}`;
 }
 
+// ---------- MLS match stats ----------
+// ESPN has no MLS team statistics, but each day's scoreboard carries possession and shots per club.
+// Finished days never change, so they are cached in .cache/espn (kept between workflow runs).
+async function matchStats(cfg, games) {
+  const days = new Set();
+  for (const gs of Object.values(games)) for (const g of gs) if (g.state === 'final') {
+    const d = new Date(g.date);
+    for (const off of [0, -1]) days.add(new Date(d.getTime() + off * 864e5).toISOString().slice(0, 10).replace(/-/g, ''));
+  }
+  await mkdir(CACHE, { recursive: true });
+  const seen = new Set(), out = {};
+  await pool([...days].sort(), 6, async (day) => {
+    const file = path.join(CACHE, `${cfg.espn.replace('/', '_')}_${day}.json`);
+    let sb = null;
+    try { sb = JSON.parse(await readFile(file, 'utf8')); } catch {}
+    if (!sb) {
+      sb = await get(`${SITEAPI}/${cfg.espn}/scoreboard?dates=${day}`, { optional: true });
+      if (!sb) return;
+      sb = { events: (sb.events || []).map((e) => ({ id: e.id, done: e.competitions[0].status?.type?.completed,
+        teams: e.competitions[0].competitors.map((c) => ({ id: c.team.id, st: Object.fromEntries((c.statistics || []).map((x) => [x.name, parseFloat(x.displayValue)])) })) })) };
+      if (sb.events.length && sb.events.every((e) => e.done)) await writeFile(file, JSON.stringify(sb));
+    }
+    for (const e of sb.events) {
+      if (!e.done || seen.has(e.id) || e.teams.length !== 2) continue;
+      seen.add(e.id);
+      for (const [a, b] of [[0, 1], [1, 0]]) {
+        const me = e.teams[a], op = e.teams[b];
+        if (!(me.st.totalShots >= 0)) continue;
+        const o = (out[me.id] ??= { n: 0, poss: 0, shots: 0, onT: 0, goals: 0, shotsA: 0 });
+        o.n++; o.poss += me.st.possessionPct || 0; o.shots += me.st.totalShots; o.onT += me.st.shotsOnTarget || 0;
+        o.goals += me.st.totalGoals || 0; o.shotsA += op.st.totalShots || 0;
+      }
+    }
+  });
+  return out;
+}
+
 // ---------- one league ----------
 async function buildLeague(key) {
   const cfg = LEAGUES[key];
@@ -181,31 +219,53 @@ async function buildLeague(key) {
   });
   const games = Object.fromEntries(teams.map((t, i) => [t.id, per[i].games]));
 
+  // ---------- MLS match stats (possession, shots) from the daily scoreboards ----------
+  const match = cfg.stats.some((d) => d[2] === 'match') ? await matchStats(cfg, games) : {};
+
   // ---------- team stat boxes, ranked across the league ----------
+  // Each box is something the standings do not already show. A stat is a number, or [number to rank by, text to show].
+  const pts3 = (x) => (x.res === 'W' ? 3 : x.res === 'T' ? 1 : 0);
   const statOf = (i, [name, , src]) => {
     const t = teams[i], s = sById[t.id], g = per[i].games.filter((x) => x.state === 'final');
     const gp = g.length || 1;
-    if (src === 'standings') return sv(s, name);
-    if (src === 'derived') {
-      const pf = g.reduce((a, x) => a + x.us, 0), pa = g.reduce((a, x) => a + x.them, 0);
-      const pts = g.reduce((a, x) => a + (x.res === 'W' ? 3 : x.res === 'T' ? 1 : 0), 0);
-      return { pointsAgainstPerGame: pa / gp, goalsPerGame: pf / gp, goalsAgainstPerGame: pa / gp, pointsPerMatch: pts / gp,
-        cleanSheets: g.filter((x) => x.them === 0).length, homePointsPerMatch: (() => { const h = g.filter((x) => x.home); return h.length ? h.reduce((a, x) => a + (x.res === 'W' ? 3 : x.res === 'T' ? 1 : 0), 0) / h.length : null; })(),
-        awayPointsPerMatch: (() => { const h = g.filter((x) => !x.home); return h.length ? h.reduce((a, x) => a + (x.res === 'W' ? 3 : x.res === 'T' ? 1 : 0), 0) / h.length : null; })(),
-      }[name] ?? null;
+    const cs = (cat, n) => per[i].stats?.results?.stats?.categories?.find((c) => c.name === cat)?.stats.find((x) => x.name === n)?.value ?? null;
+    if (src === 'calc') {
+      if (/^(pace|offRating|defRating)$/.test(name)) {
+        // possessions per game, the usual estimate: FGA - offensive rebounds + turnovers + 0.44 x FTA
+        const poss = cs('offensive', 'avgFieldGoalsAttempted') - cs('offensive', 'avgOffensiveRebounds') + cs('offensive', 'avgTurnovers') + 0.44 * cs('offensive', 'avgFreeThrowsAttempted');
+        if (!(poss > 0)) return null;
+        if (name === 'pace') return poss;
+        if (name === 'offRating') return 100 * cs('offensive', 'avgPoints') / poss;
+        return 100 * (g.reduce((a, x) => a + x.them, 0) / gp) / poss;
+      }
+      if (name === 'yardsPerPlay') { const y = cs('rushing', 'totalYards'), n = cs('rushing', 'totalOffensivePlays'); return n ? y / n : null; }
+      if (name === 'possessionTime') { const sec = cs('miscellaneous', 'possessionTimeSeconds'), n = cs('passing', 'teamGamesPlayed'); if (!n) return null;
+        const per = sec / n; return [per, `${Math.floor(per / 60)}:${String(Math.round(per % 60)).padStart(2, '0')}`]; }
+      if (name === 'oneRunGames') { const o = g.filter((x) => Math.abs(x.us - x.them) === 1), w = o.filter((x) => x.res === 'W').length;
+        return o.length ? [w / o.length, `${w}-${o.length - w}`] : null; }
+      if (name === 'cleanSheets') return g.filter((x) => x.them === 0).length;
+      if (name === 'homePointsPerMatch' || name === 'awayPointsPerMatch') {
+        const h = g.filter((x) => x.home === (name === 'homePointsPerMatch')); return h.length ? h.reduce((a, x) => a + pts3(x), 0) / h.length : null; }
+      return null;
     }
-    const cat = per[i].stats?.results?.stats?.categories?.find((c) => c.name === src);
-    return cat?.stats.find((x) => x.name === name)?.value ?? null;
+    if (src === 'match') {
+      const m = match[t.id]; if (!m?.n) return null;
+      return { possessionPct: m.poss / m.n, shotsPerMatch: m.shots / m.n, onTargetPerMatch: m.onT / m.n, shotsAllowedPerMatch: m.shotsA / m.n,
+        conversionPct: m.shots ? 100 * m.goals / m.shots : null }[name] ?? null;
+    }
+    if (src === 'standings') return sv(s, name);
+    return cs(src, name);
   };
   const statTable = cfg.stats.map((def) => teams.map((_, i) => statOf(i, def)));
   const fmtStat = (v, [name]) => {
-    if (v == null) return '–';
-    if (/Pct$|^fieldGoalPct|^threePoint|^freeThrow/.test(name)) return v > 1 ? v.toFixed(1) : (v * 100).toFixed(1);
-    if (/^(avg|OPS|fieldingPct)$/.test(name)) return v.toFixed(3).replace(/^0/, '');
-    if (/^(ERA|WHIP|strikeoutsPerNineInnings)$/.test(name)) return v.toFixed(2);
-    if (Number.isInteger(v) && !/^avg|PerGame|PerMatch/.test(name)) return (v > 0 && /ifferential|Differential/.test(name) ? '+' : '') + v;
-    return (v > 0 && /ifferential|Differential/.test(name) ? '+' : '') + v.toFixed(1);
+    if (Array.isArray(v)) return v[1];
+    if (/Pct$|^threePoint|^freeThrow/.test(name)) return v > 1 ? v.toFixed(1) : (v * 100).toFixed(1);
+    if (/^(avg|OPS)$/.test(name)) return v.toFixed(3).replace(/^0/, '');
+    if (/^(ERA|WHIP|strikeoutsPerNineInnings|assistTurnoverRatio)$/.test(name)) return v.toFixed(2);
+    if (Number.isInteger(v) && !/^avg|PerGame|PerMatch|PerPlay|^pace|Rating$/.test(name)) return (v > 0 && /ifferential/.test(name) ? '+' : '') + v;
+    return (v > 0 && /ifferential/.test(name) ? '+' : '') + v.toFixed(1);
   };
+  const rankVal = (v) => (Array.isArray(v) ? v[0] : v);
 
   // ---------- leaders (named players) ----------
   const leaderData = await pool(teams, 6, async (t, i) => {
@@ -259,6 +319,16 @@ async function buildLeague(key) {
     teams: teams.map((t) => ({ abbr: t.abbr, name: t.name, slug: t.slug, logo: t.logo, color: t.color, conference: t.conference, confShort: t.confShort, division: t.division })) };
   await writeFile(path.join(outDir, 'data', 'league.json'), JSON.stringify(leagueIndex));
 
+  // "good" teams for the header's record against them
+  const ppm = (id) => { const s = sById[id]; const gp = sv(s, 'gamesPlayed') || (sv(s, 'wins') + sv(s, 'losses') + (sv(s, 'ties') || 0)); return gp ? sv(s, 'points') / gp : 0; };
+  const medPpm = cfg.draws ? teams.map((x) => ppm(x.id)).sort((a, b) => a - b)[Math.floor(teams.length / 2)] : 0;
+  const good = new Set(teams.filter((x) => cfg.draws ? ppm(x.id) >= medPpm : (sv(sById[x.id], 'winPercent') ?? 0) >= 0.5).map((x) => x.id));
+  const cfgOut = { brand: cfg.brand, league: cfg.league, espn: cfg.espn, draws: !!cfg.draws, ...cfg.words, ...cfg.chart,
+    lineSeed: cfg.picture.lineSeed, lineName: cfg.picture.lineName, cuts: cfg.picture.cuts, note: cfg.picture.note,
+    goodLabel: cfg.draws ? 'top-half clubs' : '.500+ teams',
+    standCols: cfg.standings.cols.map(([h]) => h),
+    leagues: [{ key: 'nhl', brand: 'Rinkside', league: 'NHL' }, ...Object.entries(LEAGUES).map(([k, l]) => ({ key: k, brand: l.brand, league: l.league }))] };
+
   for (const [i, t] of teams.entries()) {
     const s = sById[t.id];
     const confTeams = teams.filter((x) => x.conference === t.conference);
@@ -268,6 +338,21 @@ async function buildLeague(key) {
         .sort((a, b) => (a.seed ?? 99) - (b.seed ?? 99)).sort((a, b) => cfg.draws ? (b.pts - a.pts) : ((b.pct ?? 0) - (a.pct ?? 0))),
     }));
     const pic = confTeams.map(standRows).sort((a, b) => (a.seed ?? 99) - (b.seed ?? 99));
+    {
+      // each seed's distance from the line: inside, ahead of the first team out; outside, behind the last team in
+      const N = cfg.picture.lineSeed, firstOut = pic[N], lastIn = pic[N - 1];
+      const m = (r) => cfg.draws ? r.pts : (r.w - r.l);
+      for (const [k, r] of pic.entries()) {
+        const ref = k < N ? firstOut : lastIn;
+        r.edge = ref ? (cfg.draws ? 1 : 0.5) * (m(r) - m(ref)) : null;
+        // a division leader stays in by keeping the division or by the wild-card margin, whichever is bigger
+        if (cfg.picture.divWinners && k < N) {
+          const dv = tById[r.id].division, mates = pic.filter((x) => tById[x.id].division === dv);
+          const [top, next] = [...mates].sort((x, y) => (y.pct ?? 0) - (x.pct ?? 0) || m(y) - m(x));
+          if (top === r && next) r.edge = Math.max(r.edge ?? -Infinity, 0.5 * (m(r) - m(next)));
+        }
+      }
+    }
     const ld = leaderData[i];
     const leaders = cfg.leaders.map(([cat, label, subCat]) => {
       const c = ld.cats.find((x) => x.name === cat); const l = c?.leaders?.[0];
@@ -278,11 +363,11 @@ async function buildLeague(key) {
       return { label, value, name: p.name || '?', short: p.short || p.name, jersey: p.jersey, pos: p.pos, face: p.face, sub };
     }).filter(Boolean);
     const stats = cfg.stats.map((def, k) => {
-      const v = statTable[k][i]; if (v == null) return null;
-      const lower = def[3];
-      const others = statTable[k].filter((x) => x != null);
+      const raw = statTable[k][i]; if (raw == null) return null;
+      const v = rankVal(raw), lower = def[3];
+      const others = statTable[k].filter((x) => x != null).map(rankVal);
       const rank = 1 + others.filter((x) => lower ? x < v : x > v).length;
-      return { key: def[0], label: def[1], value: fmtStat(v, def), rank, of: others.length };
+      return { key: def[0], label: def[1], value: fmtStat(raw, def), rank, of: others.length };
     }).filter(Boolean);
     const data = {
       league: key, brand: cfg.brand, sport: cfg.sport, leagueName: cfg.league, season: per[i].seasonName, updated: leagueIndex.updated,
@@ -292,8 +377,9 @@ async function buildLeague(key) {
         home: sd(s, 'home') || sd(s, 'Home') || splitRec(games[t.id].filter((g) => g.home)), road: sd(s, 'road') || sd(s, 'Road') || splitRec(games[t.id].filter((g) => !g.home)),
         last10: sd(s, 'lasttengames') || sd(s, 'Last Ten Games') || splitRec(games[t.id].filter((g) => g.state === 'final').slice(-10)),
         streak: sd(s, 'streak'), gb: sd(s, 'gamesBehind'), seed: num(sd(s, 'playoffSeed')) ?? num(sd(s, 'rank')), clinch: sd(s, 'clincher') || null,
-        pf: sv(s, 'pointsFor'), pa: sv(s, 'pointsAgainst') },
-      standCols: cfg.standings.cols.map(([h]) => h),
+        pf: sv(s, 'pointsFor'), pa: sv(s, 'pointsAgainst'),
+        vsGood: splitRec(games[t.id].filter((g) => good.has(g.oppId))) },
+      cfg: cfgOut,
       divisions, picture: pic, line: hist[t.id],
       games: games[t.id].map((g) => ({ ...g, oppLogo: tById[g.oppId]?.logo || null })),
       post: per[i].post.map((g) => ({ ...g, oppLogo: tById[g.oppId]?.logo || null })),
