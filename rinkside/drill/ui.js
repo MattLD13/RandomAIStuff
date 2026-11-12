@@ -1,9 +1,10 @@
 // Empty Net: the page. Reads window.DRILL_DATA (real endings + daily schedule) and window.Drill (the model).
+// Every call is a target on the ice: tap it, drag the puck to it, tap a key, or press 1-4. The play then runs
+// on the rink frame by frame (players skate, the puck carries, passes and shots fly, the goalie slides).
 (function () {
   const D = window.Drill, DATA = window.DRILL_DATA;
   const $ = (id) => document.getElementById(id);
   const games = new Map(DATA.games.map((g) => [g.id, g]));
-  const N = 3000;                     // simulated endings per graded call
   const STORE = 'emptynet:v2';
   const SVGNS = 'http://www.w3.org/2000/svg';
 
@@ -17,27 +18,38 @@
   const load = () => { try { return JSON.parse(localStorage.getItem(STORE)) || { days: {} }; } catch { return { days: {} }; } };
   const save = (st) => { try { localStorage.setItem(STORE, JSON.stringify(st)); } catch {} };
 
-  // ---------- grading off the main thread ----------
-  let worker = null, jobId = 0;
+  // ---------- grading: a Web Worker when the page allows one, otherwise a smaller run on the page ----------
+  let worker = null, jobId = 0, syncN = 1500;
   const jobs = new Map();
+  const syncGrade = (snap, seed) => {
+    const t = performance.now();
+    const g = D.grade(snap, syncN, seed);
+    const ms = performance.now() - t;
+    if (ms > 350 && syncN > 600) syncN = Math.max(600, Math.round(syncN * 350 / ms));   // keep a slow phone responsive
+    return g;
+  };
+  const dropWorker = () => {
+    worker = null;
+    for (const [id, j] of jobs) { jobs.delete(id); j.res(syncGrade(j.snap, j.seed)); }
+  };
   try {
     const src = $('engine-src').textContent;
     const glue = '\nonmessage = (e) => { const { id, s, n, seed } = e.data; postMessage({ id, graded: Drill.grade(s, n, seed) }); };';
     worker = new Worker(URL.createObjectURL(new Blob([src, glue], { type: 'text/javascript' })));
-    worker.onmessage = (e) => { const j = jobs.get(e.data.id); if (j) { jobs.delete(e.data.id); j(e.data.graded); } };
-    worker.onerror = () => { worker = null; };
+    worker.onmessage = (e) => { const j = jobs.get(e.data.id); if (j) { jobs.delete(e.data.id); j.res(e.data.graded); } };
+    worker.onerror = (e) => { if (e && e.preventDefault) e.preventDefault(); dropWorker(); };
   } catch { worker = null; }
   function gradeAsync(s, seed) {
     const snap = D.clone(s);
     return new Promise((res) => {
       if (worker) {
         const id = ++jobId;
-        jobs.set(id, res);
-        try { worker.postMessage({ id, s: snap, n: N, seed }); } catch { jobs.delete(id); setTimeout(() => res(D.grade(snap, N, seed)), 0); return; }
-        setTimeout(() => { if (jobs.has(id)) { jobs.delete(id); res(D.grade(snap, N, seed)); } }, 6000);
+        jobs.set(id, { res, snap, seed });
+        try { worker.postMessage({ id, s: snap, n: 3000, seed }); } catch { jobs.delete(id); dropWorker(); setTimeout(() => res(syncGrade(snap, seed)), 0); return; }
+        setTimeout(() => { if (jobs.has(id)) dropWorker(); }, 4000);
         return;
       }
-      setTimeout(() => res(D.grade(snap, N, seed)), 30);
+      setTimeout(() => res(syncGrade(snap, seed)), 20);
     });
   }
 
@@ -51,8 +63,57 @@
   const perLabel = (s) => s.per === 'REG' ? '3RD' : s.per === 'SO' ? 'SO' : s.playoff && s.otNum > 1 ? `${s.otNum}OT` : 'OT';
   const last = (n) => (n || '').split(' ').slice(1).join(' ') || n || '';
   const pts = (x) => Math.abs(x) < 0.0005 ? '0.0' : `${x >= 0 ? '+' : '−'}${Math.abs(x * 100).toFixed(1)}`;
-  const callLabel = (s, id) => { const c = (s.per === 'OT' && !s.playoff ? D.OT_CALLS : D.CALLS)[D.tableKey(s)].find((x) => x[0] === id); return c ? c[1] : id; };
+  const callsOf = (s) => (s.per === 'OT' && !s.playoff ? D.OT_CALLS : D.CALLS)[D.tableKey(s)];
+  const callLabel = (s, id) => { const c = callsOf(s).find((x) => x[0] === id); return c ? c[1] : id; };
   const describe = (s, c) => [c.goalie ? (s.pulled ? 'Goalie back in' : 'Pull the goalie') : null, c.timeout ? 'Timeout' : null, callLabel(s, c.play)].filter(Boolean).join(' + ');
+  const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+
+  // ---------- sound (Web Audio, made on the fly; off with the speaker button) ----------
+  const Sound = (() => {
+    let ctx = null, on = load().sound !== false;
+    const ac = () => {
+      if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { ctx = null; } }
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+      return ctx;
+    };
+    const noise = (c, dur, type, freq, gain, at = 0) => {
+      const n = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+      const src = c.createBufferSource(); src.buffer = buf;
+      const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq;
+      const g = c.createGain(); g.gain.value = gain;
+      src.connect(f).connect(g).connect(c.destination); src.start(c.currentTime + at);
+    };
+    const tone = (c, type, freq, dur, gain, at = 0, vib = 0) => {
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = type; o.frequency.value = freq;
+      if (vib) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = 28; lg.gain.value = vib; l.connect(lg).connect(o.frequency); l.start(c.currentTime + at); l.stop(c.currentTime + at + dur); }
+      const t = c.currentTime + at;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + 0.03); g.gain.setValueAtTime(gain, t + dur - 0.12); g.gain.linearRampToValueAtTime(0, t + dur);
+      o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + 0.02);
+    };
+    const play = (k) => {
+      if (!on) return;
+      const c = ac(); if (!c) return;
+      try {
+        if (k === 'stick') noise(c, 0.06, 'bandpass', 2600, 0.5);
+        else if (k === 'pass') noise(c, 0.035, 'bandpass', 1900, 0.28);
+        else if (k === 'save') { noise(c, 0.09, 'lowpass', 900, 0.55); }
+        else if (k === 'board') noise(c, 0.12, 'lowpass', 380, 0.7);
+        else if (k === 'post') { tone(c, 'triangle', 1480, 0.22, 0.12); tone(c, 'triangle', 2210, 0.18, 0.06); }
+        else if (k === 'whistle') tone(c, 'sine', 2950, 0.42, 0.09, 0, 140);
+        else if (k === 'horn') { [174.6, 220, 261.6].forEach((f) => tone(c, 'sawtooth', f, 1.7, 0.05)); }
+        else if (k === 'thud') { tone(c, 'sine', 82, 0.45, 0.35); noise(c, 0.25, 'lowpass', 300, 0.4); }
+        else if (k === 'skate') noise(c, 0.18, 'highpass', 5200, 0.05);
+      } catch {}
+    };
+    return { play, wake: ac, get on() { return on; }, set(v) { on = v; const st = load(); st.sound = v; save(st); } };
+  })();
+  function soundIcon() { $('btn-sound').setAttribute('aria-pressed', String(Sound.on)); $('snd-wave').toggleAttribute('hidden', !Sound.on); $('snd-x').toggleAttribute('hidden', Sound.on); }
+  $('btn-sound').onclick = () => { Sound.set(!Sound.on); soundIcon(); if (Sound.on) { Sound.wake(); Sound.play('pass'); } };
+  soundIcon();
 
   // ---------- state ----------
   let G = null;
@@ -98,125 +159,193 @@
     const zone = { O: 'Faceoff in their end', D: 'Faceoff in your end', N: 'Faceoff at center' }[sc.start.zone];
     $('intro-facts').innerHTML = [zone, 'Your timeout: unused', sc.type === 3 ? 'Tied? Sudden-death OT' : 'Tied? 3-on-3, then a shootout', sc.you.home ? 'At home' : 'On the road']
       .map((f) => `<span class="fact">${esc(f)}</span>`).join('');
-    $('intro-note').textContent = `The real ${sc.you.name} bench lost this one. Read what they're showing, make the calls, and see if you can do better. A typical NHL bench scores 50.`;
+    $('intro-note').textContent = `The real ${sc.you.name} bench lost this one. Read what they're showing, make the calls on the ice, and see if you can do better. A typical NHL bench scores 50.`;
     const rec = !practiceSc && load().days[day];
     $('intro-played').textContent = rec ? `You played this one: ${rec.score}/100, ${rec.won ? 'won' : 'lost'} ${rec.final}.` : '';
-    $('btn-start').onclick = () => start(day, practiceSc);
+    $('btn-start').onclick = () => { Sound.wake(); start(day, practiceSc); };
   }
 
-  // ---------- the rink ----------
+  // ==================================================================================================
+  // The rink: entities, a frame loop, a camera that follows the puck
+  // ==================================================================================================
   const ENT = ['G', 'C', 'W1', 'W2', 'D1', 'D2', 'X', 'oG', 'oC', 'oW', 'oW2', 'oD', 'oD2'];
-  const pos = {};
+  const A = { e: {}, tw: [], skipping: false, busy: false, cam: { cx: 42.5, cy: 100, z: 1, tx: 42.5, ty: 100, tz: 1, follow: false }, trail: [], trailOn: false, last: 0 };
+  const P = (id) => [A.e[id].x, A.e[id].y];
+
   function buildRink(sc) {
     const L = sc.lineup || { you: {}, opp: {} };
     const info = {
-      G: { num: '', n: G.names.G }, oG: { num: '', n: G.names.oG },
+      G: { n: G.names.G }, oG: { n: G.names.oG },
       C: L.you.C, W1: L.you.W1, W2: L.you.W2, D1: L.you.D1, D2: L.you.D2, X: L.you.X,
       oC: L.opp.C, oW: L.opp.W1, oW2: L.opp.W2, oD: L.opp.D1, oD2: L.opp.D2,
     };
     const g = $('players');
     g.innerHTML = '';
-    for (const id of ENT) {
+    A.e = {};
+    ENT.forEach((id, i) => {
       const mine = !id.startsWith('o');
       const goalie = id === 'G' || id === 'oG';
       const p = info[id] || {};
       const el = document.createElementNS(SVGNS, 'g');
-      el.setAttribute('class', `pl mover ${mine ? 'you' : 'opp'}${goalie ? ' goalie' : ''}`);
+      el.setAttribute('class', `pl ${mine ? 'you' : 'opp'}${goalie ? ' goalie' : ''}`);
       el.id = `p-${id}`;
-      el.innerHTML = `<circle r="${goalie ? 2.9 : 2.6}"/><text class="n">${goalie ? 'G' : esc(p.num ?? '')}</text><text class="l" y="${mine ? 5.2 : -3.8}">${esc(p.n || '')}</text>`;
+      const stick = goalie ? '' : `<line class="stick" x1="${mine ? 1.6 : -1.6}" y1="${mine ? -1.2 : 1.2}" x2="${mine ? 2.6 : -2.6}" y2="${mine ? -3.6 : 3.6}"/>`;
+      el.innerHTML = `${stick}<circle r="${goalie ? 2.9 : 2.5}"/><text class="n">${goalie ? 'G' : esc(p.num ?? '')}</text><text class="l" y="${mine ? 5.1 : -3.7}">${esc(p.n || '')}</text>`;
       g.appendChild(el);
-    }
+      A.e[id] = { x: 42.5, y: 100, el, ph: i * 1.7 };
+    });
+    A.e.puck = { x: 42.5, y: 100, el: $('puck'), ph: 0 };
   }
-  function place(id, x, y) {
-    pos[id] = [x, y];
-    const el = id === 'puck' ? $('puck') : $(`p-${id}`);
-    if (el) el.style.transform = `translate(${x}px, ${y}px)`;
+  const setPos = (id, p) => { A.e[id].x = p[0]; A.e[id].y = p[1]; };
+  const ease = (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+  const linear = (t) => t;
+  // move an entity; ctrl bends the path (quadratic curve); with: other ids that ride along with an offset
+  function tween(id, to, dur, o = {}) {
+    return new Promise((res) => {
+      const e = A.e[id]; if (!e) return res();
+      if (A.skipping || dur <= 0) { setPos(id, to); return res(); }
+      A.tw = A.tw.filter((t) => { if (t.id === id) { t.res(); return false; } return true; });
+      A.tw.push({ id, from: [e.x, e.y], to, ctrl: o.ctrl, t0: performance.now(), dur, ease: o.ease || ease, res, carry: o.carry });
+    });
   }
-  function show(id, on) { const el = $(`p-${id}`); if (el) el.classList.toggle('off', !on); }
-  const CAM = { O: 0, N: 44, D: 88 };
-  function cam(k) { $('cam').style.transform = `translateY(${-CAM[k]}px)`; G.cam = k; }
+  const sleep = (ms) => new Promise((res) => { if (A.skipping) return res(); const t = setTimeout(res, ms); timers.push(t); A.sleeps.push(res); });
+  A.sleeps = [];
+  // the puck rides along with a skater
+  const carry = (id, to, dur, o = {}) => Promise.all([tween(id, to, dur, o), tween('puck', [to[0] + 1.6, to[1] - 1.6], dur, o)]);
+  const puckTo = (to, dur, o = {}) => { A.trailOn = !!o.trail; A.trail = []; return tween('puck', to, dur, { ease: o.ease || easeOut, ctrl: o.ctrl }).then(() => { A.trailOn = false; }); };
 
-  // where everyone stands for a spot, given what they are showing
+  function frame(now) {
+    const dt = Math.min(64, now - (A.last || now)); A.last = now;
+    // tweens
+    A.tw = A.tw.filter((t) => {
+      const k = clamp((now - t.t0) / t.dur, 0, 1), e = t.ease(k);
+      let x, y;
+      if (t.ctrl) { const u = 1 - e; x = u * u * t.from[0] + 2 * u * e * t.ctrl[0] + e * e * t.to[0]; y = u * u * t.from[1] + 2 * u * e * t.ctrl[1] + e * e * t.to[1]; }
+      else { x = t.from[0] + (t.to[0] - t.from[0]) * e; y = t.from[1] + (t.to[1] - t.from[1]) * e; }
+      setPos(t.id, [x, y]);
+      if (k >= 1) { t.res(); return false; }
+      return true;
+    });
+    // draw: skaters drift a little while you think, so the ice never looks frozen
+    const idle = !A.busy;
+    for (const [id, e] of Object.entries(A.e)) {
+      let x = e.x, y = e.y;
+      if (idle && id !== 'puck' && id !== 'G' && id !== 'oG') { x += 0.45 * Math.sin(now / 820 + e.ph); y += 0.35 * Math.cos(now / 1030 + e.ph * 1.3); }
+      e.el.setAttribute('transform', `translate(${x.toFixed(2)} ${y.toFixed(2)})`);
+    }
+    // puck trail
+    if (A.trailOn) { A.trail.push(`${A.e.puck.x.toFixed(1)},${A.e.puck.y.toFixed(1)}`); if (A.trail.length > 9) A.trail.shift(); }
+    else if (A.trail.length) A.trail.shift();
+    $('trail').setAttribute('points', A.trail.join(' '));
+    // camera
+    const c = A.cam;
+    if (c.follow) { c.ty = A.e.puck.y; c.tx = 42.5; }
+    const half = 56 / c.tz, halfW = 42.5 / c.tz;
+    const ty = clamp(c.ty, half, 200 - half), tx = c.tz > 1 ? clamp(c.tx, halfW, 85 - halfW) : 42.5;
+    const kk = 1 - Math.exp(-dt / (c.follow ? 160 : 220));
+    c.cy += (ty - c.cy) * kk; c.cx += (tx - c.cx) * kk; c.z += (c.tz - c.z) * kk;
+    $('cam').setAttribute('transform', `translate(${(42.5 - c.cx * c.z).toFixed(2)} ${(56 - c.cy * c.z).toFixed(2)}) scale(${c.z.toFixed(3)})`);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  const camTo = (cy, z = 1, cx = 42.5, snap = false) => { const c = A.cam; c.follow = false; c.ty = cy; c.tz = z; c.tx = cx; if (snap) { c.cy = clamp(cy, 56 / z, 200 - 56 / z); c.z = z; c.cx = cx; } };
+
+  function show(id, on) { $(`p-${id}`)?.classList.toggle('off', !on); }
+  function hl(id) { document.querySelectorAll('.pl.hl').forEach((e) => e.classList.remove('hl')); if (id) $(`p-${id}`)?.classList.add('hl'); }
+  function flash(text, cls, ms = 1300) { const f = $('flash'); f.hidden = false; f.className = `flash ${cls}`; f.textContent = text; later(() => { f.hidden = true; }, ms); }
+  function tick(text) { $('ticker').hidden = !text; $('ticker').textContent = text || ''; }
+  function lamp(side) { const l = $(`lamp-${side}`); l.classList.remove('on'); void l.getBBox(); l.classList.add('on'); later(() => l.classList.remove('on'), 2000); const n = $(`netg-${side}`); n.classList.remove('shake'); void n.getBBox(); n.classList.add('shake'); }
+
+  // where everyone stands for a spot, given what the other team is showing
   function formation(s) {
-    const P = {}, L = s.look;
-    let puck = [42.5, 100], c = 'N';
+    const F = {}, L = s.look;
+    let puck = [42.5, 100], cy = 100;
     const fo = (dx, dy, zone) => {
-      P.C = [dx, dy + 3]; P.oC = [dx, dy - 3];
-      P.W1 = [dx - 10, dy + 4]; P.W2 = [dx + 10, dy + 4];
-      P.oW = L === 'cheat' ? [dx - 6, dy - 2] : [dx - 10, dy - 4]; P.oW2 = L === 'cheat' ? [dx + 6, dy - 2] : [dx + 10, dy - 4];
-      if (zone === 'O') { P.D1 = [22, 64]; P.D2 = [62, 64]; P.oD = [26, 16]; P.oD2 = [58, 16]; P.X = [45, 50]; }
-      else if (zone === 'D') { P.D1 = [26, 183]; P.D2 = [58, 183]; P.oD = [24, 134]; P.oD2 = [60, 134]; P.X = [45, 150]; }
-      else { P.D1 = [30, 116]; P.D2 = [55, 116]; P.oD = [30, 84]; P.oD2 = [55, 84]; P.X = [42, 122]; }
+      F.C = [dx, dy + 3.2]; F.oC = [dx, dy - 3.2];
+      F.W1 = [dx - 10, dy + 4]; F.W2 = [dx + 10, dy + 4];
+      F.oW = L === 'cheat' ? [dx - 6, dy - 2] : [dx - 10, dy - 4]; F.oW2 = L === 'cheat' ? [dx + 6, dy - 2] : [dx + 10, dy - 4];
+      if (zone === 'O') { Object.assign(F, { D1: [22, 64], D2: [62, 64], oD: [26, 16], oD2: [58, 16], X: [45, 50] }); }
+      else if (zone === 'D') { Object.assign(F, { D1: [26, 183], D2: [58, 183], oD: [24, 134], oD2: [60, 134], X: [45, 150] }); }
+      else { Object.assign(F, { D1: [30, 116], D2: [55, 116], oD: [30, 84], oD2: [55, 84], X: [42, 122] }); }
       puck = [dx, dy];
     };
-    if (s.phase === 'FO_O') { fo(20.5, 31, 'O'); c = 'O'; }
-    else if (s.phase === 'FO_D') { fo(20.5, 169, 'D'); c = 'D'; }
-    else if (s.phase === 'FO_N') { fo(42.5, 100, 'N'); c = 'N'; }
+    if (s.phase === 'FO_O') { fo(20.5, 31, 'O'); cy = 56; }
+    else if (s.phase === 'FO_D') { fo(20.5, 169, 'D'); cy = 144; }
+    else if (s.phase === 'FO_N') { fo(42.5, 100, 'N'); cy = 100; }
     else if (s.phase === 'ENTRY') {
-      c = 'N';
-      Object.assign(P, { D1: [32, 140], C: [42, 118], W1: [16, 112], W2: [69, 112], D2: [60, 142], X: [50, 128] });
-      Object.assign(P, {
-        trap: { oC: [42, 112], oW: [14, 92], oW2: [71, 92], oD: [42, 90], oD2: [42, 68] },
-        high: { oC: [34, 129], oW: [56, 133], oW2: [70, 112], oD: [22, 98], oD2: [62, 98] },
-        change: { oC: [80, 104], oW: [81, 94], oW2: [30, 88], oD: [30, 72], oD2: [56, 72] },
-        gap: { oC: [28, 108], oW: [62, 108], oW2: [44, 96], oD: [30, 78], oD2: [56, 78] },
-      }[L] || { oC: [42, 112], oW: [14, 92], oW2: [71, 92], oD: [42, 90], oD2: [42, 68] });
-      puck = [P.D1[0] + 2, P.D1[1] - 2];
+      cy = 80;
+      Object.assign(F, { D1: [32, 128], C: [42, 112], W1: [16, 106], W2: [69, 106], D2: [58, 132], X: [50, 120] });
+      Object.assign(F, {
+        trap: { oC: [42, 104], oW: [14, 88], oW2: [71, 88], oD: [42, 86], oD2: [42, 64] },
+        high: { oC: [34, 120], oW: [56, 124], oW2: [70, 104], oD: [22, 94], oD2: [62, 94] },
+        change: { oC: [80, 100], oW: [81, 92], oW2: [30, 84], oD: [30, 68], oD2: [56, 68] },
+        gap: { oC: [28, 102], oW: [62, 102], oW2: [44, 92], oD: [30, 77], oD2: [56, 77] },
+      }[L] || { oC: [42, 104], oW: [14, 88], oW2: [71, 88], oD: [42, 86], oD2: [42, 64] });
+      puck = [F.D1[0] + 1.6, F.D1[1] - 1.6];
     } else if (s.phase === 'ZONE') {
-      c = 'O';
-      Object.assign(P, { D1: [16, 70], D2: [69, 70], C: [27, 30], W1: [64, 38], W2: [42, 22], X: [42, 56] });
-      Object.assign(P, {
+      cy = 56;
+      Object.assign(F, { D1: [16, 70], D2: [69, 70], C: [27, 30], W1: [64, 38], W2: [42, 22], X: [42, 56] });
+      Object.assign(F, {
         box: { oD: [36, 22], oD2: [49, 22], oW: [34, 36], oW2: [51, 36], oC: [42, 29] },
         points: { oW: [20, 61], oW2: [65, 61], oD: [34, 24], oD2: [52, 24], oC: [36, 36] },
         door: { oD: [31, 24], oD2: [38, 31], oW: [28, 46], oW2: [50, 50], oC: [24, 38] },
         tired: { oD: [36, 24], oD2: [54, 27], oW: [28, 45], oW2: [58, 47], oC: [45, 36] },
         rebound: { oD: [35, 23], oD2: [51, 23], oW: [30, 42], oW2: [56, 44], oC: [42, 33] },
-      }[L] || {});
-      if (L === 'door') P.W1 = [67, 27];
-      puck = [P.C[0] + 2, P.C[1] + 1];
+      }[L] || { oD: [36, 24], oD2: [52, 24], oW: [30, 42], oW2: [56, 44], oC: [42, 33] });
+      if (L === 'door') F.W1 = [67, 27];
+      puck = [F.C[0] + 1.6, F.C[1] - 1.6];
     } else if (s.phase === 'THEIRS' && !s.deep) {
-      c = 'N';
-      Object.assign(P, { C: [42, 112], W1: [28, 96], W2: [58, 96], D1: [30, 134], D2: [56, 134], X: [42, 120] });
-      Object.assign(P, {
+      cy = 100;
+      Object.assign(F, { C: [42, 112], W1: [28, 96], W2: [58, 96], D1: [30, 134], D2: [56, 134], X: [42, 120] });
+      Object.assign(F, {
         dump: { oC: [44, 97], oW: [79, 92], oW2: [80, 84], oD: [30, 78], oD2: [56, 76] },
         stretch: { oD: [40, 82], oD2: [62, 78], oC: [42, 98], oW: [16, 104], oW2: [72, 128] },
         slow: { oD: [40, 68], oD2: [62, 64], oC: [42, 86], oW: [16, 92], oW2: [70, 92] },
       }[L] || { oD: [40, 82], oD2: [62, 78], oC: [42, 98], oW: [16, 104], oW2: [70, 104] });
-      puck = L === 'dump' ? [P.oC[0], P.oC[1] + 2] : [P.oD[0], P.oD[1] + 2];
+      const car = L === 'dump' ? 'oC' : 'oD';
+      puck = [F[car][0] - 1.6, F[car][1] + 1.6];
     } else {
-      c = 'D';
-      Object.assign(P, { D1: [34, 178], D2: [52, 178], C: [42, 160], W1: [26, 142], W2: [60, 142], X: [42, 150] });
-      Object.assign(P, {
+      cy = 144;
+      Object.assign(F, { D1: [34, 178], D2: [52, 178], C: [42, 160], W1: [26, 142], W2: [60, 142], X: [42, 150] });
+      Object.assign(F, {
         cycle: { oW: [10, 172], oC: [14, 186], oW2: [66, 165], oD: [22, 132], oD2: [63, 132] },
         shot: { oW: [14, 170], oC: [30, 180], oW2: [62, 166], oD: [24, 131], oD2: [62, 131] },
         screen: { oW: [12, 170], oC: [28, 176], oW2: [42, 183], oD: [22, 132], oD2: [63, 132] },
       }[L] || { oW: [12, 170], oC: [28, 176], oW2: [62, 166], oD: [22, 132], oD2: [63, 132] });
-      puck = L === 'shot' ? [P.oD[0], P.oD[1] + 2] : L === 'cycle' ? [P.oC[0] + 1, P.oC[1]] : [P.oW[0] + 1, P.oW[1]];
+      const car = L === 'shot' ? 'oD' : L === 'cycle' ? 'oC' : 'oW';
+      puck = [F[car][0] - 1.6, F[car][1] + 1.6];
     }
-    P.oG = [42.5, 13];
-    P.G = s.pulled ? [92, 100] : [42.5, 187];
-    return { P, puck, c };
+    F.oG = [42.5, 13];
+    F.G = s.pulled ? [88, 100] : [42.5, 187];
+    return { F, puck, cy };
   }
+  const carrierOf = (s) => {
+    if (s.phase === 'ENTRY') return 'D1';
+    if (s.phase === 'ZONE') return 'C';
+    if (s.phase === 'THEIRS') return s.deep ? (s.look === 'shot' ? 'oD' : s.look === 'cycle' ? 'oC' : 'oW') : (s.look === 'dump' ? 'oC' : 'oD');
+    return null;
+  };
+  function onIce(s) {
+    const sk = D.skaters(s), is3 = s.per === 'OT' && !s.playoff;
+    const you = sk.you - (s.pulled ? 1 : 0), opp = sk.opp - (s.oppPulled ? 1 : 0);
+    return { W2: !is3 && you >= 5, D2: !is3 && you >= 4, X: s.pulled, oW2: !is3 && opp >= 5, oD2: !is3 && opp >= 4, G: !s.pulled, oG: !s.oppPulled };
+  }
+  // everyone skates to the next spot
   function stage(s, instant) {
     const f = formation(s);
-    const sk = D.skaters(s);
-    const is3 = s.per === 'OT' && !s.playoff;
-    const onIce = {
-      W2: !is3 && sk.you - (s.pulled ? 1 : 0) >= 5, D2: !is3 && sk.you - (s.pulled ? 1 : 0) >= 4, X: s.pulled,
-      oW2: !is3 && sk.opp - (s.oppPulled ? 1 : 0) >= 5, oD2: !is3 && sk.opp - (s.oppPulled ? 1 : 0) >= 4, G: !s.pulled, oG: !s.oppPulled,
-    };
+    const vis = onIce(s);
+    const moves = [];
     for (const id of ENT) {
-      const el = $(`p-${id}`); if (!el) continue;
-      if (instant) el.classList.add('fast');
-      show(id, onIce[id] ?? true);
-      const p = f.P[id] || pos[id] || [42.5, 100];
-      place(id, p[0], p[1]);
+      show(id, vis[id] ?? true);
+      const p = f.F[id] || P(id);
+      if (instant) setPos(id, p); else moves.push(tween(id, p, 650 + Math.random() * 200));
     }
-    place('puck', f.puck[0], f.puck[1]);
-    cam(f.c);
+    if (instant) setPos('puck', f.puck); else moves.push(tween('puck', f.puck, 650));
+    camTo(f.cy, 1, 42.5, instant);
     $('rink').classList.toggle('empty', s.pulled);
     $('rink-tag').textContent = tagFor(s);
-    if (instant) requestAnimationFrame(() => document.querySelectorAll('.pl.fast').forEach((e) => e.classList.remove('fast')));
+    return Promise.all(moves);
   }
   function tagFor(s) {
     const sk = D.skaters(s);
@@ -224,6 +353,85 @@
     const str = s.pulled ? `${sk.you} on ${sk.opp} · empty net` : s.pp > 0 ? `Power play ${fmt(s.pp)}` : s.pp < 0 ? `Penalty kill ${fmt(-s.pp)}` : `${sk.you} on ${sk.opp}`;
     return `${where} · ${str}`;
   }
+
+  // ---------- targets: every call is a spot on the ice ----------
+  function targetsFor(s) {
+    const f = formation(s).F, n = G.names, L = s.look;
+    const at = (id) => f[id] || P(id);
+    const three = s.per === 'OT' && !s.playoff;
+    const k = D.tableKey(s);
+    const T = {};
+    if (k === 'FO_O' && !three) Object.assign(T, { back: [at('D1'), `Back to ${n.D1}`], set: [[at('W1')[0], at('W1')[1] - 2], `One-timer: ${n.W1}`], tie: [[29, 25], 'Tie-up'] });
+    else if (k.startsWith('FO_') && three) Object.assign(T, { back: [k === 'FO_D' ? [42, 150] : at('D1'), 'Win it back'], go: [k === 'FO_O' ? [42.5, 14] : k === 'FO_D' ? [42, 128] : [42, 70], 'Win it and go'] });
+    else if (k === 'FO_N') Object.assign(T, { fwd: [[24, 72], 'Chip it in'], back: [at('D1'), `Back to ${n.D1}`] });
+    else if (k === 'FO_D') Object.assign(T, { out: [[42, 130], 'Up the middle'], glass: [[9, 150], 'Off the glass'] });
+    else if (k === 'ENTRY') {
+      Object.assign(T, { carry: [[42, 66], three ? 'Attack' : 'Carry in'], stretch: [[16, 74], `Stretch to ${n.W1}`] });
+      if (three) T.change = [[42, 132], 'Circle back'];
+      else { T.dump = [[12, 28], 'Dump in']; T.change = [[79, 124], 'Regroup'] ; }
+    } else if (k === 'ZONE') {
+      T.shoot = [[42.5, 7.5], three ? 'Shoot' : `Shoot (${n.D1})`];
+      T.seam = [at('W1'), three ? `Back door: ${n.W1}` : `Seam to ${n.W1}`];
+      if (three) T.peel = [[42, 68], 'Peel back'];
+      else { T.cycle = [[9, 21], 'Cycle low']; T.net = [at('W2'), `Bump to ${n.C}`]; }
+    } else {
+      const car = carrierOf(s);
+      T.press = [at(car), three ? 'Go get it' : s.deep ? 'Pressure' : 'Forecheck'];
+      T.sit = [s.deep ? [42, 177] : [42, 116], three ? 'Stay above' : s.deep ? 'Collapse' : 'Trap'];
+    }
+    void L;
+    // keep every target well inside the boards so it is easy to hit
+    return callsOf(s).map(([id], i) => T[id] && { play: id, at: [clamp(T[id][0][0], 8, 77), clamp(T[id][0][1], 6, 194)], label: T[id][1], n: i + 1 }).filter(Boolean);
+  }
+  function drawTargets(list, origin, z = 1) {
+    const g = $('targets');
+    const sc = 1 / z;
+    g.innerHTML = list.map((t) => {
+      const [x, y] = t.at, lx = clamp(x, 10 * sc, 85 - 10 * sc), above = y > (origin ? origin[1] : 0) ? 1 : -1;
+      const ly = y + above * 6.2 * sc;
+      return `<g class="tgt" data-p="${t.play}">${origin ? `<path class="lane" d="M${origin[0]} ${origin[1]} L${x} ${y}" style="stroke-width:${0.45 * sc}"/>` : ''}
+        <circle class="halo" cx="${x}" cy="${y}" r="${3.6 * sc}"/><circle class="ring" cx="${x}" cy="${y}" r="${2.9 * sc}" style="stroke-width:${0.4 * sc}"/>
+        <text class="num" x="${x}" y="${y}" style="font-size:${3 * sc}px">${t.n}</text>
+        <text class="lbl" x="${lx}" y="${ly}" style="font-size:${2.8 * sc}px;stroke-width:${0.9 * sc}px">${esc(t.label)}</text></g>`;
+    }).join('');
+    A.targets = list; A.tz = z;
+    $('rink').classList.toggle('aim', list.length > 0);
+  }
+  const clearTargets = () => { $('targets').innerHTML = ''; A.targets = []; $('rink').classList.remove('aim'); $('dragline').setAttribute('visibility', 'hidden'); };
+  function hotTarget(play) { document.querySelectorAll('.tgt').forEach((g) => g.classList.toggle('hot', g.dataset.p === play)); }
+
+  // pointer on the ice: tap a target, or drag the puck to one
+  const toRink = (ev) => { const pt = $('rink').createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; const m = $('cam').getScreenCTM(); return m ? (({ x, y }) => [x, y])(pt.matrixTransform(m.inverse())) : [0, 0]; };
+  const nearest = (p, r) => { let best = null, bd = r / (A.tz || 1); for (const t of A.targets || []) { const d = dist(p, t.at); if (d < bd) { bd = d; best = t; } } return best; };
+  let drag = null;
+  $('rink').addEventListener('pointerdown', (ev) => {
+    if (G && A.busy && G.skip) { G.skip(); return; }
+    if (!A.targets || !A.targets.length || !A.onPick) return;
+    drag = { start: toRink(ev), moved: false, id: ev.pointerId };
+    try { $('rink').setPointerCapture(ev.pointerId); } catch {}
+  });
+  $('rink').addEventListener('pointermove', (ev) => {
+    if (!A.targets || !A.targets.length) return;
+    const p = toRink(ev);
+    if (drag) {
+      if (dist(p, drag.start) > 2.5 / (A.tz || 1)) drag.moved = true;
+      if (drag.moved) { const pk = P('puck'), l = $('dragline'); l.setAttribute('x1', pk[0]); l.setAttribute('y1', pk[1]); l.setAttribute('x2', p[0]); l.setAttribute('y2', p[1]); l.setAttribute('visibility', 'visible'); l.style.strokeWidth = 0.9 / (A.tz || 1); }
+    }
+    const t = nearest(p, drag && drag.moved ? 12 : 8);
+    hotTarget(t ? t.play : null);
+  });
+  const endDrag = (ev, cancel) => {
+    if (!drag) return;
+    const p = toRink(ev), moved = drag.moved;
+    drag = null;
+    $('dragline').setAttribute('visibility', 'hidden');
+    if (cancel) return;
+    const t = nearest(p, moved ? 12 : 8);
+    if (t && A.onPick) A.onPick(t.play);
+  };
+  $('rink').addEventListener('pointerup', (ev) => endDrag(ev, false));
+  $('rink').addEventListener('pointercancel', (ev) => endDrag(ev, true));
+  $('rink').addEventListener('pointerleave', () => { if (!drag) hotTarget(null); });
 
   // ---------- scoreboard ----------
   function board() {
@@ -236,12 +444,14 @@
     $('b-to').innerHTML = s.per === 'REG' ? `<i class="${s.to ? '' : 'used'}"></i>` : '';
   }
 
-  // ---------- a game ----------
+  // ==================================================================================================
+  // A game
+  // ==================================================================================================
   function start(day, practiceSc) {
     clearTimers();
     const sc = practiceSc || gameForDay(day);
     setTeams(sc);
-    G = { day, practice: !!practiceSc, sc, s: D.newGame(sc), step: 0, sumD: 0, sumV: 0, calls: [], pick: { goalie: false, timeout: false }, names: null, cam: 'N' };
+    G = { day, practice: !!practiceSc, sc, s: D.newGame(sc), step: 0, sumD: 0, sumV: 0, calls: [], pick: { goalie: false, timeout: false }, names: null };
     G.names = namesFor(sc);
     $('game').appendChild($('pbp'));
     hideAll();
@@ -285,11 +495,20 @@
     keys.className = `keys n${o.plays.length}`;
     keys.style.setProperty('--n', o.plays.length);
     keys.innerHTML = o.plays.map((p, i) => `<button type="button" class="key" data-p="${p.id}" disabled><span class="kn">${i + 1}</span><b>${esc(p.label)}</b><small>${esc(p.hint)}</small></button>`).join('');
-    keys.querySelectorAll('.key').forEach((b) => b.onclick = () => commit(b.dataset.p));
+    keys.querySelectorAll('.key').forEach((b) => {
+      b.onclick = () => commit(b.dataset.p);
+      b.onpointerenter = () => hotTarget(b.dataset.p); b.onpointerleave = () => hotTarget(null);
+      b.onfocus = () => hotTarget(b.dataset.p); b.onblur = () => hotTarget(null);
+    });
     const firstGame = !load().tipped;
     $('c-tip').hidden = !(firstGame && G.step < 2);
-    $('c-tip').textContent = G.step === 0 ? 'Read what they are showing, then make the call. Pulling the goalie and the timeout are optional.' : 'Tap the ice to skip a replay. Green means you read it right.';
+    $('c-tip').textContent = G.step === 0 ? 'Read what they are showing, then make the call: tap a target on the ice or a key below.' : 'Tap the ice to skip a replay. Green means you read it right.';
     if (firstGame && G.step >= 1) { const st0 = load(); st0.tipped = true; save(st0); }
+    // targets go up right away; the call is accepted once the grade is in (usually already, from the worker)
+    const car = carrierOf(s);
+    drawTargets(targetsFor(s), car ? P(car) : P('puck'));
+    $('rink-hint').hidden = !(firstGame && G.step < 3);
+    A.onPick = (play) => commit(play);
     G.accepting = true;
     G.pending.then((graded) => {
       if (!G || G.s !== s) return;
@@ -297,34 +516,42 @@
       if (graded[0].wp < 0.01 && s.per === 'REG') return outOfReach(false);
       if (graded[0].wp > 0.995) return outOfReach(true);
       keys.querySelectorAll('.key').forEach((b) => b.disabled = false);
+      if (G.queued) { const q = G.queued; G.queued = null; commit(q); return; }
       const r = keys.getBoundingClientRect();
       if (r.bottom > window.innerHeight) keys.scrollIntoView({ block: 'end', behavior: 'smooth' });
     });
   }
-  // a game that is gone (under 1% with the best call) skips to the final horn instead of dragging on
+  function toggle(k) {
+    if (!G.accepting) return;
+    G.pick[k] = !G.pick[k];
+    const b = $('c-toggles').querySelector(`[data-k="${k}"]`);
+    if (b) b.setAttribute('aria-pressed', String(G.pick[k]));
+    Sound.play('pass');
+  }
+  // a game that is gone (under 1%), or won (over 99.5%), plays itself out to the horn
   function outOfReach(won) {
     const s = G.s;
+    clearTargets(); A.onPick = null; G.accepting = false;
     const r = D.mulberry(D.hash(`${G.sc.id}:out:${G.step}`));
     const was = `${s.you}-${s.opp}, ${fmt(s.t)} left`;
     D.finish(s, r);
     if (!s.over) { const p = s.per === 'SO' ? s.soWin : 0.5; s.how = s.per === 'SO' ? 'SO' : 'OT'; s.over = true; s.won = r() < p; if (s.won) s.you++; else s.opp++; }
     feed(perLabel(s), won ? `<b>Game in hand</b>${esc(was)}: over 99.5% from here. Played out to the final horn.` : `<b>Out of reach</b>${esc(was)}: under 1% even with the best call. Played out to the final horn.`);
-    const f = $('flash'); f.hidden = false; f.className = `flash ${won ? 'good' : 'info'}`; f.textContent = won ? 'Game in hand' : 'Out of reach';
+    flash(won ? 'Game in hand' : 'Out of reach', won ? 'good' : 'info', 1500);
+    Sound.play('whistle');
     board();
-    later(() => { f.hidden = true; finish(); }, 1600);
-  }
-  function toggle(k) {
-    G.pick[k] = !G.pick[k];
-    const b = $('c-toggles').querySelector(`[data-k="${k}"]`);
-    if (b) b.setAttribute('aria-pressed', String(G.pick[k]));
+    later(finish, 1600);
   }
 
   function commit(play) {
-    if (!G.accepting || !G.graded) return;
+    if (!G || !G.accepting) return;
+    if (!G.graded) { G.queued = play; hotTarget(play); return; }   // the grade is a moment away: take the call now
     G.accepting = false;
+    A.onPick = null;
     const s = G.s;
     const c = { play, goalie: G.pick.goalie, timeout: G.pick.timeout };
     const graded = G.graded;
+    G.graded = null;
     const mine = graded.find((g) => D.key(g) === D.key(c)) || graded[graded.length - 1];
     const best = graded[0];
     const typ = D.typical(s, graded);
@@ -332,136 +559,200 @@
     const d = mine.wp - typ.wp;
     if (v.k !== 'none') { G.sumD += d; G.sumV += typ.v; }
     const before = { t: s.t, per: perLabel(s), situ: $('rink-tag').textContent, look: D.lookInfo(s)[1], call: describe(s, c), best: describe(s, best), wp: best.wp, mine: mine.wp, loss: best.wp - mine.wp };
-    // play it
     const events = [];
     const rng = D.mulberry(D.hash(`${G.sc.id}:${G.practice ? 'p' : G.day}:${G.step}`));
     const prev = D.clone(s);
     const say = (k, text, data) => events.push({ k, text: fill(text), raw: text, data: data || {} });
     D.resolve(s, c, rng, say);
     // overtime: each call covers a longer stretch; the next stretch plays itself out until a goal or the horn
-    if (s.per === 'OT' && !s.over) {
+    if (s.per === 'OT' && !s.over && prev.per === 'OT') {
       const budget = s.playoff ? 60 : 24, t0 = s.t, ot0 = s.otNum, auto = [];
       while (!s.over && s.per === 'OT' && s.otNum === ot0 && t0 - s.t < budget) {
         D.resolve(s, D.coach(s, rng), rng, (k, text, data) => auto.push({ k, text: fill(text), raw: text, data: data || {} }));
       }
-      const big = auto.filter((e) => ['shot', 'against', 'eng', 'pp', 'pk', 'ot', 'so', 'stop'].includes(e.k) && (e.k !== 'shot' || e.data.res === 'goal' || e.data.res === 'save'));
-      events.push({ k: 'play', text: `${t0 - s.t > 0 ? `The next ${t0 - s.t} seconds:` : ''} ${big.length ? '' : 'back and forth, no one breaks through.'}`.trim(), raw: '', data: {} });
+      const big = auto.filter((e) => ['against', 'eng', 'pp', 'pk', 'ot', 'so', 'stop'].includes(e.k) || (e.k === 'shot' && (e.data.res === 'goal' || e.data.res === 'save')));
+      events.push({ k: 'play', text: big.length ? `The next ${t0 - s.t} seconds:` : `The next ${t0 - s.t} seconds: back and forth, no one breaks through.`, raw: '', data: {} });
       events.push(...big.slice(-3));
     }
     G.step++;
     G.pending = s.over || s.per === 'SO' ? Promise.resolve(null) : gradeAsync(s, G.step + 1 + G.day * 1000);
     G.calls.push({ ...before, v: v.k, d });
     $('c-keys').querySelectorAll('.key').forEach((b) => { b.disabled = true; if (b.dataset.p === play) b.classList.add('down'); });
+    $('c-toggles').querySelectorAll('.tg').forEach((b) => { b.disabled = true; });
     $('result').hidden = true;
-    animate(prev, s, events, () => afterPlay(before, v, d, events));
+    $('rink-hint').hidden = true;
+    clearTargets();
+    Sound.play('pass');
+    run(prev, s, events, play).then(() => afterPlay(before, v, d, events));
   }
 
-  // ---------- the play, on the ice ----------
-  function animate(prev, s, events, done) {
-    const steps = [];
-    let puck = (pos.puck || [42.5, 100]).slice();
-    const at = (id) => (pos[id] || [42.5, 100]).slice();
-    const shooterOf = (raw, mineSide) => { const t = tokens(raw).find((k) => mineSide ? !k.startsWith('o') && k !== 'G' : k.startsWith('o') && k !== 'oG'); return t || (mineSide ? 'C' : 'oW'); };
-    const push = (o) => steps.push(o);
-    for (const e of events) {
-      const k = e.k, d = e.data;
-      if (k === 'timeout') push({ tick: e.text, flash: ['Timeout', 'info'], wait: 1000 });
-      else if (k === 'pull') push({ tick: e.text, move: { G: [92, 100] }, showX: true, flash: ['Net empty', 'info'], wait: 1100 });
-      else if (k === 'return') push({ tick: e.text, move: { G: [42.5, 187] }, wait: 600 });
-      else if (k === 'fo') { const p = d.won ? at('C') : at('oC'); push({ tick: e.text, puck: [p[0] + (d.won ? -3 : 3), p[1] + (d.won ? 6 : -6)], wait: 650 }); }
-      else if (k === 'shot') {
-        const id = shooterOf(e.raw, true); const p = at(id);
-        const fromEng = d.from === 'eng';
-        const target = fromEng ? [42.5, 9] : d.res === 'goal' ? [42.5 + (Math.random() - 0.5) * 3, 9.5] : d.res === 'save' ? [42.5, 14.5] : d.res === 'block' ? [(p[0] + 42.5) / 2, (p[1] + 18) / 2] : [p[0] < 42 ? 49 : 36, 6];
-        push({ puck: [p[0] + 1, p[1] - 1.5], hl: id, cam: p[1] < 125 ? 'O' : null, wait: 300 });
-        push({ tick: e.text, puck: target, fast: true, flash: d.res === 'goal' ? ['Goal!', 'good'] : null, wait: d.res === 'goal' ? 1700 : 900 });
-      } else if (k === 'against' || k === 'stop') {
-        const id = shooterOf(e.raw, false); const p = at(id);
-        push({ puck: [p[0], p[1] + 1.5], hl: id, cam: 'D', wait: 450 });
-        push({ tick: e.text, puck: k === 'against' ? [42.5, 190.5] : [42.5, 185.5], fast: true, flash: k === 'against' ? ['Goal against', 'bad'] : null, wait: k === 'against' ? 1700 : 900 });
-      } else if (k === 'eng') {
-        push({ tick: e.text, cam: 'D', puck: [42.5, 191], flash: d.res === 'goal' ? ['Empty net', 'bad'] : null, wait: 1800 });
-      } else if (k === 'icing') push({ tick: e.text, cam: 'D', puck: [28, 196], flash: ['Icing', 'info'], wait: 1300 });
-      else if (k === 'pass') {
-        const tk = tokens(e.raw); const to = d.ok ? tk.filter((t) => !t.startsWith('o')).pop() : (tk.find((t) => t.startsWith('o')) || 'oD');
-        const p = at(to || 'W1');
-        const mv = {};
-        if (d.ok && d.type === 'stretch') { mv[to] = [p[0], Math.max(60, p[1] - 30)]; }
-        push({ tick: e.text, puck: d.ok && d.type === 'stretch' ? mv[to] : [p[0], p[1]], move: mv, cam: d.ok && d.type === 'stretch' ? 'O' : null, fast: true, hl: to, wait: 800 });
-      } else if (k === 'entry') {
-        if (d.ok) push({ tick: e.text, cam: 'O', move: { C: [30, 58], W1: [16, 50], W2: [66, 52], D1: [24, 82], D2: [58, 84], X: [44, 70] }, puck: d.type === 'dump' ? [70, 8] : [30, 55], wait: 1000 });
-        else { const p = at('oD'); push({ tick: e.text, puck: [p[0], p[1] + 2], wait: 900 }); }
-      } else if (k === 'keep') push({ tick: e.text, cam: 'O', puck: [66, 72], wait: 750 });
-      else if (k === 'clear') push({ tick: e.text, cam: 'N', puck: [44, 128], wait: 850 });
-      else if (k === 'take') { const t = tokens(e.raw).find((x) => !x.startsWith('o')) || 'C'; const p = at(t); push({ tick: e.text, puck: [p[0] + 1, p[1] - 1], hl: t, wait: 800 }); }
-      else if (k === 'turn' || k === 'beat') { const t = tokens(e.raw).find((x) => x.startsWith('o')) || 'oW'; const p = at(t); push({ tick: e.text, puck: [p[0], p[1] + 1.5], hl: t, wait: 850 }); }
-      else if (k === 'dumpin') push({ tick: e.text, cam: 'D', puck: [12, 194], wait: 900 });
-      else if (k === 'zone') push({ tick: e.text, cam: 'D', puck: [18, 160], wait: 800 });
-      else if (k === 'change') push({ tick: e.text, fade: true, wait: 900 });
-      else if (k === 'pp') push({ tick: e.text, flash: ['Power play', 'info'], wait: 1300 });
-      else if (k === 'pk') push({ tick: e.text, flash: ['Penalty kill', 'info'], wait: 1300 });
-      else if (k === 'ot') push({ tick: e.text, flash: ['Overtime', 'info'], wait: 1500 });
-      else if (k === 'so') push({ tick: e.text, flash: ['Shootout', 'info'], wait: 1500 });
-      else if (k === 'end') push({ tick: e.text, flash: ['Final', 'info'], wait: 1200 });
-      else push({ tick: e.text, wait: 700 });
-    }
-    void puck;
-    G.animating = true;
-    $('rink-box').classList.add('playing');
-    let i = 0;
-    const finishAnim = () => {
-      clearTimers();
-      G.animating = false;
-      $('flash').hidden = true; $('ticker').hidden = true;
-      document.querySelectorAll('.pl.hl').forEach((e) => e.classList.remove('hl'));
-      document.querySelectorAll('.pl').forEach((e) => { e.style.opacity = ''; });
-      if (!s.over && s.per !== 'SO') stage(s, false);
-      board();
-      done();
+  // ==================================================================================================
+  // The play, frame by frame
+  // ==================================================================================================
+  async function run(prev, s, events, play) {
+    A.busy = true; A.skipping = false;
+    G.skip = () => {
+      A.skipping = true;
+      A.tw.forEach((t) => { setPos(t.id, t.to); t.res(); }); A.tw = [];
+      A.sleeps.forEach((r) => r()); A.sleeps = [];
+      clearTimers(); $('flash').hidden = true;
     };
-    G.skip = finishAnim;
-    const run = () => {
-      if (i >= steps.length) { later(finishAnim, 250); return; }
-      const st = steps[i++];
-      document.querySelectorAll('.pl.hl').forEach((e) => e.classList.remove('hl'));
-      if (st.cam) cam(st.cam);
-      if (st.move) for (const [id, p] of Object.entries(st.move)) place(id, p[0], p[1]);
-      if (st.showX) show('X', true);
-      if (st.hl) $(`p-${st.hl}`)?.classList.add('hl');
-      if (st.puck) { $('puck').classList.toggle('fast', !!st.fast); place('puck', st.puck[0], st.puck[1]); }
-      if (st.fade) { document.querySelectorAll('.pl.you:not(.goalie)').forEach((e) => { e.style.opacity = '0.25'; }); later(() => document.querySelectorAll('.pl.you').forEach((e) => { e.style.opacity = ''; }), 500); }
-      if (st.tick) { $('ticker').hidden = false; $('ticker').textContent = st.tick; }
-      if (st.flash) { const f = $('flash'); f.hidden = false; f.className = `flash ${st.flash[1]}`; f.textContent = st.flash[0]; later(() => { f.hidden = true; }, Math.min(st.wait, 1500)); }
-      board();
-      later(run, st.wait);
-    };
-    run();
+    A.cam.follow = true;
+    try {
+      // the call itself: the carrier makes the move the call names
+      await opening(prev, play, events);
+      for (const e of events) await animate(e);
+    } catch (err) { /* an animation glitch must never stop the game */ }
+    A.cam.follow = false;
+    A.trailOn = false;
+    hl(null); tick('');
+    if (!s.over && s.per !== 'SO') { A.skipping = false; await stage(s, false); }
+    A.busy = false; A.skipping = false;
+    G.skip = null;
+    $('flash').hidden = A.skipping ? true : $('flash').hidden;
+    board();
+  }
+
+  // a short lead-in that shows the call you made before the result plays
+  async function opening(prev, play, events) {
+    const k = D.tableKey(prev);
+    if (events[0] && events[0].k === 'pull') return;
+    if (k === 'ENTRY' && play === 'change') { tick(`${G.names.D1} swings back with it.`); await carry('D1', [36, 150], 650); return; }
+    if (k === 'ZONE' && play === 'cycle') { tick(`${G.names.C} takes it below the dots.`); await carry('C', [14, 18], 600); return; }
+    if (k === 'ZONE' && play === 'peel') { tick(`${G.names.C} peels back.`); await carry('C', [40, 66], 600); return; }
+    if (k.startsWith('THEIRS') && play === 'press') { const car = carrierOf(prev); const me = prev.deep ? 'D2' : 'W1'; tick(`${G.names[me]} goes after ${G.names[car] || 'the puck'}.`); await tween(me, [P(car)[0] + 2, P(car)[1] + 2.5], 550); return; }
+    if (k.startsWith('THEIRS') && play === 'sit') { tick(prev.deep ? 'Everyone collapses to the slot.' : 'Three across the neutral zone.'); await Promise.all(prev.deep ? [tween('D1', [37, 180], 500), tween('D2', [48, 180], 500), tween('C', [42, 170], 500)] : [tween('W1', [20, 108], 500), tween('C', [42, 108], 500), tween('W2', [65, 108], 500)]); }
+  }
+
+  const shooterOf = (raw, mine) => tokens(raw).find((t) => mine ? !t.startsWith('o') && t !== 'G' : t.startsWith('o') && t !== 'oG') || (mine ? 'C' : 'oW');
+  const nearestOf = (ids, p) => ids.filter((id) => !$(`p-${id}`).classList.contains('off')).sort((a, b) => dist(P(a), p) - dist(P(b), p))[0];
+  const OPP = ['oC', 'oW', 'oW2', 'oD', 'oD2'], YOU = ['C', 'W1', 'W2', 'D1', 'D2', 'X'];
+
+  async function animate(e) {
+    const k = e.k, d = e.data;
+    if (e.text) tick(e.text);
+    if (k === 'timeout') { Sound.play('whistle'); flash('Timeout', 'info', 1000); await sleep(1000); }
+    else if (k === 'pull') { tick(e.text); flash('Net empty', 'info', 1100); await Promise.all([tween('G', [88, 100], 1000), (async () => { show('X', true); setPos('X', [88, 108]); await tween('X', [45, Math.min(P('puck')[1] + 10, 150)], 1000); })()]); }
+    else if (k === 'return') { await tween('G', [42.5, 187], 700); }
+    else if (k === 'fo') {
+      const dot = P('puck');
+      Sound.play('whistle'); await sleep(250);
+      setPos('puck', [dot[0], dot[1] - 0.01]); Sound.play('stick');
+      await Promise.all([tween('C', [dot[0], dot[1] + 2.4], 120), tween('oC', [dot[0], dot[1] - 2.4], 120)]);
+      const w = d.won ? P('C') : P('oC');
+      await puckTo([w[0] + (d.won ? -3 : 3), w[1] + (d.won ? 7 : -7)], 260, { trail: true });
+    } else if (k === 'shot') {
+      const id = d.from === 'eng' ? 'D1' : shooterOf(e.raw, true);
+      const sp = P(id);
+      if (dist(P('puck'), sp) > 3) { Sound.play('pass'); await puckTo([sp[0] + 1.4, sp[1] - 1.4], 280, { trail: true }); }
+      hl(id);
+      await tween(id, [sp[0], sp[1] + 1.4], 140);
+      Sound.play('stick');
+      const res = d.res;
+      const tgt = d.from === 'eng' ? [42.5, 8.6] : res === 'goal' ? [42.5 + (Math.random() - 0.5) * 4, 8.7] : res === 'save' ? [42.5 + (Math.random() - 0.5) * 3, 12.4] : res === 'block' ? lerp(sp, [42.5, 11], 0.35) : [sp[0] < 42.5 ? 47.4 : 37.6, 4.2];
+      const moves = [puckTo(tgt, res === 'block' ? 150 : 210, { trail: true, ease: linear })];
+      if (res === 'save') moves.push(tween('oG', [tgt[0], 13], 170));
+      if (res === 'goal' && d.from !== 'eng') moves.push(tween('oG', [42.5 + (tgt[0] < 42.5 ? 2.5 : -2.5), 13.4], 200));
+      if (res === 'block') { const b = nearestOf(OPP, tgt); if (b) moves.push(tween(b, [tgt[0] + 1, tgt[1] - 1.5], 150)); }
+      await Promise.all(moves);
+      if (res === 'goal') { lamp('opp'); Sound.play('horn'); flash('Goal!', 'good', 1700); await sleep(1700); }
+      else if (res === 'save') { Sound.play('save'); await sleep(250); await puckTo([tgt[0] + (Math.random() - 0.5) * 8, 20], 260); await sleep(250); }
+      else if (res === 'block') { Sound.play('board'); await puckTo([tgt[0] + 3, tgt[1] + 6], 220); await sleep(200); }
+      else { Sound.play(Math.random() < 0.3 ? 'post' : 'board'); await puckTo([tgt[0] < 42.5 ? 8 : 77, 12], 320); await sleep(150); }
+      hl(null);
+    } else if (k === 'against' || k === 'stop') {
+      const id = shooterOf(e.raw, false); const sp = P(id);
+      A.cam.follow = true;
+      if (dist(P('puck'), sp) > 3) await puckTo([sp[0] - 1.4, sp[1] + 1.4], 280, { trail: true });
+      hl(id);
+      await tween(id, [sp[0], sp[1] - 1.4], 140);
+      Sound.play('stick');
+      const tgt = k === 'against' ? [42.5 + (Math.random() - 0.5) * 4, 191.3] : [42.5 + (Math.random() - 0.5) * 3, 187.6];
+      await Promise.all([puckTo(tgt, 220, { trail: true, ease: linear }), k === 'stop' && !$('p-G').classList.contains('off') ? tween('G', [tgt[0], 187], 170) : null]);
+      if (k === 'against') { lamp('you'); Sound.play('thud'); flash('Goal against', 'bad', 1600); await sleep(1600); }
+      else { Sound.play('save'); flash('Save!', 'good', 800); await sleep(800); await tween('G', [42.5, 187], 200); }
+      hl(null);
+    } else if (k === 'eng') {
+      const from = P('puck');
+      Sound.play('stick');
+      A.cam.follow = true;
+      await puckTo([42.5, d.res === 'goal' ? 191.3 : 190], Math.max(700, (191 - from[1]) * 9), { trail: true, ease: linear });
+      if (d.res === 'goal') { lamp('you'); Sound.play('thud'); flash('Empty net', 'bad', 1700); await sleep(1700); }
+    } else if (k === 'icing') {
+      Sound.play('stick'); A.cam.follow = true;
+      await puckTo([26, 197], 900, { trail: true, ease: linear });
+      Sound.play('whistle'); flash('Icing', 'info', 1000); await sleep(1000);
+    } else if (k === 'pass') {
+      const tk = tokens(e.raw);
+      const recv = d.ok ? tk.filter((t) => !t.startsWith('o')).pop() || 'W1' : tk.find((t) => t.startsWith('o')) || nearestOf(OPP, P('puck'));
+      let rp = P(recv);
+      Sound.play('pass');
+      if (d.ok && d.type === 'stretch') { rp = [rp[0], Math.max(40, rp[1] - 34)]; await Promise.all([tween(recv, rp, 700, { ease: easeOut }), puckTo([rp[0] + 1, rp[1] - 1], 620, { trail: true, ctrl: [rp[0] + 14, (rp[1] + P('puck')[1]) / 2] })]); }
+      else if (d.ok) { await puckTo([rp[0] + 1.2, rp[1] - 1.2], 300, { trail: true }); hl(recv); }
+      else { const mid = lerp(P('puck'), d.type === 'stretch' ? [16, 74] : P(tk.filter((t) => !t.startsWith('o')).pop() || 'W1'), 0.55); await Promise.all([tween(recv, mid, 320), puckTo(mid, 320, { trail: true })]); Sound.play('stick'); hl(recv); }
+      await sleep(250);
+    } else if (k === 'entry') {
+      if (d.ok && d.type === 'carry') {
+        const who = tokens(e.raw).find((t) => !t.startsWith('o')) || 'C';
+        if (dist(P('puck'), P(who)) > 3) await puckTo([P(who)[0] + 1.6, P(who)[1] - 1.6], 250, { trail: true });
+        A.cam.follow = true;
+        await Promise.all([carry(who, [32, 60], 900, { ease: linear }), tween('W1', [14, 54], 900), tween(who === 'W2' ? 'C' : 'W2', [66, 56], 900), tween('D1', [24, 84], 950), tween('D2', [58, 86], 950), tween('X', [46, 74], 950)]);
+      } else if (d.ok) {
+        Sound.play('stick'); A.cam.follow = true;
+        await Promise.all([puckTo([72, 8], 800, { ctrl: [70, 50] }), tween('W1', [66, 13], 950), tween('C', [40, 34], 950), tween('W2', [56, 30], 950), tween('D1', [24, 70], 950), tween('D2', [62, 70], 950)]);
+        await puckTo([P('W1')[0] + 1.4, P('W1')[1] + 1.4], 200); Sound.play('board'); hl('W1');
+      } else {
+        const t = d.type === 'dump' ? [72, 8] : lerp(P('puck'), [42, 70], 0.5);
+        if (d.type === 'dump') { Sound.play('stick'); A.cam.follow = true; await Promise.all([puckTo(t, 800, { ctrl: [70, 50] }), tween('oD', [70, 12], 850), tween('W1', [60, 22], 950)]); }
+        else { const who = nearestOf(OPP, t); await Promise.all([carry('C', t, 500), tween(who, [t[0] + 2, t[1] - 2], 480)]); Sound.play('stick'); await puckTo([t[0] + 2, t[1] - 4], 200); }
+      }
+      await sleep(200);
+    } else if (k === 'keep') { Sound.play('stick'); await Promise.all([tween('D2', [64, 72], 450), puckTo([65.5, 70.5], 450, { trail: true })]); hl('D2'); await sleep(200); }
+    else if (k === 'clear') { const who = nearestOf(OPP, P('puck')); if (who) hl(who); Sound.play('stick'); A.cam.follow = true; await puckTo([44 + (Math.random() - 0.5) * 20, 128], 800, { trail: true, ease: linear }); Sound.play('board'); await sleep(250); }
+    else if (k === 'take') {
+      const me = tokens(e.raw).find((t) => !t.startsWith('o')) || nearestOf(YOU, P('puck'));
+      const pk = P('puck');
+      await tween(me, [pk[0] + 1.5, pk[1] + 1.5], 380); Sound.play('board');
+      await carry(me, [pk[0] + 2, pk[1] + 6], 380); hl(me); await sleep(250);
+    } else if (k === 'turn' || k === 'beat') {
+      const them = tokens(e.raw).find((t) => t.startsWith('o')) || nearestOf(OPP, P('puck'));
+      const pk = P('puck');
+      await tween(them, [pk[0] - 1.5, pk[1] - 1.5], 380); Sound.play('stick');
+      await carry(them, [pk[0] - 2, pk[1] + 8], 400); hl(them); await sleep(250);
+    } else if (k === 'dumpin') { Sound.play('stick'); A.cam.follow = true; await Promise.all([puckTo([12, 194], 900, { ctrl: [10, 150] }), tween('D1', [16, 188], 1000)]); Sound.play('board'); await sleep(200); }
+    else if (k === 'zone') { const who = nearestOf(OPP, P('puck')); A.cam.follow = true; await carry(who, [20, 158], 800); await sleep(200); }
+    else if (k === 'change') {
+      document.querySelectorAll('.pl.you:not(.goalie)').forEach((el) => { el.style.opacity = '0.2'; });
+      await sleep(600);
+      document.querySelectorAll('.pl.you').forEach((el) => { el.style.opacity = ''; });
+      await sleep(300);
+    } else if (k === 'pp' || k === 'pk') { Sound.play('whistle'); flash(k === 'pp' ? 'Power play' : 'Penalty kill', 'info', 1300); await sleep(1300); }
+    else if (k === 'ot' || k === 'so' || k === 'end') { Sound.play('whistle'); flash(k === 'ot' ? 'Overtime' : k === 'so' ? 'Shootout' : 'Final', 'info', 1400); await sleep(1400); }
+    else await sleep(e.text ? 650 : 0);
   }
 
   const BIG = (events) => {
     const has = (k, f = () => true) => events.find((e) => e.k === k && f(e));
-    if (has('shot', (e) => e.data.res === 'goal')) return ['Goal!', 'good'];
-    if (has('eng', (e) => e.data.res === 'goal')) return ['Empty-net goal against', 'bad'];
-    if (has('against')) return ['Goal against', 'bad'];
-    if (has('pp')) return ['Power play', ''];
-    if (has('pk')) return ['Penalty kill', ''];
-    if (has('icing')) return ['Icing', ''];
+    if (has('shot', (e) => e.data.res === 'goal')) return 'Goal!';
+    if (has('eng', (e) => e.data.res === 'goal')) return 'Empty-net goal against';
+    if (has('against')) return 'Goal against';
+    if (has('pp')) return 'Power play';
+    if (has('pk')) return 'Penalty kill';
+    if (has('icing')) return 'Icing';
     const shots = events.filter((e) => e.k === 'shot');
-    if (shots.length) return [{ save: 'Save', block: 'Blocked', wide: 'Wide' }[shots[shots.length - 1].data.res] || 'Shot', ''];
-    if (has('stop')) return [`Big save, ${G.names.G}`, ''];
+    if (shots.length) return { save: 'Save', block: 'Blocked', wide: 'Wide' }[shots[shots.length - 1].data.res] || 'Shot';
+    if (has('stop')) return `Big save, ${G.names.G}`;
     const lastE = [...events].reverse().find((e) => !['fo', 'timeout', 'pull', 'return', 'play'].includes(e.k)) || events[events.length - 1];
-    if (!lastE) return ['', ''];
-    if (lastE.k === 'play' || lastE.k === 'change') { const sent = lastE.text.split(/(?<=\.)\s+/).filter(Boolean); const tail = sent[sent.length - 1].replace(/\.$/, ''); if (tail.length <= 28) return [tail, '']; }
+    if (!lastE) return '';
+    if (lastE.k === 'play' || lastE.k === 'change') { const sent = lastE.text.split(/(?<=\.)\s+/).filter(Boolean); const tail = (sent[sent.length - 1] || '').replace(/\.$/, ''); if (tail && tail.length <= 28) return tail; }
     const m = { keep: 'Still in their end', clear: 'Cleared', take: 'Puck won', turn: 'Turnover', beat: 'Beaten', dumpin: 'Dumped in', zone: 'They get in', change: 'Fresh legs', entry: lastE.data.ok ? 'In the zone' : 'Turned over', pass: lastE.data.ok ? 'On the tape' : 'Picked off', fo: lastE.data.won ? 'Won the draw' : 'Lost the draw' };
-    return [m[lastE.k] || 'Play on', ''];
+    return m[lastE.k] || 'Play on';
   };
 
   function afterPlay(before, v, d, events) {
     const s = G.s;
-    const [big] = BIG(events);
-    $('r-big').textContent = big;
-    const lines = events.filter((e) => !['timeout', 'return'].includes(e.k)).slice(-2).map((e) => e.text);
-    $('r-line').textContent = lines.join(' ');
+    $('r-big').textContent = BIG(events);
+    $('r-line').textContent = events.filter((e) => !['timeout', 'return'].includes(e.k) && e.text).slice(-2).map((e) => e.text).join(' ');
     const ptsEl = $('r-pts');
     ptsEl.className = `pts num ${v.k === 'best' || v.k === 'good' ? 'good' : v.k}`;
     ptsEl.textContent = v.k === 'none' ? '–' : pts(d);
@@ -477,15 +768,20 @@
     const setWp = (after) => { $('r-wp').textContent = `Win chance ${(before.wp * 100).toFixed(1)}% → ${(after * 100).toFixed(1)}%`; };
     $('r-wp').textContent = `Win chance ${(before.wp * 100).toFixed(1)}% → …`;
     $('result').hidden = false;
-    feed(`${before.per === '3RD' ? '' : before.per + ' '}${fmt(before.t)}`, `<b>${esc(before.call)}</b>${esc(before.look)}. ${esc(events.map((e) => e.text).join(' '))}`,
+    feed(`${before.per === '3RD' ? '' : before.per + ' '}${fmt(before.t)}`, `<b>${esc(before.call)}</b>${esc(before.look)}. ${esc(events.map((e) => e.text).filter(Boolean).join(' '))}`,
       `<span class="d ${v.k === 'best' || v.k === 'good' ? 'good' : v.k}">${v.k === 'none' ? '–' : pts(d)}</span>`);
-    if (s.over) { setWp(s.won ? 1 : 0); return later(finish, 900); }
-    if (s.per === 'SO') { setWp(s.soWin); return later(spot, 600); }
+    if (s.over) { setWp(s.won ? 1 : 0); return later(finish, 700); }
+    if (s.per === 'SO') { setWp(s.soWin); return later(spot, 400); }
     G.pending.then((g) => { if (g) setWp(g[0].wp); });
     spot();
   }
 
-  // ---------- shootout ----------
+  // ==================================================================================================
+  // Shootout: pick a shooter, then pick your spot on the net
+  // ==================================================================================================
+  const SPOTS = { glove: [45.4, 8.4], blocker: [39.6, 10.3], five: [42.5, 10.4], deke: [36.8, 13.5] };   // where the puck goes
+  const AIM = { glove: [52, 9], blocker: [33, 12], five: [42.5, 20], deke: [30, 22] };                    // where you tap
+  const AIMLBL = { glove: 'Glove high', blocker: 'Blocker low', five: 'Five-hole', deke: 'Deke' };
   function shootout() {
     const { sc } = G;
     if (!G.so) {
@@ -493,8 +789,9 @@
       G.so = { so, st: { round: 0, you: 0, opp: 0, used: [] }, shots: { you: [], opp: [] }, youFirst: so.youFirst };
       feed('SO', `<b>Shootout</b>${esc(sc.you.home ? `${sc.you.name} (home) shoot first.` : `${sc.opp.name} (home) shoot first.`)}`);
     }
-    $('call').hidden = true; $('so').hidden = false;
-    for (const id of ENT) show(id, id === 'oG' || id === 'G' || id === 'C');
+    $('call').hidden = true; $('so').hidden = false; $('result').hidden = true;
+    clearTargets();
+    for (const id of ENT) show(id, id === 'oG' || id === 'G' || id === 'C' || id === 'oC');
     $('rink-tag').textContent = 'Shootout';
     soRound();
   }
@@ -515,28 +812,38 @@
     const row = (ab, cls, shots) => `<div class="so-row"><span class="tchip ${cls}">${esc(ab)}</span>${shots.map((x) => `<i class="${x ? 'g' : 'm'}"></i>`).join('')}${'<i></i>'.repeat(Math.max(0, 3 - shots.length))}</div>`;
     $('so-score').innerHTML = row(G.sc.you.ab, 'you-chip', g.shots.you) + row(G.sc.opp.ab, 'opp-chip', g.shots.opp);
   }
-  function oppShot(next) {
+  async function oppShot() {
     const g = G.so, r = g.shots.opp.length;
     const sh = g.so.theirs[r % g.so.theirs.length];
     const goal = D.mulberry(D.hash(`${G.sc.id}:so-opp:${r}`))() < sh.p;
     g.shots.opp.push(goal);
-    cam('D'); place('oC', 42.5, 140); show('oC', true); place('puck', 42.5, 142);
-    $('ticker').hidden = false; $('ticker').textContent = `${last(sh.n) || sh.n} skates in on ${G.names.G}…`;
-    later(() => {
-      place('puck', goal ? 42.5 : 44, goal ? 190.5 : 185.5);
-      $('ticker').textContent = goal ? `${sh.n} scores.` : `${G.names.G} stops ${last(sh.n) || sh.n}.`;
-      const f = $('flash'); f.hidden = false; f.className = `flash ${goal ? 'bad' : 'good'}`; f.textContent = goal ? 'Scores' : 'Save!';
-      feed('SO', `<b>${esc(G.sc.opp.ab)}: ${esc(sh.n)}</b>${goal ? 'Scores.' : 'Stopped.'}`);
-      later(() => { f.hidden = true; $('ticker').hidden = true; soScore(); next(); }, 1300);
-    }, 900);
+    A.busy = true;
+    const el = $('p-oC'); el.querySelector('.n').textContent = sh.num ?? ''; el.querySelector('.l').textContent = last(sh.n) || sh.n;
+    show('oC', true); show('C', false);
+    setPos('oC', [42.5, 100]); setPos('puck', [41, 101.6]); setPos('G', [42.5, 187]);
+    camTo(178, 2.4, 42.5, true);
+    tick(`${sh.n} skates in on ${G.names.G}…`);
+    Sound.play('whistle');
+    A.cam.follow = false;
+    await carry('oC', [44, 172], 1300, { ease: linear });
+    await carry('oC', [39, 180], 350);
+    Sound.play('stick');
+    const tgt = goal ? [42.5 + (Math.random() < 0.5 ? -2.4 : 2.4), 190.6] : [42.5, 187.4];
+    await Promise.all([puckTo(tgt, 200, { trail: true, ease: linear }), tween('G', [goal ? 46 : 41.5, 187], 180)]);
+    if (goal) { lamp('you'); Sound.play('thud'); flash('Scores', 'bad', 1100); } else { Sound.play('save'); flash('Save!', 'good', 1100); }
+    tick(goal ? `${sh.n} scores.` : `${G.names.G} stops ${last(sh.n) || sh.n}.`);
+    feed('SO', `<b>${esc(G.sc.opp.ab)}: ${esc(sh.n)}</b>${goal ? 'Scores.' : 'Stopped.'}`);
+    await new Promise((res) => later(res, 1300));
+    tick(''); A.busy = false;
+    soScore();
   }
-  function soRound() {
+  async function soRound() {
     const g = G.so;
     soScore();
     const done = soDecided();
     if (done) return soEnd(done);
     const theirTurn = g.youFirst ? g.shots.opp.length < g.shots.you.length : g.shots.opp.length <= g.shots.you.length;
-    if (theirTurn) { $('so-shooters').innerHTML = ''; $('so-moves').hidden = true; $('so-step').textContent = 'Their shooter'; return oppShot(soRound); }
+    if (theirTurn) { $('so-shooters').innerHTML = ''; $('so-moves').hidden = true; $('so-step').textContent = 'Their shooter'; await oppShot(); return soRound(); }
     const st = { round: g.shots.you.length, you: g.shots.you.filter(Boolean).length, opp: g.shots.opp.filter(Boolean).length, used: g.st.used };
     g.st = st;
     const so = g.so, goalie = G.sc.roster.oppG;
@@ -546,27 +853,37 @@
     $('so-sub').textContent = st.round < 3 ? `Round ${st.round + 1} of 3` : `Sudden death, round ${st.round + 1}`;
     $('so-step').textContent = 'Pick your shooter';
     $('so-moves').hidden = true;
-    cam('O'); place('oG', 42.5, 13); place('C', 42.5, 70); place('puck', 42.5, 67); show('C', true);
+    show('oC', false); show('C', false); setPos('oG', [42.5, 13]);
+    camTo(56, 1, 42.5, false);
     $('so-shooters').innerHTML = so.shooters.map((p, i) => {
       const used = st.used.includes(i);
       const pct = p.s ? `${p.g} for ${p.s} career (${Math.round((100 * p.g) / p.s)}%)` : 'No shootout history';
       return `<button type="button" class="shooter" data-i="${i}" ${used ? 'disabled' : ''} aria-pressed="false"><b>${p.num ? `#${p.num} ` : ''}${esc(p.n)}</b><span>${pct}</span><em>Favorite: ${esc(D.MOVES[p.sig][1].toLowerCase())}</em></button>`;
     }).join('');
-    $('so-shooters').querySelectorAll('.shooter').forEach((b) => b.onclick = () => {
-      $('so-shooters').querySelectorAll('.shooter').forEach((x) => x.setAttribute('aria-pressed', 'false'));
-      b.setAttribute('aria-pressed', 'true');
-      const p = so.shooters[+b.dataset.i];
-      const el = $('p-C'); el.querySelector('.n').textContent = p.num ?? ''; el.querySelector('.l').textContent = last(p.n) || p.n;
-      $('so-step').textContent = 'Pick the move';
-      const mv = $('so-moves'); mv.hidden = false; mv.className = 'keys';
-      mv.innerHTML = D.MOVES.map(([, label], m) => `<button type="button" class="key" data-m="${m}"><span class="kn">${m + 1}</span><b>${esc(label)}</b></button>`).join('');
-      mv.querySelectorAll('.key').forEach((k) => k.onclick = () => soShoot(+b.dataset.i, +k.dataset.m));
-    });
+    $('so-shooters').querySelectorAll('.shooter').forEach((b) => b.onclick = () => soPick(+b.dataset.i, b));
   }
-  function soShoot(i, m) {
+  function soPick(i, btn) {
+    const so = G.so.so, p = so.shooters[i];
+    // collapse the list to the shooter you picked and bring the net into view
+    $('so-shooters').querySelectorAll('.shooter').forEach((x) => { x.setAttribute('aria-pressed', 'false'); x.hidden = x !== btn; });
+    btn.setAttribute('aria-pressed', 'true');
+    btn.onclick = () => { $('so-shooters').querySelectorAll('.shooter').forEach((x) => { x.hidden = false; }); $('so-step').textContent = 'Pick your shooter'; $('so-moves').hidden = true; clearTargets(); A.onPick = null; show('C', false); camTo(56, 1, 42.5, false); $('so-shooters').querySelectorAll('.shooter').forEach((x) => { x.onclick = () => soPick(+x.dataset.i, x); }); };
+    later(() => $('rink-box').scrollIntoView({ block: 'start', behavior: 'smooth' }), 30);
+    const el = $('p-C'); el.querySelector('.n').textContent = p.num ?? ''; el.querySelector('.l').textContent = last(p.n) || p.n;
+    show('C', true); setPos('C', [42.5, 44]); setPos('puck', [44.1, 42.4]);
+    camTo(26, 2, 42.5, false);
+    $('so-step').textContent = 'Now pick your spot: tap the net (tap the shooter to change him)';
+    const mv = $('so-moves'); mv.hidden = false; mv.className = 'keys n4'; mv.style.setProperty('--n', 4);
+    mv.innerHTML = D.MOVES.map(([, label], m) => `<button type="button" class="key" data-m="${m}"><span class="kn">${m + 1}</span><b>${esc(label)}</b></button>`).join('');
+    mv.querySelectorAll('.key').forEach((k) => { k.onclick = () => soShoot(i, +k.dataset.m); k.onpointerenter = () => hotTarget(String(k.dataset.m)); k.onpointerleave = () => hotTarget(null); });
+    drawTargets(D.MOVES.map(([id], m) => ({ play: String(m), at: AIM[id], label: AIMLBL[id], n: m + 1 })), null, 2);
+    A.onPick = (m) => soShoot(i, +m);
+  }
+  async function soShoot(i, m) {
     const g = G.so, so = g.so;
-    $('so-moves').querySelectorAll('.key').forEach((k) => k.disabled = true);
-    $('so-shooters').querySelectorAll('.shooter').forEach((k) => k.disabled = true);
+    A.onPick = null; clearTargets();
+    $('so-moves').querySelectorAll('.key').forEach((k) => { k.disabled = true; });
+    $('so-shooters').querySelectorAll('.shooter').forEach((k) => { k.disabled = true; });
     const graded = D.soGrade(so, g.st);
     const mine = graded.find((x) => x.i === i && x.m === m), best = graded[0];
     // a typical bench: one of its three best shooters by reputation, any move
@@ -581,25 +898,31 @@
     const goal = D.mulberry(D.hash(`${G.sc.id}:so-you:${g.shots.you.length}`))() < mine.p;
     g.shots.you.push(goal);
     g.st.used = g.st.used.length + 1 >= so.shooters.length ? [] : [...g.st.used, i];
-    const sh = so.shooters[i];
-    $('ticker').hidden = false; $('ticker').textContent = `${sh.n} skates in on ${G.names.oG}…`;
-    place('C', 42.5, 30); place('puck', 42.5, 27);
-    later(() => {
-      const tgt = { glove: [46.5, 9.5], blocker: [38.5, 10], five: [42.5, 10], deke: [40, 9.5] }[D.MOVES[m][0]];
-      place('puck', goal ? tgt[0] : 42.5, goal ? tgt[1] : 14.5);
-      if (D.MOVES[m][0] === 'deke') place('oG', 45, 13);
-      const f = $('flash'); f.hidden = false; f.className = `flash ${goal ? 'good' : 'bad'}`; f.textContent = goal ? 'Scores!' : 'Saved';
-      $('ticker').textContent = goal ? `${sh.n} scores, ${D.MOVES[m][1].toLowerCase()}.` : `${G.names.oG} stops ${sh.n}.`;
-      $('r-big').textContent = goal ? 'Scores!' : 'Saved';
-      $('r-line').textContent = `${sh.n}: ${D.MOVES[m][1].toLowerCase()}.`;
-      $('r-wp').textContent = `Shooter's chance on that move: ${Math.round(mine.p * 100)}%`;
-      const ptsEl = $('r-pts'); ptsEl.className = `pts num ${v.k === 'best' || v.k === 'good' ? 'good' : v.k}`; ptsEl.textContent = pts(d);
-      const vt = $('r-verdict'); vt.className = `verdict ${v.k}`;
-      vt.innerHTML = v.k === 'best' || v.k === 'good' ? '<span>Your pick: <b>the best one.</b></span>' : `<span>Your pick: <b>${v.k === 'bad' ? 'costly' : 'decent'}.</b> ${esc(so.shooters[best.i].n)}, ${esc(D.MOVES[best.m][1].toLowerCase())} was the pick.</span>`;
-      $('result').hidden = false;
-      feed('SO', `<b>${esc(sh.n)}: ${esc(D.MOVES[m][1].toLowerCase())}</b>${goal ? 'Scores.' : 'Stopped.'}`, `<span class="d ${v.k === 'best' || v.k === 'good' ? 'good' : v.k}">${pts(d)}</span>`);
-      later(() => { f.hidden = true; $('ticker').hidden = true; place('oG', 42.5, 13); soRound(); }, 1500);
-    }, 900);
+    const sh = so.shooters[i], mvId = D.MOVES[m][0];
+    A.busy = true;
+    tick(`${sh.n} skates in on ${G.names.oG}…`);
+    Sound.play('whistle');
+    await carry('C', [41, 24], 1100, { ease: linear });
+    if (mvId === 'deke') { await carry('C', [36.5, 17], 260); }
+    else await carry('C', [42.5 + (mvId === 'glove' ? -1.5 : 1.5), 19], 220);
+    Sound.play(mvId === 'deke' ? 'pass' : 'stick');
+    const spot = SPOTS[mvId];
+    const tgt = goal ? [spot[0], Math.min(spot[1], 9.4)] : [spot[0], 12.6];
+    const goalieTo = goal ? [mvId === 'deke' ? 45 : mvId === 'glove' ? 40.5 : 44.5, 13] : [spot[0], 13];
+    await Promise.all([puckTo(tgt, mvId === 'deke' ? 260 : 190, { trail: true, ease: linear }), tween('oG', goalieTo, mvId === 'deke' ? 240 : 170)]);
+    if (goal) { lamp('opp'); Sound.play('horn'); flash('Scores!', 'good', 1300); } else { Sound.play('save'); flash('Saved', 'bad', 1300); }
+    tick(goal ? `${sh.n} scores, ${D.MOVES[m][1].toLowerCase()}.` : `${G.names.oG} stops ${sh.n}.`);
+    $('r-big').textContent = goal ? 'Scores!' : 'Saved';
+    $('r-line').textContent = `${sh.n}: ${D.MOVES[m][1].toLowerCase()}.`;
+    $('r-wp').textContent = `Chance on that shooter and move: ${Math.round(mine.p * 100)}%`;
+    const ptsEl = $('r-pts'); ptsEl.className = `pts num ${v.k === 'best' || v.k === 'good' ? 'good' : v.k}`; ptsEl.textContent = pts(d);
+    const vt = $('r-verdict'); vt.className = `verdict ${v.k}`;
+    vt.innerHTML = v.k === 'best' || v.k === 'good' ? '<span>Your pick: <b>the best one.</b></span>' : `<span>Your pick: <b>${v.k === 'bad' ? 'costly' : 'decent'}.</b> ${esc(so.shooters[best.i].n)}, ${esc(D.MOVES[best.m][1].toLowerCase())} was the pick.</span>`;
+    $('result').hidden = false;
+    feed('SO', `<b>${esc(sh.n)}: ${esc(D.MOVES[m][1].toLowerCase())}</b>${goal ? 'Scores.' : 'Stopped.'}`, `<span class="d ${v.k === 'best' || v.k === 'good' ? 'good' : v.k}">${pts(d)}</span>`);
+    await new Promise((res) => later(res, 1500));
+    tick(''); A.busy = false; setPos('oG', [42.5, 13]);
+    soRound();
   }
   function soEnd(who) {
     const s = G.s;
@@ -609,7 +932,9 @@
     finish();
   }
 
-  // ---------- the end ----------
+  // ==================================================================================================
+  // The end
+  // ==================================================================================================
   function realStory(sc) {
     const r = sc.real;
     const bits = [r.pulledAt != null ? `pulled the goalie with ${fmt(r.pulledAt)} left` : 'never pulled the goalie'];
@@ -632,10 +957,10 @@
     if (safe > bold * 1.6) return 'Old-time hockey';
     return 'Steady hand';
   }
-
   function finish() {
-    const { s, sc } = G;
+    const { s } = G;
     clearTimers();
+    clearTargets(); A.onPick = null;
     $('call').hidden = true; $('so').hidden = true;
     const graded = G.calls.filter((c) => c.v !== 'none').length;
     const z = G.sumD / Math.sqrt(G.sumV + Math.max(1, graded) * 0.005 ** 2);
@@ -644,10 +969,9 @@
     const final = `${s.you}-${s.opp}${how}`;
     const st = load();
     if (!G.practice && !st.days[G.day]) { st.days[G.day] = { score, won: s.won, final, squares: G.calls.map((c) => c.v).join(',') }; save(st); }
-    if (G.practice) { st.practice = (st.practice || 0) + 1; save(st); }
-    later(() => showEnd(score, final), 700);
+    if (s.won) { Sound.play('horn'); }
+    later(() => showEnd(score, final), 800);
   }
-
   function showEnd(score, final) {
     const { s, sc } = G;
     hideAll();
@@ -684,7 +1008,6 @@
     $('btn-review').onclick = () => { $('pbp').open = true; $('pbp').scrollIntoView({ behavior: 'smooth' }); };
     $('btn-practice').onclick = () => { const pool = DATA.games; showIntro(DAY, pool[Math.floor(Math.random() * pool.length)]); };
     stats();
-    $('call').hidden = true; $('so').hidden = true;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   function stats() {
@@ -704,8 +1027,9 @@
       const sc = gameForDay(d), rec = st.days[d];
       rows.push(`<li><button type="button" data-d="${d}"><span class="n">${d}</span><span class="lbl"><b>${esc(sc.you.ab)} vs ${esc(sc.opp.ab)} · ${dateStr(sc.date)}</b><span>${esc(sc.label)}</span></span><span class="res">${rec ? rec.score : ''}</span></button></li>`);
     }
+    rows.unshift(`<li><button type="button" data-d="practice"><span class="n">🎲</span><span class="lbl"><b>A random big game</b><span>Practice: any of ${DATA.games.length} real endings</span></span><span class="res"></span></button></li>`);
     $('arch-list').innerHTML = rows.join('');
-    $('arch-list').querySelectorAll('button').forEach((b) => b.onclick = () => showIntro(+b.dataset.d));
+    $('arch-list').querySelectorAll('button').forEach((b) => b.onclick = () => b.dataset.d === 'practice' ? showIntro(DAY, DATA.games[Math.floor(Math.random() * DATA.games.length)]) : showIntro(+b.dataset.d));
     hideAll();
     $('archive').hidden = false;
   }
@@ -719,19 +1043,18 @@
     else if (G && G.s.over) $('end').hidden = false;
     else showIntro(DAY);
   });
-  $('rink-box').addEventListener('click', () => { if (G && G.animating && G.skip) G.skip(); });
   document.addEventListener('keydown', (e) => {
     if (e.target.closest && e.target.closest('input, textarea')) return;
     if (!G || $('game').hidden) return;
-    if ((e.key === ' ' || e.key === 'Enter') && G.animating) { e.preventDefault(); G.skip && G.skip(); return; }
+    if ((e.key === ' ' || e.key === 'Enter') && A.busy && G.skip) { e.preventDefault(); G.skip(); return; }
     const keys = !$('so').hidden ? [...$('so-moves').querySelectorAll('.key')] : [...$('c-keys').querySelectorAll('.key')];
     const n = Number(e.key);
-    if (n >= 1 && n <= keys.length && !keys[n - 1].disabled) { e.preventDefault(); keys[n - 1].click(); }
+    if (n >= 1 && n <= keys.length) { e.preventDefault(); if (!$('so').hidden) { if (!keys[n - 1].disabled && !$('so-moves').hidden) keys[n - 1].click(); } else commit(keys[n - 1].dataset.p); }
     else if ((e.key === 'p' || e.key === 'P') && $('c-toggles').querySelector('[data-k="goalie"]')) toggle('goalie');
     else if ((e.key === 't' || e.key === 'T') && $('c-toggles').querySelector('[data-k="timeout"]')) toggle('timeout');
   });
 
-  window.EmptyNet = { state: () => G, refresh: () => { stage(G.s, true); G.pending = gradeAsync(G.s, 99); spot(); } };   // for testing from the console
+  window.EmptyNet = { state: () => G, refresh: () => { stage(G.s, true); G.pending = gradeAsync(G.s, 99); G.graded = null; spot(); } };   // for testing from the console
   $('foot-built').textContent = `${DATA.games.length} real endings · updated ${new Date(DATA.built).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
   showIntro(DAY);
 })();

@@ -529,11 +529,17 @@ https://hockey.mattdicks.org/drill/ is a daily coaching game. Each day is one re
 the real team lost: down one goal at a 5-on-5 faceoff with 2:00 to 4:30 left in the third, with the
 real players who were on the ice late in that game.
 
+- **Play on the ice:** every call is a numbered target on the rink. Tap the net to shoot, a
+  teammate to pass, the corner to dump it in, their puck carrier to go after him, or drag the puck
+  to a target. Keys under the rink (1-4) do the same. In the shootout you pick a shooter, then tap
+  your spot (glove high, blocker low, five-hole, deke) on a zoomed-in net.
 - **The read:** before every call the other team shows a look (their center owns the dot, a 1-3-1
   trap, a sagging box, the back door is open, they are mid-change...). Each look makes some calls
   better and others worse, so the skill is reading it. Calls are 2 to 4 big keys (1-4 on a
   keyboard), plus pull the goalie (P) and one timeout (T) where they apply.
-- **The play:** each call plays out on an animated rink (tap to skip), then a result card shows what
+- **The play:** each call plays out frame by frame (players skate, the puck carries, passes and
+  shots trail, the goalie slides, the goal lamp and net react, the camera follows the puck), with
+  optional Web Audio sound (stick, whistle, goal horn). Tap the ice to skip, then a result card shows what
   happened, win chance before and after, and the verdict: the best call, as good as any (inside the
   half-point noise of the simulation), decent, or costly, with the better call named.
 - **Grading:** before each call, the model replays the spot 3,000 times with every call you could

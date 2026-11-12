@@ -43,7 +43,8 @@ h1, h2, h3 { font-family: var(--head); margin: 0; text-wrap: balance; }
 }
 
 /* header */
-.top { display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; gap: 8px; }
+.top { display: grid; grid-template-columns: 84px 1fr 84px; align-items: center; gap: 8px; }
+.top-r { display: flex; gap: 6px; justify-content: flex-end; }
 .brand { text-align: center; }
 .brand h1 { font-size: 28px; line-height: 1; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; }
 .sub { margin: 2px 0 0; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -77,7 +78,7 @@ h1, h2, h3 { font-family: var(--head); margin: 0; text-wrap: balance; }
 .fact { background: var(--panel-2); border-radius: 999px; padding: 5px 11px; font-size: 14px; font-weight: 600; }
 
 /* scoreboard bar */
-.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: grid; grid-template-columns: 1fr auto auto auto 1fr; align-items: center; gap: 10px; background: #f3f6f8; color: #0b0f14; border-radius: 10px; padding: 6px 12px; box-shadow: 0 2px 0 rgba(0,0,0,.4); }
+.bar { position: relative; z-index: 5; display: grid; grid-template-columns: 1fr auto auto auto 1fr; align-items: center; gap: 10px; background: #f3f6f8; color: #0b0f14; border-radius: 10px; padding: 6px 12px; box-shadow: 0 2px 0 rgba(0,0,0,.4); }
 .bar-team { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .bar-team.right { justify-content: flex-end; }
 .tchip { font-family: var(--head); font-weight: 800; font-size: 19px; padding: 1px 7px; border-radius: 5px; letter-spacing: 0.03em; }
@@ -96,7 +97,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 /* rink */
 .rink-box { position: relative; width: 100%; max-width: min(100%, calc(42vh * 85 / 112)); margin: 0 auto; border-radius: 22px; overflow: hidden; background: #c9d6df; user-select: none; }
 .rink { display: block; width: 100%; height: auto; }
-#cam { transition: transform .7s cubic-bezier(.4,.1,.2,1); }
+
 .ice { fill: var(--ice); stroke: #9fb0be; stroke-width: 0.8; }
 .nz { fill: var(--ice-2); }
 .gl { stroke: var(--red); stroke-width: 0.5; }
@@ -108,9 +109,27 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .net { fill: none; stroke: #3d4a57; stroke-width: 0.6; }
 .empty #net-you { stroke: var(--red); stroke-dasharray: 1 .8; stroke-width: 0.9; }
 .zlabel { font: 800 4.2px var(--head); letter-spacing: 0.3em; fill: var(--ice-ink); text-anchor: middle; opacity: .7; }
-.mover { transition: transform .55s cubic-bezier(.35,.1,.25,1), opacity .3s; }
-.mover.fast { transition-duration: .35s; }
+.pl { transition: opacity .35s; }
 .puck { fill: #0b0f14; stroke: #fff; stroke-width: 0.35; }
+.mesh { stroke: #6b7885; stroke-width: 0.18; fill: none; }
+.lamp { fill: #4a2224; }
+.lamp.on { fill: #ff3b30; animation: lamp .22s steps(2) 8; filter: drop-shadow(0 0 2px #ff3b30); }
+@keyframes lamp { 50% { fill: #ffb3ad; } }
+.shake { animation: shake .45s; }
+@keyframes shake { 20% { transform: translate(0.6px, -0.5px); } 40% { transform: translate(-0.6px, 0.4px); } 60% { transform: translate(0.4px, -0.3px); } 80% { transform: translate(-0.3px, 0.2px); } }
+.trail { fill: none; stroke: #0b0f14; stroke-width: 0.9; stroke-linecap: round; stroke-linejoin: round; opacity: .28; }
+.dragline { stroke: var(--gold); stroke-width: 0.9; stroke-dasharray: 1.6 1.2; stroke-linecap: round; }
+.tgt .lane { stroke: #0b0f14; stroke-width: 0.45; stroke-dasharray: 1.2 1.1; opacity: .38; fill: none; }
+.tgt .ring { fill: var(--gold); stroke: #0b0f14; stroke-width: 0.4; }
+.tgt .halo { fill: var(--gold); opacity: .28; transform-box: fill-box; transform-origin: center; animation: halo 1.6s ease-out infinite; }
+@keyframes halo { from { transform: scale(.7); opacity: .45; } to { transform: scale(1.7); opacity: 0; } }
+.tgt .num { font: 900 3px var(--head); fill: #1a1300; text-anchor: middle; dominant-baseline: central; }
+.tgt .lbl { font: 800 2.8px var(--head); fill: #fff; text-anchor: middle; paint-order: stroke; stroke: #0b0f14; stroke-width: 0.9px; stroke-linejoin: round; letter-spacing: 0.02em; }
+.tgt.hot .ring { fill: #fff; }
+.tgt.hot .lbl { fill: var(--gold); }
+#rink { touch-action: none; cursor: default; }
+#rink.aim { cursor: pointer; }
+.rink-hint { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); background: rgba(11,15,20,.82); color: var(--gold); font-size: 12.5px; font-weight: 700; padding: 5px 11px; border-radius: 999px; white-space: nowrap; pointer-events: none; }
 .pl circle { stroke: #fff; stroke-width: 0.45; }
 .pl.you circle { fill: var(--you); }
 .pl.opp circle { fill: var(--opp); }
@@ -121,6 +140,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .pl.goalie circle { stroke-width: 0.8; }
 .pl.off { opacity: 0; }
 .pl.hl circle { stroke: var(--gold); stroke-width: 0.9; }
+.pl .stick { stroke: #3a2a1a; stroke-width: 0.55; stroke-linecap: round; }
+.rink-tag, .ticker, .flash { pointer-events: none; }
 .rink-tag { position: absolute; left: 8px; top: 8px; background: rgba(11,15,20,.82); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 999px; max-width: calc(100% - 16px); }
 .ticker { position: absolute; left: 8px; right: 8px; bottom: 8px; background: rgba(11,15,20,.86); color: #fff; font-size: 15px; font-weight: 600; padding: 8px 12px; border-radius: 10px; }
 .flash { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(1); font-family: var(--head); font-weight: 900; font-size: clamp(44px, 15vw, 70px); letter-spacing: 0.04em; text-transform: uppercase; color: #fff; padding: 2px 18px; border-radius: 10px; white-space: nowrap; animation: pop .5s cubic-bezier(.2,1.6,.4,1); }
@@ -240,4 +261,4 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .foot { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 12px; margin-top: 8px; }
 
 @media (max-width: 460px) { .keys.n4 .key small { display: none; } .keys.n4 .key { min-height: 64px; } .keys.n4 .key b, .keys.n3 .key b { font-size: 19px; } .key { padding-inline: 5px; } }
-@media (prefers-reduced-motion: reduce) { #cam, .mover { transition: none !important; } .flash { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .flash, .tgt .halo, .lamp.on, .shake { animation: none; } }
