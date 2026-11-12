@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import './engine.js';
 const D = globalThis.Drill;
 if (process.env.YQ) D.R.youQ = +process.env.YQ;
+if (process.env.PACE) D.R.pace = +process.env.PACE;
 if (process.env.TIQ) D.R.tiedQ = +process.env.TIQ;
 if (process.env.TQ) D.R.themQ = +process.env.TQ;
 if (process.env.ENG) D.R.engClear = +process.env.ENG;
@@ -29,7 +30,7 @@ for (const g of games) {
   if (g.real.goals.some((x) => !x.mine && x.empty)) real.eng++;
   if (g.real.pulledAt != null) { real.pulled++; real.pullT += g.real.pulledAt; }
 }
-const sim = { n: 0, tied: 0, won: 0, eng: 0, gf: 0, ga: 0 };
+const sim = { n: 0, tied: 0, won: 0, eng: 0, calls: 0, regCalls: 0 };
 const K = +(process.env.K || 20);
 for (const g of games) {
   const sc = { ...g, roster: g.roster ?? { you: [], opp: [] } };
@@ -40,7 +41,7 @@ for (const g of games) {
     let guard = 0;
     while (!s.over && s.per !== 'SO' && s.otNum < 3 && guard++ < 400) {
       const before = s.opp, wasPulled = s.pulled;
-      D.resolve(s, D.coach(s, r), r);
+      D.resolve(s, D.coach(s, r), r); sim.calls++; if (s.per === "REG" || (s.per === "OT" && s.otNum === 1 && s.t === (s.playoff ? 1200 : 300))) sim.regCalls++;
       if (s.per === 'REG' && s.you === s.opp) tied = true;
       if (s.opp > before && wasPulled) eng = true;
       if (s.per !== 'REG') tied = true;
@@ -56,4 +57,5 @@ console.log(`tied it up      ${pct(real.tied, real.n).padStart(6)}  ${pct(sim.ti
 console.log(`won the game    ${pct(real.won, real.n).padStart(6)}  ${pct(sim.won, sim.n).padStart(6)}`);
 console.log(`gave up an ENG  ${pct(real.eng, real.n).padStart(6)}  ${pct(sim.eng, sim.n).padStart(6)}`);
 console.log(`won once tied   ${pct(real.won, real.tied).padStart(6)}  ${pct(sim.won, sim.tied).padStart(6)}`);
+console.log(`calls per game (to the end of regulation): ${(sim.regCalls / sim.n).toFixed(1)}`);
 console.log(`real coaches pulled in ${pct(real.pulled, real.n)} of games, average with ${D.fmt(real.pullT / real.pulled)} left`);

@@ -29,7 +29,7 @@ const SCHEDULE = join(ROOT, 'drill', 'schedule.json');
 const RIVALS = ['BOS-MTL', 'BOS-TOR', 'MTL-TOR', 'NYR-NYI', 'NYR-NJD', 'NYI-NJD', 'NYR-PHI', 'PHI-PIT', 'PIT-WSH', 'CHI-DET',
   'CHI-STL', 'CGY-EDM', 'CGY-VAN', 'EDM-VAN', 'COL-DET', 'ANA-LAK', 'LAK-SJS', 'ANA-SJS', 'FLA-TBL', 'DAL-STL', 'MIN-WPG',
   'BOS-PHI', 'NYR-WSH', 'CAR-WSH', 'BUF-TOR', 'OTT-TOR', 'MTL-OTT', 'COL-MIN', 'NSH-STL', 'SEA-VAN', 'CHI-MIN', 'DAL-CHI', 'BOS-NYR'];
-const CACHE = join(ROOT, '.cache', 'drill');
+const CACHE = join(ROOT, '.cache', 'drill-v2');   // v2: late-game lineups
 const DATA = join(ROOT, 'drill', 'endings.json');
 
 // Scenario window: a 5-on-5 faceoff, both goalies in, one team down exactly one, 2:00 to 4:30 left in the 3rd.
@@ -125,8 +125,30 @@ function extract(pbp) {
   }
   const goalie = (id) => { const r = pbp.rosterSpots.find((x) => x.playerId === id); return r ? { id, n: `${r.firstName.default} ${r.lastName.default}` } : null; };
 
+  // who was on the ice late: third-period faceoffs pick the center; involvement in third-period plays picks the rest
+  const lineup = (teamId) => {
+    const roster = new Map(pbp.rosterSpots.filter((r) => r.teamId === teamId).map((r) => [r.playerId, r]));
+    const fo = new Map(), inv = new Map();
+    const bump = (m, id, w = 1) => { if (roster.has(id)) m.set(id, (m.get(id) || 0) + w); };
+    for (const p of plays) {
+      if (p.periodDescriptor.number !== 3) continue;
+      const d = p.details || {};
+      const late = sec(p.timeRemaining) < 600 ? 2 : 1;
+      if (p.typeDescKey === 'faceoff') { bump(fo, d.winningPlayerId, late); bump(fo, d.losingPlayerId, late); }
+      for (const k of ['shootingPlayerId', 'scoringPlayerId', 'assist1PlayerId', 'assist2PlayerId', 'blockingPlayerId', 'hittingPlayerId', 'hitteePlayerId', 'playerId', 'winningPlayerId', 'losingPlayerId']) bump(inv, d[k], late);
+    }
+    const tag = (id) => { const r = roster.get(id); return r ? { n: r.lastName.default, num: r.sweaterNumber } : null; };
+    const rank = (pred) => [...roster.values()].filter(pred).map((r) => r.playerId).sort((a, b) => (inv.get(b) || 0) - (inv.get(a) || 0));
+    const centers = [...fo.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
+    const C = centers[0] ?? rank((r) => r.positionCode === 'C')[0];
+    const fwd = rank((r) => r.positionCode !== 'D' && r.positionCode !== 'G' && r.playerId !== C);
+    const dmen = rank((r) => r.positionCode === 'D');
+    return { C: tag(C), W1: tag(fwd[0]), W2: tag(fwd[1]), X: tag(fwd[2]), D1: tag(dmen[0]), D2: tag(dmen[1]) };
+  };
+
   return {
     id: pbp.id, date: pbp.gameDate, season: pbp.season, type: pbp.gameType, fin: fin(pbp),
+    lineup: { you: lineup(youId), opp: lineup(opp.id) },
     you: { ab: you.abbrev, name: you.commonName.default, home: youHome },
     opp: { ab: opp.abbrev, name: opp.commonName.default },
     start: { t: t0, you: youHome ? score.home : score.away, opp: youHome ? score.away : score.home, zone },

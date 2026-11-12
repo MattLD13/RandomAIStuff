@@ -526,22 +526,30 @@ Vegas and Winnipeg have only ever had one logo, so they use it.
 ## Empty Net (daily comeback game)
 
 https://hockey.mattdicks.org/drill/ is a daily coaching game. Each day is one real NHL ending that
-the real team lost: down one goal at a 5-on-5 faceoff with 2:00 to 4:30 left in the third. You call
-every shift (faceoff plays, zone entries, cycle or seam pass, forecheck or sit back), decide when to
-pull the goalie, and use your one timeout. If you tie it, regular-season games go to 3-on-3 OT and a
-shootout, and playoff games go to 20-minute sudden-death periods.
+the real team lost: down one goal at a 5-on-5 faceoff with 2:00 to 4:30 left in the third, with the
+real players who were on the ice late in that game.
 
+- **The read:** before every call the other team shows a look (their center owns the dot, a 1-3-1
+  trap, a sagging box, the back door is open, they are mid-change...). Each look makes some calls
+  better and others worse, so the skill is reading it. Calls are 2 to 4 big keys (1-4 on a
+  keyboard), plus pull the goalie (P) and one timeout (T) where they apply.
+- **The play:** each call plays out on an animated rink (tap to skip), then a result card shows what
+  happened, win chance before and after, and the verdict: the best call, as good as any (inside the
+  half-point noise of the simulation), decent, or costly, with the better call named.
+- **Grading:** before each call, the model replays the spot 3,000 times with every call you could
+  make (in a Web Worker), finishing each game with a typical NHL bench. Your score (0-100) is the
+  percentile of your calls against typical benches from the same spots: the win chance your calls
+  added over a typical bench, divided by how much typical benches vary. 50 is a typical bench.
+- **Pace:** about 11 calls to the end of regulation. A game below 1% (or above 99.5%) plays itself to
+  the horn. In overtime each call covers a longer stretch (about 25 s at 3-on-3, a minute in the
+  playoffs), so OT is a handful of calls.
 - **Which games:** Stanley Cup Final games about twice a week, other playoff games (2010-11 onward),
   and rivalry games from the last two regular seasons. `drill/schedule.json` fixes the game for
-  every day from #1 (Nov 12, 2026), so everyone gets the same game and past days never change.
-- **Grading:** before each call, the model replays the spot 3,000 times with every call you could
-  make, finishing each game with a typical coach. A call's grade is the win chance it gives up
-  against the best call (A within 1 point, F more than 6). Edges count up to 3x more when your win
-  chance is low, and calls made after the game is out of reach are not graded.
+  every day from No. 1 (Nov 12, 2026), so everyone gets the same game and past days never change.
 - **Calibration:** `node drill/check.mjs` replays all ~950 real late one-goal endings in the cache
-  with the typical coach and compares the model with what happened. Real teams down one this late
-  tied it 19.6% of the time, won 10.1%, and gave up an empty-netter 38.4%. The model is tuned to
-  within half a point of each.
+  with the typical bench and compares the model with what happened. Real teams down one this late
+  tied it 19.6% of the time, won 10.1%, and gave up an empty-netter 38.4%; the model is within a
+  point of each. 3-on-3 OT ends before the shootout 60% of the time, as in the NHL.
 - **Shootout:** real dressed skaters with their career shootout goals/attempts against the real
   goalie's career shootout saves (both shrunk toward league average for small samples). Goalie
   weak spots and shooters' favorite moves are generated per game.
@@ -549,7 +557,7 @@ shootout, and playoff games go to 20-minute sudden-death periods.
 | File | What it does |
 | --- | --- |
 | `scripts/build-drill.mjs` | play-by-play -> `drill/endings.json`, `drill/schedule.json`, and the one-file page at `site/drill/index.html` (`--offline` rebuilds the page from the committed data) |
-| `drill/engine.js` | the game model: plays, outcomes, the typical coach, Monte Carlo grading, shootout math |
+| `drill/engine.js` | the game model: calls, looks, outcomes, the typical bench, Monte Carlo grading, shootout math |
 | `drill/ui.js`, `drill/page.html`, `drill/style.css` | the page |
 | `drill/check.mjs` | calibration against the real endings |
 
