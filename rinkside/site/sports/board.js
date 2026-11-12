@@ -298,7 +298,7 @@
     const l = D.leaders.find((x) => x.key === k);
     if (!l) return `<div class="lrow"><div class="who"><div class="k">${esc(L.leaders.find((x) => x[0] === k)?.[1] || k)}</div><div class="s">no data yet</div></div></div>`;
     return `<div class="lrow"><div class="face">${l.face ? `<img src="${esc(l.face)}" alt="" loading="lazy">` : `<span class="jn">${esc(l.jersey || '')}</span>`}</div>
-      <div class="who"><div class="k">${esc(l.label)}</div><div class="n${(l.short || l.name || '').length > 17 ? ' xs' : (l.short || l.name || '').length > 15 ? ' sm' : ''}">${esc(l.short || l.name)}</div><div class="s">${esc(l.sub || [l.jersey && `#${l.jersey}`, l.pos].filter(Boolean).join(' · '))}</div></div>
+      <div class="who"><div class="k">${esc(l.label)}</div>${(() => { let n = l.short || l.name || ''; if (n.length > 17) n = n.replace(/^\S+\s+/, ''); return `<div class="n${n.length > 15 ? ' xs' : n.length > 13 ? ' sm' : ''}" title="${esc(l.name)}">${esc(n)}</div>`; })()}<div class="s">${esc(l.sub || [l.jersey && `#${l.jersey}`, l.pos].filter(Boolean).join(' · '))}</div></div>
       <div class="v${String(l.value).length > 5 ? ' xlong' : String(l.value).length > 4 ? ' long' : ''}">${esc(l.value)}</div></div>`;
   };
 
