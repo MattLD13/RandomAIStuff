@@ -1,15 +1,14 @@
 /* Courtside / Sideline / Dugout / Pitchside: style.css (Rinkside) plus these pieces. */
 #board.stack, #board.board { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
-#remix { background-size: 110px; background-repeat: space; opacity: 0.035; filter: grayscale(0.3); }
 
-.hdr .band.sb { background: var(--team); width: 210px; clip-path: polygon(0 0, 100% 0, calc(100% - 22px) 100%, 0 100%); }
-.hdr .band.sb::after { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: 26px; background: var(--team2);
-  clip-path: polygon(70% 0, 100% 0, 15% 100%, 0 100%); }
-.hdr .band.sb img { left: 34px; top: -6px; width: 112px; height: 107px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,.35)); }
+/* the band itself is the same SVG as Rinkside's (board.js); this is the clickable logo on top */
+.hdr .band.sb { background: none; width: 190px; }
+.hdr .band.sb img { object-fit: contain; }   /* size and place: Rinkside's (style.css) */
 #board.stack .hdr { width: 500px; }
-#board.stack .hdr .band.sb { width: 120px; }
-#board.stack .hdr .band.sb img { left: 14px; width: 78px; height: 95px; top: 0; }
-#board.stack .hdr .record { left: 128px; font-size: 44px; }
+#board.stack .hdr svg.band { width: 120px; }
+#board.stack .hdr .band.sb { width: 110px; }
+#board.stack .hdr .band.sb img { left: 8px; top: 2px; width: 92px; height: 90px; }
+#board.stack #board.stack .hdr .record { left: 128px; font-size: 44px; }
 #board.stack .hdr .summary { left: 130px; top: 62px; font-size: 14px; white-space: normal; width: 360px; line-height: 1.15; }
 #board.stack .hdr .meta { display: none; }
 
@@ -58,7 +57,6 @@ svg .ax.bye { fill: var(--otl); font-weight: 700; font-size: 9px; letter-spacing
 
 .ppic .prow .gp { width: 32px; }
 .ppic .prow .pts, .ppic .sub .pts { width: 58px; }
-.hdr .band.sb img { width: 100px; height: 88px; top: 4px; left: 40px; }
 .lrow .v.long { font-size: 21px; }
 .lrow .face .jn { display: grid; place-items: center; height: 100%; font: 400 18px var(--mono); color: var(--muted); }
 .pglist { padding-top: 8px; }

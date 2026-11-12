@@ -3,7 +3,7 @@
 // (site/<league>/<nickname>/index.html) so each team has its own address. Rinkside (NHL) is built separately.
 //   node scripts/build-sports.mjs            all leagues
 //   node scripts/build-sports.mjs nba nfl    some leagues
-import { mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, rm, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -177,12 +177,22 @@ async function buildLeague(key) {
     .map((t) => {
       const s = sById[t.id];
       const logo = (rel) => t.logos?.find((l) => rel.every((r) => l.rel.includes(r)))?.href;
-      return { id: t.id, abbr: t.abbreviation, name: t.displayName, short: t.shortDisplayName, nick: t.name, location: t.location,
+      // remix background: the team's secondary (alternate) logo, made for black, through ESPN's resizer (13 KB, not 230)
+      const sec = logo(['full', 'secondary_logo_on_black_color']);
+      const altLogo = sec ? `https://a.espncdn.com/combiner/i?img=${new URL(sec).pathname}&w=240&h=240` : null;
+      return { id: t.id, abbr: t.abbreviation, altLogo, name: t.displayName, short: t.shortDisplayName, nick: t.name, location: t.location,
         color: '#' + (t.color || '333333'), alt: '#' + (t.alternateColor || 'ffffff'),
         logo: logo(['full', 'dark']) || logo(['full', 'default']) || t.logos?.[0]?.href,   // the dark-background versions: the board is black
         conference: s.conference, confShort: s.confShort, division: s.division || s.conference, divShort: s.divShort || s.confShort };
     });
   const tById = Object.fromEntries(teams.map((t) => [t.id, t]));
+  // your own alternate logos win: site/alt/<league>/<ABBR>.png (or .svg, .webp, .gif, .jpg)
+  try {
+    for (const f of await readdir(path.join(SITE, 'alt', key))) {
+      const t = teams.find((x) => x.abbr === f.replace(/\.(png|svg|webp|gif|jpe?g)$/i, '').toUpperCase());
+      if (t) t.altLogo = `alt/${key}/${f}`;
+    }
+  } catch {}
   // a folder name per team: the nickname (knicks, giants, yankees); MLS clubs by their usual short name
   const used = new Set();
   for (const t of teams) {
@@ -371,7 +381,7 @@ async function buildLeague(key) {
     }).filter(Boolean);
     const data = {
       league: key, brand: cfg.brand, sport: cfg.sport, leagueName: cfg.league, season: per[i].seasonName, updated: leagueIndex.updated,
-      team: { id: t.id, abbr: t.abbr, name: t.name, short: t.short, nick: t.nick, slug: t.slug, color: t.color, alt: t.alt, logo: t.logo,
+      team: { id: t.id, abbr: t.abbr, name: t.name, short: t.short, nick: t.nick, slug: t.slug, color: t.color, alt: t.alt, logo: t.logo, altLogo: t.altLogo || t.logo,
         conference: t.conference, confShort: t.confShort, division: t.division, divShort: t.divShort },
       record: { w: sv(s, 'wins'), l: sv(s, 'losses'), t: sv(s, 'ties') ?? 0, pts: sv(s, 'points'), pct: sd(s, 'winPercent'),
         home: sd(s, 'home') || sd(s, 'Home') || splitRec(games[t.id].filter((g) => g.home)), road: sd(s, 'road') || sd(s, 'Road') || splitRec(games[t.id].filter((g) => !g.home)),

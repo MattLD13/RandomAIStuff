@@ -454,6 +454,9 @@ record, PCT, streak and points, so the other panels show something else.
   - MLS: goals, assists and saves.
 - **Next 5 / Last 5:** with TV networks. After the regular season, a **Postseason** panel shows
   each playoff game, and the header says how it ended (for example "out in the ALDS").
+- **Remix background:** as on Rinkside, each team's alternate logo is tiled faintly behind the
+  board. It's the team's secondary logo from ESPN. To use a different one, drop an image in
+  `site/alt/<league>/` named with the team's abbreviation, for example `site/alt/mlb/NYY.png`.
 - **Live:** while the team is playing, the header and the game card show the live score from
   ESPN's scoreboard. It refreshes every 30 s.
 

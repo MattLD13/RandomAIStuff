@@ -56,6 +56,10 @@
     const today = fmt(Date.now(), { weekday: 'long', month: 'long', day: 'numeric' });
     const parts = [r.home && `Home ${r.home}`, r.road && `Road ${r.road}`, !L.standCols.includes('L10') && finals().length > 10 && r.last10 && `Last 10 ${r.last10}`].filter(Boolean).join(' · ');
     return `<header class="abs hdr" style="--team:${t.color};--team2:${t.alt}">
+      <svg class="band" viewBox="0 0 210 95" width="210" height="95" preserveAspectRatio="none">
+        <polygon points="0,0 196,0 171,95 0,95" fill="var(--team)"/>
+        <polygon points="196,0 204,0 179,95 171,95" fill="var(--team2)"/>
+      </svg>
       <div class="band sb" role="button" tabindex="0" aria-label="Choose a team">${logo(t.logo)}</div>
       <div class="record mono" id="rec">${record()}</div>
       <div class="summary" id="livebox">${summary()}</div>
@@ -266,7 +270,12 @@
     }
     board.innerHTML = html;
     board.querySelectorAll('.sb').forEach((b) => b.addEventListener('click', openPicker));
-    document.getElementById('remix').style.backgroundImage = `url("${D.team.logo}")`;
+    // remix background, exactly as Rinkside: the alternate logo tiled faintly on a tilted grid
+    const alt = esc(D.team.altLogo || D.team.logo);
+    document.getElementById('remix').innerHTML = `<svg width="100%" height="100%"><defs><pattern id="remix-bg" width="168" height="168" patternUnits="userSpaceOnUse" patternTransform="rotate(-12)">
+        <image href="${alt}" x="8" y="8" width="68" height="68" preserveAspectRatio="xMidYMid meet"/>
+        <image href="${alt}" x="92" y="92" width="68" height="68" preserveAspectRatio="xMidYMid meet"/>
+      </pattern></defs><rect width="100%" height="100%" fill="url(#remix-bg)"/></svg>`;
     fit();
   }
   function fit() {
