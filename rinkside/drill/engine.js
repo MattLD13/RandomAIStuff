@@ -19,7 +19,7 @@
     penOpp: 0.045,         // opponent minor per 60 s of your pressure (refs swallow whistles late)
     penYou: 0.03,
     pullAt: { '-1': 100, '-2': 200 }, // when a typical bench pulls: seconds left (real benches 2010-2026: 1:41 on average down one)
-    youQ: 0.78, tiedQ: 1, themQ: 0.75, themTied: 1.1, them3: 0.31, // shot-quality scales: you while trailing (they protect the lead),
+    youQ: 0.67, tiedQ: 1, themQ: 0.75, themTied: 1.1, them3: 0.31, // shot-quality scales: you while trailing (they protect the lead),
                                                                   // you once level, them while leading / level / at 3-on-3
     pace: 1.3,             // multiplies every shift's length (about 11 calls to the end of regulation)
   };
@@ -39,19 +39,21 @@
     FO_O: [['back', 'Back to the point', 'Win it back, shot through traffic.'], ['set', 'One-timer set', 'Win it to the circle, one-timer.'], ['tie', 'Tie-up', 'Wingers jump the loose puck.']],
     FO_N: [['fwd', 'Win it forward', 'Chip it in and chase.'], ['back', 'Win it back', 'Control first, then attack.']],
     FO_D: [['out', 'Clean breakout', 'Win it and go up the middle.'], ['glass', 'Off the glass', 'Safe exit, usually gives it away.']],
-    ENTRY: [['carry', 'Carry in', 'Controlled entry with speed.'], ['dump', 'Dump & chase', 'Get it deep, go win it back.'], ['stretch', 'Stretch pass', 'Hit a forward at their blue line.'], ['change', 'Regroup', 'Swing back, fresh legs. Costs time.']],
-    ZONE: [['shoot', 'Shoot', 'Point shot through traffic.'], ['cycle', 'Cycle low', 'Work it below the dots.'], ['seam', 'Seam pass', 'Cross-ice for the one-timer.'], ['net', 'Net-front', 'Bump it to the slot.']],
+    ENTRY: [['carry', 'Carry in', 'Attack the middle with speed. You get the rush.'], ['wide', 'Drive wide', 'Take it down the wall, protect it low.'], ['dump', 'Dump & chase', 'Get it deep, go win it back.'], ['stretch', 'Stretch pass', 'Spring a forward. Breakaway if it connects.'], ['change', 'Regroup', 'Swing back, fresh legs. Costs time.']],
+    RUSH: [['shoot', 'Shoot in stride', 'Rip it before they set up.'], ['drop', 'Drop to the trailer', 'Leave it for the late man.'], ['drive', 'Drive the net', 'Take it to the crease.'], ['delay', 'Pull up', 'Wait for support. Zone time.']],
+    BREAK: [['high', 'Shoot high', 'Over the shoulder.'], ['five', 'Five-hole', 'Between the pads.'], ['deke', 'Deke', 'Make him move first.']],
+    ZONE: [['shoot', 'Point shot', 'From the point, through traffic.'], ['quick', 'Shoot it yourself', 'Quick shot from the wall.'], ['cycle', 'Cycle low', 'Work it below the dots.'], ['seam', 'Seam pass', 'Cross-ice for the one-timer.'], ['net', 'Net-front', 'Bump it to the slot.']],
     THEIRS_N: [['press', 'Forecheck', 'Two in deep, force a turnover.'], ['sit', 'Trap', 'Clog the middle and wait.']],
     THEIRS_D: [['press', 'Pressure', 'Go take it from them.'], ['sit', 'Collapse', 'Protect the slot.']],
   };
   const OT_CALLS = {
     FO_O: [['back', 'Win it back', 'Keep it, wait for a lane.'], ['go', 'Win it and go', 'Strike before they set up.']],
-    ENTRY: [['carry', 'Attack', 'Take it in with speed.'], ['change', 'Circle back', 'Keep it, change on the fly.'], ['stretch', 'Stretch pass', 'Home-run pass for a breakaway.']],
+    ENTRY: [['carry', 'Attack', 'Take it in with speed. You get the rush.'], ['change', 'Circle back', 'Keep it, change on the fly.'], ['stretch', 'Stretch pass', 'Home-run pass for a breakaway.']],
     ZONE: [['shoot', 'Shoot', 'Get it on net and crash.'], ['seam', 'Back door', 'Wait for the defender to bite.'], ['peel', 'Peel back', 'Reset. Nothing given up.']],
     THEIRS_N: [['press', 'Go get it', 'Strip them before they set up.'], ['sit', 'Stay above', 'Protect the middle.']],
     THEIRS_D: [['press', 'Go get it', 'Win it back right now.'], ['sit', 'Stay above', 'Keep them to the outside.']],
   };
-  OT_CALLS.FO_N = OT_CALLS.FO_O; OT_CALLS.FO_D = OT_CALLS.FO_O;
+  OT_CALLS.FO_N = OT_CALLS.FO_O; OT_CALLS.FO_D = OT_CALLS.FO_O; OT_CALLS.RUSH = CALLS.RUSH; OT_CALLS.BREAK = CALLS.BREAK;
 
   // ---------- looks: what the other team is showing. [id, headline, detail] ----------
   const FO_LOOKS = [
@@ -67,6 +69,17 @@
       ['high', 'They are forechecking high', 'Their D are pinching up. Open ice behind them.'],
       ['change', 'They are changing', 'Two forwards heading for the bench.'],
       ['gap', 'Tight gap at the line', 'Their D are standing up at the blue line.'],
+    ],
+    RUSH: [
+      ['odd', 'It is a 3-on-2', '{C} has numbers. Their D are split.'],
+      ['trailer', 'The trailer is wide open', 'Nobody picked up {D1} coming late.'],
+      ['backcheck', 'Their backchecker is closing', '{oC} is a stride away. Shoot now or lose it.'],
+      ['gap', 'Their D are backing off', 'Soft gap. The middle is open to the crease.'],
+    ],
+    BREAK: [
+      ['out', '{oG} comes way out', 'He is cutting the angle hard. Make him move.'],
+      ['deep', '{oG} stays deep in his crease', 'Lots of net up top.'],
+      ['legs', '{oG} has his feet wide', 'Room between the pads.'],
     ],
     ZONE: [
       ['box', 'Sagging box', 'Five in front of the net. Shooting lanes are clogged.'],
@@ -109,6 +122,7 @@
     const list = LOOKS[tableKey(s)];
     const w = list.map(([id]) => {
       if (id === 'box' && s.pulled) return 2.2;            // a team defending 6-on-5 collapses
+      if ((id === 'odd' || id === 'trailer') && s.look === 'change') return 2;
       if (id === 'tired' && s.legs > 0.8) return 0.5;
       if ((id === 'cycle' || id === 'slow' || id === 'dump') && diff(s) < 0 && s.per === 'REG') return 1.5; // protecting a lead
       return 1;
@@ -124,7 +138,7 @@
     const plays = callsFor(s).map(([id, label, hint]) => ({ id, label, hint }));
     const reg = s.per === 'REG';
     const stoppage = s.phase.startsWith('FO_');
-    const withPuck = s.phase === 'ENTRY' || s.phase === 'ZONE';
+    const withPuck = s.phase === 'ENTRY' || s.phase === 'ZONE';   // not mid-rush or on a breakaway
     return { plays, canPull: reg && !s.pulled && (stoppage || withPuck), canReturn: reg && s.pulled && stoppage, canTimeout: reg && s.to && stoppage };
   }
   function choices(s) {
@@ -154,6 +168,8 @@
   const FROM = {
     point: 'from the point', circle: 'one-timer from the circle', slot: 'from the slot', door: 'one-timer at the back door',
     rush: 'off the rush', rebound: 'on the rebound', breakaway: 'on a breakaway', quick: 'quick shot off the draw',
+    wall: 'shoots it from the half-wall', trailer: 'one-timer as the trailer', crease: 'at the crease',
+    bhigh: 'on the breakaway, goes high', bfive: 'on the breakaway, goes five-hole', bdeke: 'on the breakaway, dekes',
   };
   const RES = { save: 'saved by {oG}.', block: 'blocked.', wide: 'just wide.' };
 
@@ -228,7 +244,33 @@
       return won;
     };
 
-    if (!is3) {
+    if (ph === 'RUSH') {
+      if (p === 'shoot') {
+        spend(4, 7);
+        const res = shot(0.085 * (look({ backcheck: 1.35, odd: 1.3, trailer: 0.9 }) || 1), 'rush', '{W1}', 0.12);
+        if (res !== 'goal' && !(res === 'save' && r() < 0.22 && shot(0.1, 'rebound', '{C}') === 'goal')) clear(1, 0.35);
+      } else if (p === 'drop') {
+        spend(5, 8);
+        if (r() < 0.68 + look({ trailer: 0.22, backcheck: -0.3, gap: 0.05 })) {
+          say('pass', '{C} drops it for {D1}.', { ok: true, type: 'drop' });
+          if (shot(0.12 * (look({ trailer: 1.7, odd: 1.2 }) || 1), 'trailer', '{D1}') !== 'goal') clear(1, 0.35);
+        } else { say('pass', '{oC} picks off the drop pass.', { ok: false, type: 'drop' }); if (s.pulled) { if (!engAttempt(R.engTurn)) s.phase = 'ENTRY'; } else if (r() < 0.4) { if (!against(0.09, 'rush')) theirs(false); } else theirs(false); }
+      } else if (p === 'drive') {
+        spend(5, 9);
+        if (r() < 0.52 + look({ gap: 0.32, odd: 0.1, backcheck: -0.18 })) {
+          say('play', '{C} drives the net.');
+          if (shot(0.11 * (look({ gap: 1.6, odd: 1.15 }) || 1), 'crease', '{C}', 0.08) !== 'goal') clear(1, 0.45);
+        } else { say('turn', '{oD} rides {C} into the corner.'); if (r() < 0.5) s.phase = 'ZONE'; else clear(1, 0.3); }
+      } else {
+        spend(7, 11);
+        if (L === 'backcheck') { say('play', '{C} pulls up. Their backchecker gets back.'); s.phase = 'ZONE'; }
+        else { say('play', '{C} pulls up on the half-wall. Support arrives.'); s.phase = 'ZONE'; s.bonus += 0.12; }
+      }
+    } else if (ph === 'BREAK') {
+      spend(4, 7);
+      const q = 0.26 * ({ high: look({ deep: 1.55, out: 0.7, legs: 0.9 }), five: look({ legs: 1.7, out: 0.85, deep: 0.8 }), deke: look({ out: 1.6, deep: 0.8, legs: 0.9 }) }[p] || 1);
+      if (shot(q, { high: 'bhigh', five: 'bfive', deke: 'bdeke' }[p], '{W1}', 0) !== 'goal') { if (r() < 0.35) s.phase = 'ZONE'; else clear(1, 0.3); }
+    } else if (!is3) {
       if (ph === 'FO_O') {
         if (p === 'back') {
           spend(10, 16);
@@ -265,27 +307,29 @@
         else if (!against(p === 'out' ? 0.06 : 0.045, 'quick', '{oC}')) theirs(true);
       } else if (ph === 'ENTRY') {
         if (p === 'carry') {
-          spend(10, 16);
-          if (r() < 0.57 + (s.legs - 0.5) * 0.15 + look({ trap: -0.2, high: 0.05, change: 0.28, gap: -0.12 })) {
+          spend(8, 13);
+          if (r() < 0.55 + (s.legs - 0.5) * 0.15 + look({ trap: -0.25, high: 0.05, change: 0.3, gap: -0.18 })) {
             say('entry', '{C} carries it in with speed.', { ok: true, type: 'carry' });
-            if (r() < 0.32 + look({ change: 0.3 })) { if (shot(0.085 * (L === 'change' ? 1.4 : 1), 'rush', '{W1}') !== 'goal') clear(1, 0.4); }
-            else { s.phase = 'ZONE'; s.bonus += 0.12; }
+            s.phase = 'RUSH';
           } else {
             say('entry', '{oD} steps up and takes it off {C}.', { ok: false, type: 'carry' });
-            if (s.pulled) { if (!engAttempt(R.engTurn)) s.phase = r() < 0.6 ? 'ENTRY' : s.phase; }
+            if (s.pulled) { if (!engAttempt(R.engTurn)) s.phase = 'ENTRY'; }
             else { const x = r(); if (x < 0.3) { if (!against(0.07, 'rush')) theirs(true); } else if (x < 0.75) theirs(false); }
           }
+        } else if (p === 'wide') {
+          spend(10, 16);
+          if (r() < 0.7 + look({ trap: -0.08, gap: 0.06, high: -0.06 })) { say('entry', '{W1} drives wide and protects it down low.', { ok: true, type: 'wide' }); s.phase = 'ZONE'; s.bonus += 0.05; }
+          else { say('entry', '{oD} rubs {W1} out along the wall.', { ok: false, type: 'wide' }); if (s.pulled) { if (!engAttempt(R.engTurn * 0.6)) s.phase = 'ENTRY'; } else theirs(false); }
         } else if (p === 'dump') {
           spend(14, 22);
-          if (r() < 0.42 + (s.legs - 0.5) * 0.12 + (s.pulled ? 0.08 : 0) + look({ trap: 0.1, high: -0.08, gap: 0.12, change: 0.05 })) {
+          if (r() < 0.42 + (s.legs - 0.5) * 0.12 + (s.pulled ? 0.08 : 0) + look({ trap: 0.14, high: -0.1, gap: 0.15, change: 0.04 })) {
             say('entry', '{W2} dumps it in and {W1} wins the battle.', { ok: true, type: 'dump' }); s.phase = 'ZONE';
           } else { say('entry', 'Dumped in. {oD} gets there first.', { ok: false, type: 'dump' }); clear(0.7, 0.2); }
         } else if (p === 'stretch') {
           spend(6, 12);
-          if (r() < 0.3 + look({ high: 0.34, change: 0.12, trap: -0.12, gap: -0.05 })) {
-            say('pass', '{D1} hits {W1} with the stretch pass.', { ok: true, type: 'stretch' });
-            if (r() < 0.4) { if (shot(0.16, 'breakaway', '{W1}') !== 'goal') clear(1, 0.3); }
-            else s.phase = 'ZONE';
+          if (r() < 0.28 + look({ high: 0.4, change: 0.15, trap: -0.15, gap: -0.08 })) {
+            say('pass', '{D1} hits {W1} with the stretch pass. Breakaway!', { ok: true, type: 'stretch' });
+            s.phase = 'BREAK';
           } else {
             say('pass', 'Stretch pass picked off by {oD}.', { ok: false, type: 'stretch' });
             if (s.pulled) { if (!engAttempt(R.engTurn * 1.1)) s.phase = 'ENTRY'; }
@@ -300,25 +344,29 @@
       } else if (ph === 'ZONE') {
         if (p === 'shoot') {
           spend(10, 16);
-          if (L === 'points' && r() < 0.15) {
+          if (L === 'points' && r() < 0.18) {
             say('turn', '{oW} jumps the point and is gone.', {});
             if (s.pulled) { if (!engAttempt(0.4, '{oW}')) s.phase = 'ENTRY'; }
             else if (!against(0.15, 'breakaway')) s.phase = 'ENTRY';
           } else {
-            const res = shot(0.045 * (L === 'rebound' ? 1.3 : 1), 'point', '{D1}', look({ box: 0.62, points: 0.55, rebound: 0.18 }) || 0.3);
-            if (res !== 'goal' && !(res === 'save' && r() < (L === 'rebound' ? 0.75 : 0.22) && shot(0.1 * (L === 'rebound' ? 1.5 : 1), 'rebound', '{C}') === 'goal')) clear(1, 0.42);
+            const res = shot(0.04 * (L === 'rebound' ? 1.4 : 1), 'point', '{D1}', look({ box: 0.65, points: 0.6, rebound: 0.15 }) || 0.3);
+            if (res !== 'goal' && !(res === 'save' && r() < (L === 'rebound' ? 0.8 : 0.22) && shot(0.1 * (L === 'rebound' ? 1.6 : 1), 'rebound', '{C}') === 'goal')) clear(1, 0.42);
           }
+        } else if (p === 'quick') {
+          spend(6, 10);
+          const res = shot(0.06 * (look({ tired: 1.35, rebound: 1.3, box: 0.65, points: 1.1 }) || 1), 'wall', '{C}', L === 'box' ? 0.4 : 0.18);
+          if (res !== 'goal' && !(res === 'save' && r() < (L === 'rebound' ? 0.55 : 0.18) && shot(0.1, 'rebound', '{W2}') === 'goal')) clear(1, 0.38);
         } else if (p === 'cycle') {
           spend(18, 28);
-          if (r() < 0.64 + (s.legs - 0.5) * 0.12 + look({ box: 0.1, tired: 0.15, points: 0.05 })) {
+          if (r() < 0.62 + (s.legs - 0.5) * 0.12 + look({ box: 0.15, tired: 0.2, points: 0.05, door: -0.05 })) {
             say('play', '{C} and {W2} work it low.');
-            if (shot(0.1 * (L === 'tired' ? 1.25 : 1), 'slot', '{W2}') !== 'goal') clear(1, 0.38);
+            if (shot(0.09 * (look({ tired: 1.6, box: 1.3 }) || 1), 'slot', '{W2}') !== 'goal') clear(1, 0.38);
           } else { say('turn', 'Cycle broken up along the wall.'); clear(1.25, 0.25); }
         } else if (p === 'seam') {
           spend(10, 15);
-          if (r() < 0.45 + look({ door: 0.27, box: -0.05 })) {
+          if (r() < 0.42 + look({ door: 0.35, box: -0.1, tired: 0.1 })) {
             say('pass', '{C} threads it across to {W1}.', { ok: true, type: 'seam' });
-            if (shot(0.165, 'door', '{W1}') !== 'goal') clear(1, 0.32);
+            if (shot(0.16 * (L === 'door' ? 1.4 : 1), 'door', '{W1}') !== 'goal') clear(1, 0.32);
           } else {
             say('pass', 'Seam pass picked off by {oD}.', { ok: false, type: 'seam' });
             if (s.pulled) { if (!engAttempt(R.engTurn * 1.1)) s.phase = 'ENTRY'; }
@@ -326,9 +374,9 @@
           }
         } else {
           spend(12, 18);
-          if (r() < 0.5 + look({ points: 0.22, box: -0.15 })) {
+          if (r() < 0.48 + look({ points: 0.3, box: -0.18, rebound: 0.1 })) {
             say('pass', '{D2} bumps it to {C} in the slot.', { ok: true, type: 'bump' });
-            if (shot(0.11 * (L === 'points' ? 1.25 : 1), 'slot', '{C}') !== 'goal') clear(1, 0.4);
+            if (shot(0.11 * (look({ points: 1.5, rebound: 1.4 }) || 1), 'slot', '{C}') !== 'goal') clear(1, 0.4);
           } else { say('turn', '{oD} ties up {C} in front.'); clear(1.1, 0.3); }
         }
       } else if (ph === 'THEIRS' && !s.deep) {
@@ -371,8 +419,7 @@
           spend(8, 13);
           if (r() < 0.6 + (s.legs - 0.5) * 0.2 + look({ change: 0.15, gap: -0.1, trap: -0.1, high: 0.05 })) {
             say('entry', '{C} attacks with speed.', { ok: true, type: 'carry' });
-            if (r() < 0.45) { if (shot(0.1, 'rush', '{C}') !== 'goal') { if (r() < 0.5) s.phase = 'ZONE'; else theirs(false); } }
-            else s.phase = 'ZONE';
+            s.phase = 'RUSH';
           } else { say('entry', 'Turned over in the neutral zone.', { ok: false, type: 'carry' }); if (!(r() < 0.45 && rush(0.16))) theirs(r() < 0.5); }
         } else if (p === 'change') {
           spend(12, 20); s.legs = Math.min(1, s.legs + 0.35);
@@ -380,7 +427,7 @@
           else say('change', 'Circle back, change on the fly. Fresh legs.');
         } else {
           spend(5, 9);
-          if (r() < 0.28 + look({ high: 0.15, change: 0.1 })) { say('pass', 'Stretch pass on the tape.', { ok: true, type: 'stretch' }); if (shot(0.26, 'breakaway', '{W1}') !== 'goal') { if (r() < 0.5) theirs(false); else s.phase = 'ZONE'; } }
+          if (r() < 0.28 + look({ high: 0.15, change: 0.1 })) { say('pass', 'Stretch pass on the tape. Breakaway!', { ok: true, type: 'stretch' }); s.phase = 'BREAK'; }
           else { say('pass', 'Stretch pass picked off.', { ok: false, type: 'stretch' }); if (!(r() < 0.5 && rush(0.17))) theirs(r() < 0.5); }
         }
       } else if (ph === 'ZONE') {
@@ -416,7 +463,7 @@
     s.legs = clamp(s.legs - dur / (is3 ? 55 : 80), 0, 1);
     if (s.pp) { const left = Math.abs(s.pp) - dur; s.pp = left > 0 ? Math.sign(s.pp) * left : 0; }
     if (!s.over && s.pp === 0) {
-      const attacking = ['FO_O', 'ZONE', 'ENTRY'].includes(ph);
+      const attacking = ['FO_O', 'ZONE', 'ENTRY', 'RUSH', 'BREAK'].includes(ph);
       if (r() < (attacking ? R.penOpp : R.penYou) * dur / 60) {
         if (attacking) { s.pp = 120; s.phase = 'FO_O'; say('pp', 'Penalty on {oD}. Power play, faceoff in their end.'); }
         else { s.pp = -120; s.phase = 'FO_D'; say('pk', 'Penalty on {D2}. Penalty kill.'); }
@@ -449,10 +496,12 @@
   // ---------- the typical NHL bench, who finishes every simulated game ----------
   const MIX = {
     REG: { FO_O: { back: 0.45, set: 0.25, tie: 0.3 }, FO_N: { fwd: 0.5, back: 0.5 }, FO_D: { out: 0.6, glass: 0.4 },
-      ENTRY: { carry: 0.45, dump: 0.4, stretch: 0.08, change: 0.07 }, ZONE: { shoot: 0.38, cycle: 0.32, seam: 0.15, net: 0.15 },
+      ENTRY: { carry: 0.35, wide: 0.15, dump: 0.35, stretch: 0.08, change: 0.07 }, ZONE: { shoot: 0.3, quick: 0.15, cycle: 0.25, seam: 0.15, net: 0.15 },
+      RUSH: { shoot: 0.4, drop: 0.2, drive: 0.2, delay: 0.2 }, BREAK: { high: 0.4, five: 0.3, deke: 0.3 },
       THEIRS_N: { press: 0.55, sit: 0.45 }, THEIRS_D: { press: 0.5, sit: 0.5 } },
     OT: { FO_O: { back: 0.6, go: 0.4 }, FO_N: { back: 0.6, go: 0.4 }, FO_D: { back: 0.6, go: 0.4 },
       ENTRY: { carry: 0.5, change: 0.4, stretch: 0.1 }, ZONE: { shoot: 0.4, seam: 0.4, peel: 0.2 },
+      RUSH: { shoot: 0.4, drop: 0.2, drive: 0.2, delay: 0.2 }, BREAK: { high: 0.4, five: 0.3, deke: 0.3 },
       THEIRS_N: { press: 0.45, sit: 0.55 }, THEIRS_D: { press: 0.45, sit: 0.55 } },
   };
   const mixFor = (s) => MIX[three(s) ? 'OT' : 'REG'][tableKey(s)];

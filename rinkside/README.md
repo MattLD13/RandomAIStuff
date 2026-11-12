@@ -556,6 +556,13 @@ real players who were on the ice late in that game.
   with the typical bench and compares the model with what happened. Real teams down one this late
   tied it 19.6% of the time, won 10.1%, and gave up an empty-netter 38.4%; the model is within a
   point of each. 3-on-3 OT ends before the shootout 60% of the time, as in the NHL.
+  `node drill/skill.mjs` plays the same endings with a bench that grades every call and always takes
+  the best one: it ties the game about 42% of the time and wins about 32% (typical bench: 18% / 9%).
+  Hard, but a good reader comes back far more often than a real bench did.
+- **The rush and the breakaway:** carrying it in gives you a rush decision (shoot in stride, drop to
+  the trailer, drive the net, pull up) against its own read (3-on-2, open trailer, backchecker
+  closing, soft gap); a stretch pass that connects gives you a breakaway against the goalie's look
+  (way out, deep in his crease, feet wide): shoot high, five-hole or deke.
 - **Shootout:** real dressed skaters with their career shootout goals/attempts against the real
   goalie's career shootout saves (both shrunk toward league average for small samples). Goalie
   weak spots and shooters' favorite moves are generated per game.

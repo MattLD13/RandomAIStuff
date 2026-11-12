@@ -283,6 +283,21 @@
         gap: { oC: [28, 102], oW: [62, 102], oW2: [44, 92], oD: [30, 77], oD2: [56, 77] },
       }[L] || { oC: [42, 104], oW: [14, 88], oW2: [71, 88], oD: [42, 86], oD2: [42, 64] });
       puck = [F.D1[0] + 1.6, F.D1[1] - 1.6];
+    } else if (s.phase === 'RUSH') {
+      cy = 56;
+      Object.assign(F, { C: [36, 66], W1: [16, 60], W2: [66, 62], D1: [44, 88], D2: [62, 98], X: [52, 80] });
+      Object.assign(F, {
+        odd: { oD: [30, 42], oD2: [56, 42], oC: [50, 96], oW: [22, 100], oW2: [72, 104] },
+        trailer: { oD: [30, 46], oD2: [56, 46], oC: [38, 72], oW: [20, 98], oW2: [72, 104] },
+        backcheck: { oD: [32, 40], oD2: [55, 40], oC: [39, 70], oW: [19, 68], oW2: [70, 92] },
+        gap: { oD: [33, 24], oD2: [52, 24], oC: [50, 94], oW: [22, 100], oW2: [72, 104] },
+      }[L] || { oD: [30, 42], oD2: [56, 42], oC: [50, 96], oW: [22, 100], oW2: [72, 104] });
+      if (L === 'trailer') F.D1 = [46, 84];
+      puck = [F.C[0] + 1.6, F.C[1] - 1.6];
+    } else if (s.phase === 'BREAK') {
+      cy = 40;
+      Object.assign(F, { W1: [42.5, 42], C: [30, 92], W2: [64, 96], D1: [36, 120], D2: [56, 124], X: [48, 110], oD: [38, 62], oD2: [60, 86], oC: [44, 100], oW: [24, 104], oW2: [70, 108] });
+      puck = [44.1, 40.4];
     } else if (s.phase === 'ZONE') {
       cy = 56;
       Object.assign(F, { D1: [16, 70], D2: [69, 70], C: [27, 30], W1: [64, 38], W2: [42, 22], X: [42, 56] });
@@ -316,12 +331,14 @@
       const car = L === 'shot' ? 'oD' : L === 'cycle' ? 'oC' : 'oW';
       puck = [F[car][0] - 1.6, F[car][1] + 1.6];
     }
-    F.oG = [42.5, 13];
+    F.oG = s.phase === 'BREAK' && L === 'out' ? [42.5, 19] : s.phase === 'BREAK' && L === 'deep' ? [42.5, 11.6] : [42.5, 13];
     F.G = s.pulled ? [88, 100] : [42.5, 187];
     return { F, puck, cy };
   }
   const carrierOf = (s) => {
     if (s.phase === 'ENTRY') return 'D1';
+    if (s.phase === 'RUSH') return 'C';
+    if (s.phase === 'BREAK') return 'W1';
     if (s.phase === 'ZONE') return 'C';
     if (s.phase === 'THEIRS') return s.deep ? (s.look === 'shot' ? 'oD' : s.look === 'cycle' ? 'oC' : 'oW') : (s.look === 'dump' ? 'oC' : 'oD');
     return null;
@@ -342,14 +359,14 @@
       if (instant) setPos(id, p); else moves.push(tween(id, p, 650 + Math.random() * 200));
     }
     if (instant) setPos('puck', f.puck); else moves.push(tween('puck', f.puck, 650));
-    camTo(f.cy, 1, 42.5, instant);
+    camTo(f.cy, s.phase === 'BREAK' ? 1.5 : 1, 42.5, instant);
     $('rink').classList.toggle('empty', s.pulled);
     $('rink-tag').textContent = tagFor(s);
     return Promise.all(moves);
   }
   function tagFor(s) {
     const sk = D.skaters(s);
-    const where = { FO_O: 'Faceoff, their end', FO_N: 'Faceoff, center ice', FO_D: 'Faceoff, your end', ENTRY: 'Your puck, coming up ice', ZONE: 'Your puck in their end', THEIRS: s.deep ? 'Their puck in your end' : 'Their puck, neutral zone' }[s.phase];
+    const where = { FO_O: 'Faceoff, their end', FO_N: 'Faceoff, center ice', FO_D: 'Faceoff, your end', ENTRY: 'Your puck, coming up ice', RUSH: 'On the rush', BREAK: 'Breakaway!', ZONE: 'Your puck in their end', THEIRS: s.deep ? 'Their puck in your end' : 'Their puck, neutral zone' }[s.phase];
     const str = s.pulled ? `${sk.you} on ${sk.opp} · empty net` : s.pp > 0 ? `Power play ${fmt(s.pp)}` : s.pp < 0 ? `Penalty kill ${fmt(-s.pp)}` : `${sk.you} on ${sk.opp}`;
     return `${where} · ${str}`;
   }
@@ -368,9 +385,14 @@
     else if (k === 'ENTRY') {
       Object.assign(T, { carry: [[42, 66], three ? 'Attack' : 'Carry in'], stretch: [[16, 74], `Stretch to ${n.W1}`] });
       if (three) T.change = [[42, 132], 'Circle back'];
-      else { T.dump = [[12, 28], 'Dump in']; T.change = [[79, 124], 'Regroup'] ; }
+      else { T.dump = [[12, 28], 'Dump in']; T.change = [[79, 124], 'Regroup']; T.wide = [[70, 62], `Wide with ${n.W1}`]; }
+    } else if (k === 'RUSH') {
+      Object.assign(T, { shoot: [[42.5, 7.5], `Shoot (${n.W1})`], drop: [at('D1'), `Drop to ${n.D1}`], drive: [[56, 22], 'Drive the net'], delay: [[14, 74], 'Pull up'] });
+    } else if (k === 'BREAK') {
+      Object.assign(T, { high: [[52, 8], 'Shoot high'], five: [[42.5, 23], 'Five-hole'], deke: [[31, 18], 'Deke'] });
     } else if (k === 'ZONE') {
-      T.shoot = [[42.5, 7.5], three ? 'Shoot' : `Shoot (${n.D1})`];
+      T.shoot = [[42.5, 7.5], three ? 'Shoot' : `Point shot (${n.D1})`];
+      if (!three) T.quick = [[at('C')[0] - 6, at('C')[1] + 7], `${n.C} shoots`];
       T.seam = [at('W1'), three ? `Back door: ${n.W1}` : `Seam to ${n.W1}`];
       if (three) T.peel = [[42, 68], 'Peel back'];
       else { T.cycle = [[9, 21], 'Cycle low']; T.net = [at('W2'), `Bump to ${n.C}`]; }
@@ -387,17 +409,19 @@
     const g = $('targets');
     const sc = 1 / z;
     g.innerHTML = list.map((t) => {
-      const [x, y] = t.at, lx = clamp(x, 10 * sc, 85 - 10 * sc), above = y > (origin ? origin[1] : 0) ? 1 : -1;
-      const ly = y + above * 6.2 * sc;
+      const [x, y] = t.at, lx = clamp(x, 10 * sc, 85 - 10 * sc), above = y < 18 || y > (origin ? origin[1] : 0) ? 1 : -1;
+      let ly = y + above * 6.2 * sc, lxx = lx, anchor = 'middle';
+      if (y < 18 && Math.abs(x - 42.5) < 6) { ly = y + 1; lxx = x - 4.5 * sc; anchor = 'end'; }   // at the net: label beside it, not on the goalie
       return `<g class="tgt" data-p="${t.play}">${origin ? `<path class="lane" d="M${origin[0]} ${origin[1]} L${x} ${y}" style="stroke-width:${0.45 * sc}"/>` : ''}
         <circle class="halo" cx="${x}" cy="${y}" r="${3.6 * sc}"/><circle class="ring" cx="${x}" cy="${y}" r="${2.9 * sc}" style="stroke-width:${0.4 * sc}"/>
         <text class="num" x="${x}" y="${y}" style="font-size:${3 * sc}px">${t.n}</text>
-        <text class="lbl" x="${lx}" y="${ly}" style="font-size:${2.8 * sc}px;stroke-width:${0.9 * sc}px">${esc(t.label)}</text></g>`;
+        <text class="lbl" x="${lxx}" y="${ly}" style="text-anchor:${anchor};font-size:${2.8 * sc}px;stroke-width:${0.9 * sc}px">${esc(t.label)}</text></g>`;
     }).join('');
     A.targets = list; A.tz = z;
+    $('rink-tag').hidden = list.length > 0;   // the call header says the same thing; keep the corner clear for targets
     $('rink').classList.toggle('aim', list.length > 0);
   }
-  const clearTargets = () => { $('targets').innerHTML = ''; A.targets = []; $('rink').classList.remove('aim'); $('dragline').setAttribute('visibility', 'hidden'); };
+  const clearTargets = () => { $('targets').innerHTML = ''; A.targets = []; $('rink-tag').hidden = false; $('rink').classList.remove('aim'); $('dragline').setAttribute('visibility', 'hidden'); };
   function hotTarget(play) { document.querySelectorAll('.tgt').forEach((g) => g.classList.toggle('hot', g.dataset.p === play)); }
 
   // pointer on the ice: tap a target, or drag the puck to one
@@ -480,7 +504,7 @@
     if (s.per === 'SO') return shootout();
     const o = D.options(s);
     const [, title, detail] = D.lookInfo(s);
-    $('c-look').textContent = title;
+    $('c-look').textContent = fill(title);
     $('c-detail').textContent = fill(detail);
     const sk = D.skaters(s);
     $('c-situ').textContent = `${perLabel(s)} ${fmt(s.t)} · ${s.pulled ? `${sk.you} on ${sk.opp}, net empty` : s.pp > 0 ? 'power play' : s.pp < 0 ? 'penalty kill' : `${sk.you} on ${sk.opp}`}`;
@@ -493,7 +517,7 @@
     $('c-toggles').querySelectorAll('.tg').forEach((b) => b.onclick = () => toggle(b.dataset.k));
     const keys = $('c-keys');
     keys.className = `keys n${o.plays.length}`;
-    keys.style.setProperty('--n', o.plays.length);
+    keys.style.setProperty('--n', o.plays.length > 4 ? 3 : o.plays.length);
     keys.innerHTML = o.plays.map((p, i) => `<button type="button" class="key" data-p="${p.id}" disabled><span class="kn">${i + 1}</span><b>${esc(p.label)}</b><small>${esc(p.hint)}</small></button>`).join('');
     keys.querySelectorAll('.key').forEach((b) => {
       b.onclick = () => commit(b.dataset.p);
@@ -506,7 +530,7 @@
     if (firstGame && G.step >= 1) { const st0 = load(); st0.tipped = true; save(st0); }
     // targets go up right away; the call is accepted once the grade is in (usually already, from the worker)
     const car = carrierOf(s);
-    drawTargets(targetsFor(s), car ? P(car) : P('puck'));
+    drawTargets(targetsFor(s), car ? formation(s).F[car] || P(car) : P('puck'), s.phase === 'BREAK' ? 1.5 : 1);
     $('rink-hint').hidden = !(firstGame && G.step < 3);
     A.onPick = (play) => commit(play);
     G.accepting = true;
@@ -558,7 +582,7 @@
     const v = D.verdict(best.wp - mine.wp, best.wp);
     const d = mine.wp - typ.wp;
     if (v.k !== 'none') { G.sumD += d; G.sumV += typ.v; }
-    const before = { t: s.t, per: perLabel(s), situ: $('rink-tag').textContent, look: D.lookInfo(s)[1], call: describe(s, c), best: describe(s, best), wp: best.wp, mine: mine.wp, loss: best.wp - mine.wp };
+    const before = { t: s.t, per: perLabel(s), situ: $('rink-tag').textContent, look: fill(D.lookInfo(s)[1]), call: describe(s, c), best: describe(s, best), wp: best.wp, mine: mine.wp, loss: best.wp - mine.wp };
     const events = [];
     const rng = D.mulberry(D.hash(`${G.sc.id}:${G.practice ? 'p' : G.day}:${G.step}`));
     const prev = D.clone(s);
@@ -618,6 +642,10 @@
     const k = D.tableKey(prev);
     if (events[0] && events[0].k === 'pull') return;
     if (k === 'ENTRY' && play === 'change') { tick(`${G.names.D1} swings back with it.`); await carry('D1', [36, 150], 650); return; }
+    if (k === 'RUSH' && play === 'drive') { tick(`${G.names.C} drives the net.`); await carry('C', [46, 22], 650); return; }
+    if (k === 'RUSH' && play === 'delay') { tick(`${G.names.C} pulls up on the half-wall.`); await Promise.all([carry('C', [14, 46], 650), tween('W1', [24, 30], 650), tween('W2', [60, 34], 650), tween('D1', [22, 70], 650), tween('D2', [64, 70], 650)]); return; }
+    if (k === 'BREAK') { tick(`${G.names.W1} is in alone on ${G.names.oG}…`); await Promise.all([carry('W1', [42.5, play === 'deke' ? 24 : 26], 900, { ease: linear }), tween('oD', [40, 48], 900)]); if (play === 'deke') { await carry('W1', [36, 18], 260); } return; }
+    if (k === 'ENTRY' && play === 'wide') { tick(`${G.names.W1} takes it wide.`); await puckTo([P('W1')[0] + 1.4, P('W1')[1] - 1.4], 260, { trail: true }); A.cam.follow = true; await carry('W1', [8, 64], 700); return; }
     if (k === 'ZONE' && play === 'cycle') { tick(`${G.names.C} takes it below the dots.`); await carry('C', [14, 18], 600); return; }
     if (k === 'ZONE' && play === 'peel') { tick(`${G.names.C} peels back.`); await carry('C', [40, 66], 600); return; }
     if (k.startsWith('THEIRS') && play === 'press') { const car = carrierOf(prev); const me = prev.deep ? 'D2' : 'W1'; tick(`${G.names[me]} goes after ${G.names[car] || 'the puck'}.`); await tween(me, [P(car)[0] + 2, P(car)[1] + 2.5], 550); return; }
@@ -649,7 +677,8 @@
       await tween(id, [sp[0], sp[1] + 1.4], 140);
       Sound.play('stick');
       const res = d.res;
-      const tgt = d.from === 'eng' ? [42.5, 8.6] : res === 'goal' ? [42.5 + (Math.random() - 0.5) * 4, 8.7] : res === 'save' ? [42.5 + (Math.random() - 0.5) * 3, 12.4] : res === 'block' ? lerp(sp, [42.5, 11], 0.35) : [sp[0] < 42.5 ? 47.4 : 37.6, 4.2];
+      const bspot = { bhigh: [45.6, 8.2], bfive: [42.5, 10.2], bdeke: [39.6, 9.4] }[d.from];
+      const tgt = bspot && res === 'goal' ? bspot : bspot && res === 'save' ? [bspot[0], 12.2] : d.from === 'eng' ? [42.5, 8.6] : res === 'goal' ? [42.5 + (Math.random() - 0.5) * 4, 8.7] : res === 'save' ? [42.5 + (Math.random() - 0.5) * 3, 12.4] : res === 'block' ? lerp(sp, [42.5, 11], 0.35) : [sp[0] < 42.5 ? 47.4 : 37.6, 4.2];
       const moves = [puckTo(tgt, res === 'block' ? 150 : 210, { trail: true, ease: linear })];
       if (res === 'save') moves.push(tween('oG', [tgt[0], 13], 170));
       if (res === 'goal' && d.from !== 'eng') moves.push(tween('oG', [42.5 + (tgt[0] < 42.5 ? 2.5 : -2.5), 13.4], 200));
@@ -687,7 +716,7 @@
       const recv = d.ok ? tk.filter((t) => !t.startsWith('o')).pop() || 'W1' : tk.find((t) => t.startsWith('o')) || nearestOf(OPP, P('puck'));
       let rp = P(recv);
       Sound.play('pass');
-      if (d.ok && d.type === 'stretch') { rp = [rp[0], Math.max(40, rp[1] - 34)]; await Promise.all([tween(recv, rp, 700, { ease: easeOut }), puckTo([rp[0] + 1, rp[1] - 1], 620, { trail: true, ctrl: [rp[0] + 14, (rp[1] + P('puck')[1]) / 2] })]); }
+      if (d.ok && d.type === 'stretch') { rp = [42.5, 42]; await Promise.all([tween(recv, rp, 700, { ease: easeOut }), puckTo([rp[0] + 1, rp[1] - 1], 620, { trail: true, ctrl: [rp[0] + 14, (rp[1] + P('puck')[1]) / 2] })]); }
       else if (d.ok) { await puckTo([rp[0] + 1.2, rp[1] - 1.2], 300, { trail: true }); hl(recv); }
       else { const mid = lerp(P('puck'), d.type === 'stretch' ? [16, 74] : P(tk.filter((t) => !t.startsWith('o')).pop() || 'W1'), 0.55); await Promise.all([tween(recv, mid, 320), puckTo(mid, 320, { trail: true })]); Sound.play('stick'); hl(recv); }
       await sleep(250);
@@ -696,7 +725,9 @@
         const who = tokens(e.raw).find((t) => !t.startsWith('o')) || 'C';
         if (dist(P('puck'), P(who)) > 3) await puckTo([P(who)[0] + 1.6, P(who)[1] - 1.6], 250, { trail: true });
         A.cam.follow = true;
-        await Promise.all([carry(who, [32, 60], 900, { ease: linear }), tween('W1', [14, 54], 900), tween(who === 'W2' ? 'C' : 'W2', [66, 56], 900), tween('D1', [24, 84], 950), tween('D2', [58, 86], 950), tween('X', [46, 74], 950)]);
+        await Promise.all([carry(who, [36, 66], 800, { ease: linear }), tween('W1', [16, 60], 800), tween(who === 'W2' ? 'C' : 'W2', [66, 62], 800), tween('D1', [44, 88], 850), tween('D2', [62, 98], 850)]);
+      } else if (d.ok && d.type === 'wide') {
+        await Promise.all([carry('W1', [10, 26], 700), tween('C', [34, 36], 700), tween('W2', [56, 28], 700), tween('D1', [20, 70], 700), tween('D2', [62, 70], 700)]);
       } else if (d.ok) {
         Sound.play('stick'); A.cam.follow = true;
         await Promise.all([puckTo([72, 8], 800, { ctrl: [70, 50] }), tween('W1', [66, 13], 950), tween('C', [40, 34], 950), tween('W2', [56, 30], 950), tween('D1', [24, 70], 950), tween('D2', [62, 70], 950)]);
@@ -732,6 +763,7 @@
   }
 
   const BIG = (events) => {
+    if (events.find((e) => e.k === 'pass' && e.data.ok && e.data.type === 'stretch') && !events.find((e) => e.k === 'shot')) return 'Breakaway!';
     const has = (k, f = () => true) => events.find((e) => e.k === k && f(e));
     if (has('shot', (e) => e.data.res === 'goal')) return 'Goal!';
     if (has('eng', (e) => e.data.res === 'goal')) return 'Empty-net goal against';
@@ -745,7 +777,7 @@
     const lastE = [...events].reverse().find((e) => !['fo', 'timeout', 'pull', 'return', 'play'].includes(e.k)) || events[events.length - 1];
     if (!lastE) return '';
     if (lastE.k === 'play' || lastE.k === 'change') { const sent = lastE.text.split(/(?<=\.)\s+/).filter(Boolean); const tail = (sent[sent.length - 1] || '').replace(/\.$/, ''); if (tail && tail.length <= 28) return tail; }
-    const m = { keep: 'Still in their end', clear: 'Cleared', take: 'Puck won', turn: 'Turnover', beat: 'Beaten', dumpin: 'Dumped in', zone: 'They get in', change: 'Fresh legs', entry: lastE.data.ok ? 'In the zone' : 'Turned over', pass: lastE.data.ok ? 'On the tape' : 'Picked off', fo: lastE.data.won ? 'Won the draw' : 'Lost the draw' };
+    const m = { keep: 'Still in their end', clear: 'Cleared', take: 'Puck won', turn: 'Turnover', beat: 'Beaten', dumpin: 'Dumped in', zone: 'They get in', change: 'Fresh legs', entry: lastE.data.ok ? (lastE.data.type === 'carry' ? 'On the rush' : 'In the zone') : 'Turned over', pass: lastE.data.ok ? 'On the tape' : 'Picked off', fo: lastE.data.won ? 'Won the draw' : 'Lost the draw' };
     return m[lastE.k] || 'Play on';
   };
 
