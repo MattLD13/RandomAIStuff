@@ -40,6 +40,11 @@ jobs:
       - name: Fetch NHL data
         run: node scripts/build-data.mjs
 
+      # Empty Net: the daily comeback game at /drill (real endings from play-by-play, cached in .cache/drill)
+      - name: Build Empty Net
+        continue-on-error: true
+        run: node scripts/build-drill.mjs || node scripts/build-drill.mjs --offline
+
       # Courtside (NBA), Sideline (NFL), Dugout (MLB), Pitchside (MLS): ESPN data, same board
       - name: Fetch other leagues
         continue-on-error: true

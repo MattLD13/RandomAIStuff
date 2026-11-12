@@ -523,6 +523,36 @@ Toronto, Calgary, Nashville, Utah, Dallas) and a fan-favorite throwback for the 
 the Islanders fisherman, the Canucks flying skate and the Penguins 1967 roundel. Seattle,
 Vegas and Winnipeg have only ever had one logo, so they use it.
 
+## Empty Net (daily comeback game)
+
+https://hockey.mattdicks.org/drill/ is a daily coaching game. Each day is one real NHL ending that
+the real team lost: down one goal at a 5-on-5 faceoff with 2:00 to 4:30 left in the third. You call
+every shift (faceoff plays, zone entries, cycle or seam pass, forecheck or sit back), decide when to
+pull the goalie, and use your one timeout. If you tie it, regular-season games go to 3-on-3 OT and a
+shootout, and playoff games go to 20-minute sudden-death periods.
+
+- **Which games:** Stanley Cup Final games about twice a week, other playoff games (2010-11 onward),
+  and rivalry games from the last two regular seasons. `drill/schedule.json` fixes the game for
+  every day from #1 (Nov 12, 2026), so everyone gets the same game and past days never change.
+- **Grading:** before each call, the model replays the spot 3,000 times with every call you could
+  make, finishing each game with a typical coach. A call's grade is the win chance it gives up
+  against the best call (A within 1 point, F more than 6). Edges count up to 3x more when your win
+  chance is low, and calls made after the game is out of reach are not graded.
+- **Calibration:** `node drill/check.mjs` replays all ~950 real late one-goal endings in the cache
+  with the typical coach and compares the model with what happened. Real teams down one this late
+  tied it 19.6% of the time, won 10.1%, and gave up an empty-netter 38.4%. The model is tuned to
+  within half a point of each.
+- **Shootout:** real dressed skaters with their career shootout goals/attempts against the real
+  goalie's career shootout saves (both shrunk toward league average for small samples). Goalie
+  weak spots and shooters' favorite moves are generated per game.
+
+| File | What it does |
+| --- | --- |
+| `scripts/build-drill.mjs` | play-by-play -> `drill/endings.json`, `drill/schedule.json`, and the one-file page at `site/drill/index.html` (`--offline` rebuilds the page from the committed data) |
+| `drill/engine.js` | the game model: plays, outcomes, the typical coach, Monte Carlo grading, shootout math |
+| `drill/ui.js`, `drill/page.html`, `drill/style.css` | the page |
+| `drill/check.mjs` | calibration against the real endings |
+
 ## Run locally
 
 ```sh
