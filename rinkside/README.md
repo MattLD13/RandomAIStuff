@@ -533,8 +533,14 @@ game's real lines. One call per possession, and the possession plays out on the 
   and change when your line's legs are gone). Your puck in their end: Shoot now, Work it low, Get it to
   the point, Crash the net. A draw in their end: One-timer off the draw, Get it to the point, Crash the
   net. The goalie and the timeout are calls on the same menu: Pull the goalie then attack, Five
-  forwards all in, Timeout and draw up a play. Their puck: Play it straight, Forecheck hard, Sell out
-  (late, trailing).
+  forwards all in, Timeout and draw up a play (the timeout stops the clock and rests the bench, then
+  you pick the set play with a boost). Set plays off a draw in their end: Back to the point, One-timer
+  from the circle, Center shoots off the draw, Tie up and crash, Win it to the wall and work it low;
+  you pick who takes the draw (your centers, with their real faceoff record that night), and the read
+  is about the draw (their center owns the dot, struggling, wingers cheating in, goalie fighting it).
+  Their puck: Play it straight, Forecheck hard, Clog the middle, Sell out (late, trailing). With your
+  net empty: Hunt the puck, Get in the lanes (a blocked or missed try is often icing), Everyone on
+  the puck. Each defensive call with the net empty gives up a goal 21-30% of the time.
 - **Who gets it.** Leave it on Anyone, or feed one of your players, shown with his goals and shots
   that night and his season goals and shooting %. His season shooting (shrunk toward league average)
   scales the shot; the defense keys on him a little. Feeding a star on the bench sends his line out.
@@ -550,7 +556,7 @@ game's real lines. One call per possession, and the possession plays out on the 
   verdict and what feeding your player was worth. The score (0-100) is your percentile against typical
   benches.
 - **Calibration:** `node drill/check.mjs` replays the ~950 real late one-goal endings with the typical
-  bench: tied 19.9% (real 19.6%), won 10.2% (10.1%), gave up an empty-netter 39.3% (38.4%), won 51.0%
+  bench: tied 19.1% (real 19.6%), won 9.6% (10.1%), gave up an empty-netter 38.7% (38.4%), won 50.3%
   once tied (51.6%). OT is about 50/50, and 3-on-3 ends before the shootout about 61% of the time.
   `node drill/skill.mjs`: a bench that always takes the best graded call ties about 31% and wins
   about 18-28% (depending on grading depth). About 13 calls to the end of regulation.

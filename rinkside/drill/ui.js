@@ -461,7 +461,7 @@
   // a player from a key like L0-2 (line 1, third man) or P1-0 (second pair, first D)
   const playerOf = (k) => { const R2 = G.roster.you; return k[0] === 'L' ? R2.lines[+k[1]][+k[3]] : R2.pairs[+k[1]][+k[3]]; };
   const pctTxt = (p) => (p.ss ? `${p.sg} G · ${((100 * p.sg) / p.ss).toFixed(0)}%` : '');
-  function describe(c) { return `${callName(c.call)}${c.focus ? ` → ${playerOf(c.focus).n}` : ''}`; }
+  function describe(c) { if (!c.focus) return callName(c.call); return c.call[0] === 'f' && c.call.length > 1 && c.call !== 'fpoint' || c.call === 'fpoint' ? `${callName(c.call)} (${playerOf(c.focus).n} on the draw)` : `${callName(c.call)} → ${playerOf(c.focus).n}`; }
   const ctxWords = { FO_O: 'Faceoff in their end', YOU_N: 'Your puck, coming up ice', YOU_O: 'Your puck in their end', THEM: 'Their puck' };
 
   // the call menu
@@ -476,7 +476,7 @@
     const d = D.diff(s);
     const score = d < 0 ? `down ${-d}` : d > 0 ? `up ${d}` : 'tied';
     const str = s.pulled ? `${sk.you} on ${sk.opp}, net empty` : s.pp > 0 ? `power play ${fmt(s.pp)}` : s.pp < 0 ? `penalty kill ${fmt(-s.pp)}` : `${sk.you} on ${sk.opp}`;
-    $('c-situ').innerHTML = `<b>${esc(ctxWords[s.ctx] || '')}</b> · ${esc(score)}, ${fmt(s.t)} left${s.per === 'REG' ? '' : ` in ${perLabel(s)}`} · ${esc(str)}`;
+    $('c-situ').innerHTML = `<b>${esc(ctxWords[s.ctx] || '')}</b> · ${esc(score)}, ${fmt(s.t)} left${s.per === 'REG' ? '' : ` in ${perLabel(s)}`} · ${esc(str)}${s.drawn ? ' · <b>Timeout: pick your drawn-up play</b>' : ''}${s.pulled && s.ctx === 'THEM' ? ' · <b>your net is empty</b>' : ''}`;
     const [, title, detail] = D.lookInfo(s);
     $('c-look').textContent = fill(title);
     const e = s.olines[s.oon].e;
@@ -490,9 +490,15 @@
     // who gets it
     const feedList = D.feedable(s);
     $('c-who-wrap').hidden = !feedList.length;
+    const atDraw = s.ctx === 'FO_O';
+    $('c-who-wrap').querySelector('.grp-k').textContent = atDraw ? 'Who takes the draw' : 'Who gets it';
+    if (atDraw && !G.focus) G.focus = `L${s.on}-0`;
+    if (!atDraw && G.focus && G.focus.endsWith('-0') && G.focusFromDraw) G.focus = null;
+    G.focusFromDraw = atDraw;
     if (G.focus && !feedList.find((f) => f.key === G.focus)) G.focus = null;
-    $('c-who').innerHTML = [`<button type="button" class="chipbtn" data-f=""><b>Anyone</b><small>the open man</small></button>`].concat(feedList.map((f) => {
+    $('c-who').innerHTML = (atDraw ? [] : [`<button type="button" class="chipbtn" data-f=""><b>Anyone</b><small>the open man</small></button>`]).concat(feedList.map((f) => {
       const p = playerOf(f.key) || {};
+      if (f.center) { const fo = G.roster.you.fo[+f.key[1]] || [0, 0]; return `<button type="button" class="chipbtn${f.on ? '' : ' bench'}" data-f="${f.key}"><b>${esc(p.n || '')}</b><small>Line ${+f.key[1] + 1}${f.on ? ', on the ice' : ''}</small><small>${fo[1] ? `${fo[0]} of ${fo[1]} draws tonight` : 'no draws yet tonight'}</small></button>`; }
       const game = p.gsog != null ? `${p.gg || 0} G, ${p.gsog} SOG tonight` : '';
       return `<button type="button" class="chipbtn${f.on ? '' : ' bench'}" data-f="${f.key}"><b>${esc(p.n || '')}</b><small>${esc(f.on ? game : 'on the bench')}</small><small>${esc(pctTxt(p))}</small></button>`;
     })).join('');
@@ -525,7 +531,7 @@
   }
 
   // the setup the players skate into for a call (for the picture)
-  const SETUP_OF = { point: 'umb', pull: 'umb', to: 'umb', oneT: 'umb', shoot: 'umb', go: 'umb', setup: 'over', low: 'over', crash: 'crash', allin: 'crash' };
+  const SETUP_OF = { point: 'umb', pull: 'umb', to: 'umb', fpoint: 'umb', fcircle: 'umb', fquick: 'umb', shoot: 'umb', go: 'umb', setup: 'over', low: 'over', fwall: 'over', crash: 'crash', ftie: 'crash', allin: 'crash' };
 
   async function commit(call) {
     if (!G || !G.accepting) return;
@@ -726,6 +732,7 @@
   // what the possession came to, in a few words
   function headline(events) {
     const has = (k, f = () => true) => events.find((e) => e.k === k && f(e));
+    if (has('timeout') && events.length <= 2) return 'Timeout: draw up the play';
     if (has('shot', (e) => e.data.res === 'goal')) return 'Goal!';
     if (has('eng')) return 'Empty-net goal against';
     if (has('against')) return 'Goal against';
@@ -766,7 +773,10 @@
       : v.k === 'ok' ? `Your call: <b>decent.</b> ${esc(describe(g.best))} was a bit better (+${gain.toFixed(1)}).`
       : v.k === 'bad' ? `Your call: <b>costly.</b> ${esc(describe(g.best))} was the call (+${gain.toFixed(1)} win chance).`
       : 'The game was out of reach. Not graded.';
-    if (c.focus && v.k !== 'none') {
+    if (c.focus && v.k !== 'none' && before.ctx === 'FO_O') {
+      const f = (g.mine - g.anyone) * 100;
+      if (Math.abs(f) >= 0.3) txt += f > 0 ? ` Sending ${esc(playerOf(c.focus).n)} to the draw was worth +${f.toFixed(1)}.` : ` ${esc(playerOf(c.focus).n)} on the draw cost ${(-f).toFixed(1)}.`;
+    } else if (c.focus && v.k !== 'none') {
       const f = (g.mine - g.anyone) * 100;
       txt += Math.abs(f) < 0.3 ? ` Feeding ${esc(playerOf(c.focus).n)}: no different from anyone.` : f > 0 ? ` Feeding ${esc(playerOf(c.focus).n)} was worth +${f.toFixed(1)}.` : ` Feeding ${esc(playerOf(c.focus).n)} cost ${(-f).toFixed(1)}: let the play find the open man.`;
     }
