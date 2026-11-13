@@ -313,9 +313,21 @@ async function linesFor(sc) {
     for (const [id, w] of [[d.winningPlayerId, 1], [d.losingPlayerId, 0]]) { if (!id) continue; const r = fo.get(id) || [0, 0]; r[0] += w; r[1] += 1; fo.set(id, r); }
   }
   const T0 = 2 * 1200 + (1200 - sc.start.t);
+  // each player's goals and shots on goal in this game before the scenario starts
+  const gs = new Map();
+  for (const p of pbp.plays) {
+    const per = p.periodDescriptor.number, at0 = at(per, p.timeInPeriod || '00:00');
+    if (per > 3 || at0 >= T0) continue;
+    const d = p.details || {};
+    const id = p.typeDescKey === 'goal' ? d.scoringPlayerId : p.typeDescKey === 'shot-on-goal' ? d.shootingPlayerId : null;
+    if (!id) continue;
+    const r = gs.get(id) || { g: 0, sog: 0 };
+    r.sog += 1; if (p.typeDescKey === 'goal') r.g += 1;
+    gs.set(id, r);
+  }
   const side = (teamId) => {
     const roster = pbp.rosterSpots.filter((r) => r.teamId === teamId && byP.has(r.playerId));
-    const tag = (r) => ({ n: r.lastName.default, num: r.sweaterNumber, pos: r.positionCode });
+    const tag = (r) => ({ id: r.playerId, n: r.lastName.default, num: r.sweaterNumber, pos: r.positionCode, gg: (gs.get(r.playerId) || {}).g || 0, gsog: (gs.get(r.playerId) || {}).sog || 0 });
     const fwd = roster.filter((r) => ['C', 'L', 'R'].includes(r.positionCode));
     const dmen = roster.filter((r) => r.positionCode === 'D').sort((a, b) => toi(b.playerId) - toi(a.playerId)).slice(0, 4);
     // cluster forwards into trios by shared ice: the two who played most together, then whoever played most with both
@@ -381,6 +393,24 @@ async function main() {
       sc.label = label(sc);
       try { sc.lines = await linesFor(sc); } catch (err) { console.warn(`lines ${sc.id}: ${err.message}`); sc.lines = null; }
       pool.push(trim(sc, so));
+    }
+    // regular-season numbers for everyone in the lines: goals, shots, games (shooting talent for "who gets it")
+    const seasons = [...new Set(pool.filter((g) => g.lines).map((g) => g.season))];
+    const seasonStats = new Map();
+    for (const season of seasons) {
+      try {
+        const r = await get(`https://api.nhle.com/stats/rest/en/skater/summary?limit=-1&cayenneExp=seasonId=${season}%20and%20gameTypeId=2`);
+        for (const x of r.data) {
+          const k = `${season}:${x.playerId}`, prev = seasonStats.get(k);
+          seasonStats.set(k, { sg: (prev?.sg || 0) + x.goals, ss: (prev?.ss || 0) + x.shots, sgp: (prev?.sgp || 0) + x.gamesPlayed });
+        }
+      } catch (err) { console.warn(`season stats ${season}: ${err.message}`); }
+    }
+    for (const g of pool) {
+      if (!g.lines) continue;
+      for (const side of [g.lines.you, g.lines.opp]) for (const grp of [...side.lines, ...side.pairs]) for (const p of grp) Object.assign(p, seasonStats.get(`${g.season}:${p.id}`) || {});
+    }
+    {
     }
     const sched = await schedule(pool);
     endings = { built: new Date().toISOString(), launch: LAUNCH, schedule: sched, games: pool };

@@ -105,22 +105,15 @@
       <div id="r-verdict"></div>
     </div>
 
-    <div class="call bench" id="call">
-      <div class="call-head">
-        <h3 id="c-title">Your bench</h3>
-        <span class="situ" id="c-situ"></span>
+    <div class="call menu" id="call">
+      <p class="situ-line" id="c-situ"></p>
+      <div class="read" id="c-read"><span class="read-k">They're showing</span><b id="c-look"></b><span id="c-detail"></span></div>
+      <div class="calls" id="c-calls"></div>
+      <div class="who" id="c-who-wrap">
+        <span class="grp-k">Who gets it</span>
+        <div class="who-row" id="c-who"></div>
       </div>
-      <div class="reads">
-        <div class="read" id="c-read"><span class="read-k">They're showing</span><b id="c-look"></b><span id="c-detail"></span></div>
-        <div class="read them" id="c-their"><span class="read-k">Their line on the ice</span><b id="c-oline"></b><span id="c-odet"></span></div>
-      </div>
-      <div class="grp"><span class="grp-k">Who goes out</span><div class="lines" id="c-lines"></div></div>
-      <div class="grp"><span class="grp-k">Setup in their end</span><div class="setups" id="c-setups"></div></div>
-      <div class="grp"><span class="grp-k">Your D at the blue line</span><div class="seg" id="c-d"></div></div>
-      <div class="grp" id="g-goalie"><span class="grp-k">Goalie</span><div class="seg" id="c-goalie"></div></div>
-      <div class="grp" id="g-to"><span class="grp-k">Timeout</span><div class="seg" id="c-to"></div></div>
       <p class="tip" id="c-tip" hidden></p>
-      <button type="button" class="cta go" id="c-go">Drop the puck</button>
     </div>
 
     <div class="call" id="so" hidden>
@@ -168,12 +161,12 @@
     <div class="panel-head"><h2>How to play</h2><button type="button" class="plain small" data-close="how">Close</button></div>
     <ol class="how">
       <li><b>A real game, every day.</b> A Stanley Cup Final, a playoff series or a rivalry night. Your team is down a goal late in the third, and in real life they lost. You have their real lines.</li>
-      <li><b>You run the bench.</b> At every whistle, and whenever a shift runs long, you decide who goes out, how they set up in the offensive zone, what your D do at the blue line, and the goalie. Then the shift plays out.</li>
-      <li><b>Lines.</b> Your top line scores more; your third line checks better. Legs drain on the ice and come back on the bench. Changing in your own end can get you caught. An icing traps their tired line on the ice: that is the moment to send your best.</li>
-      <li><b>Setups.</b> Umbrella (1-3-1) feeds point shots through screens and always keeps a man high. Overload floods the strong side and works it low to high. Crash the net puts two at the crease for rebounds, and leaves less behind. Read what they are showing: a collapsing box, wingers jumping your points, or a team sagging off.</li>
-      <li><b>Your D.</b> Pinch to keep pucks in, or keep one high. With the goalie pulled, a pinch that misses is often an empty-netter.</li>
-      <li><b>The goalie.</b> Pull him for an extra forward (more offense) or an extra defenseman (a safer point shot). One timeout: it rests your whole bench.</li>
-      <li><b>Every decision is graded</b> against the other choices you could have made, each replayed about 1,000 times from the same spot. Your score (0 to 100) compares your bench with a typical NHL bench; 50 is typical.</li>
+      <li><b>One call per possession.</b> With the puck: go now, set it up, get it to the point, crash the net, or dump and change when your legs are gone. In their end: shoot now or work it low. Off a draw in their end: the one-timer set play. Tap a call and the possession plays out.</li>
+      <li><b>The goalie and the timeout are calls too.</b> "Pull the goalie, then attack" puts six on the ice. "Five forwards, all in" is the big gamble. "Timeout, draw up a play" rests your bench and runs a set play off the draw.</li>
+      <li><b>Without the puck:</b> play it straight (they burn clock), forecheck hard (turnover or an odd-man rush the other way), or sell out late.</li>
+      <li><b>Who gets it.</b> Leave it on Anyone, or feed one of your players: his real shooting this season counts. Feeding a star on the bench sends his line out.</li>
+      <li><b>Read what they are showing.</b> A collapsing box gives you the point. Wingers jumping your points leave the slot. A team sagging off leaks rebounds. A team changing can be caught with speed. An icing traps their tired line on the ice.</li>
+      <li><b>Every call is graded</b> against the other calls you had, each replayed about 800 times from the same spot. Your score (0 to 100) compares you with a typical NHL bench; 50 is typical.</li>
       <li><b>Tie it and keep going.</b> Regular season: 3-on-3 overtime, then a shootout with your real shooters. Playoffs: sudden-death overtime.</li>
     </ol>
     <p class="fine">Starting spots, lineups and shootout numbers are real (NHL play-by-play, 2010–2026). Lines, D pairs, who was on the ice and each center's faceoff record come from that game's NHL shift charts and play-by-play. The model is tuned so its typical bench matches about 950 real endings like these: down one this late, real teams tied it 19.6% of the time and won 10.1%. The opponent's looks, the plays inside each shift and each goalie's tendencies are simulated.</p>

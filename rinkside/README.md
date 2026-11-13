@@ -525,45 +525,46 @@ Vegas and Winnipeg have only ever had one logo, so they use it.
 
 ## Empty Net (daily comeback game)
 
-https://hockey.mattdicks.org/drill/ is a daily bench-boss game. Each day is one real NHL ending that
-the real team lost: down one goal at a 5-on-5 faceoff with 2:00 to 4:30 left in the third. You coach
-the bench, not the puck.
+https://hockey.mattdicks.org/drill/ is a daily coaching game. Each day is one real NHL ending that
+the real team lost: down one goal at a 5-on-5 faceoff with 2:00 to 4:30 left in the third, with that
+game's real lines. One call per possession, and the possession plays out on the rink.
 
-- **Real lines.** Each game's forward lines and D pairs are rebuilt from the NHL shift charts
-  (forwards clustered into trios by shared ice time, D paired the same way), with each center's
-  faceoff record that night, who was on the ice at the starting faceoff and for how long, and the
-  other team's go-to line late in the third.
-- **The decisions,** at every whistle and whenever your line's shift runs long:
-  who goes out (top line scores more, third line checks better; legs drain on the ice and come back on
-  the bench; changing in your own end can get you caught), the offensive-zone setup (Umbrella 1-3-1,
-  Overload, Crash the net), your D at the blue line (keep one high or pinch), the goalie (pull for an
-  extra forward or an extra defenseman, or put him back) and the timeout (rests the whole bench).
-- **The reads.** The other team shows a structure (collapsing in front, jumping your points, sagging
-  off) and deploys its own lines. Each structure has a setup that beats it. An icing traps their
-  tired line on the ice; a gassed line gives up much more.
-- **The shift.** Once you drop the puck, a whole shift plays out in 4-7 second steps (zone time,
-  cycles, shots, saves, rebounds, keep-ins, clears, pinches, icings, line changes) and is animated on
-  the rink with the real names. With the goalie pulled, every clear from their end is an empty-net
-  try; keeping a man high (or an extra D) cuts that risk. About 8-9 decisions to the end of regulation.
-- **Grading.** After each decision a Web Worker replays the spot about 900 times with each
-  alternative, one dimension at a time (other line, other setup, other D, other goalie call, timeout),
-  plus the best of each combined, finished by a typical NHL bench. The result card gives a verdict per
-  decision. The score (0-100) is the percentile of your decisions against typical benches.
+- **The calls.** Your puck coming up ice: Go now, Set it up, Get it to the point, Crash the net (Dump
+  and change when your line's legs are gone). Your puck in their end: Shoot now, Work it low, Get it to
+  the point, Crash the net. A draw in their end: One-timer off the draw, Get it to the point, Crash the
+  net. The goalie and the timeout are calls on the same menu: Pull the goalie then attack, Five
+  forwards all in, Timeout and draw up a play. Their puck: Play it straight, Forecheck hard, Sell out
+  (late, trailing).
+- **Who gets it.** Leave it on Anyone, or feed one of your players, shown with his goals and shots
+  that night and his season goals and shooting %. His season shooting (shrunk toward league average)
+  scales the shot; the defense keys on him a little. Feeding a star on the bench sends his line out.
+- **Reads.** One line before each call: a 1-3-1 trap, a team changing, a tight gap or a soft middle
+  (coming up ice); collapsing in front, jumping your points or sagging off (in their end); killing
+  clock, looking long or looking to shoot (their puck). Each makes some calls much better. An icing
+  traps their tired line on the ice. Lines change on their own as legs go.
+- **Real data.** Lines and D pairs from the NHL shift charts (forwards clustered into trios by shared
+  ice), each center's faceoff record that night, who was on the ice at the start, player goals and
+  shots that night (play-by-play) and that season (NHL stats API).
+- **Grading.** After each call a Web Worker replays the spot about 800 times with every other call
+  (and your call with every other player), finished by a typical NHL bench. The result card gives the
+  verdict and what feeding your player was worth. The score (0-100) is your percentile against typical
+  benches.
 - **Calibration:** `node drill/check.mjs` replays the ~950 real late one-goal endings with the typical
-  bench: tied 19.9% (real 19.6%), won 10.6% (10.1%), gave up an empty-netter 39.2% (38.4%).
-  `node drill/skill.mjs` plays them with a bench that grades every decision and takes the best:
-  it ties about 36% and wins about 25%. Hard, but good bench management pays.
+  bench: tied 19.9% (real 19.6%), won 10.2% (10.1%), gave up an empty-netter 39.3% (38.4%), won 51.0%
+  once tied (51.6%). OT is about 50/50, and 3-on-3 ends before the shootout about 61% of the time.
+  `node drill/skill.mjs`: a bench that always takes the best graded call ties about 31% and wins
+  about 18-28% (depending on grading depth). About 13 calls to the end of regulation.
 - **Which games:** Stanley Cup Final games about twice a week, other playoff games (2010-11 onward),
-  and rivalry games from the last two regular seasons. `drill/schedule.json` fixes the game for
-  every day from No. 1 (Nov 12, 2026).
-- **Overtime and the shootout:** regular season 3-on-3, then a shootout with your real shooters'
-  career shootout numbers against the real goalie (pick the shooter, then tap your spot on a
-  zoomed-in net). Playoffs: 20-minute sudden-death periods; each decision covers a longer stretch.
+  and rivalry games from the last two regular seasons. `drill/schedule.json` fixes the game for every
+  day from No. 1 (Nov 12, 2026).
+- **Overtime and the shootout:** regular season 3-on-3, then a shootout with your real shooters' career
+  shootout numbers against the real goalie (pick the shooter, then tap your spot on a zoomed-in net).
+  Playoffs: sudden-death overtime; each call also covers the next stretch of play.
 
 | File | What it does |
 | --- | --- |
 | `scripts/build-drill.mjs` | play-by-play and shift charts -> `drill/endings.json` (with each game's real lines), `drill/schedule.json`, and the one-file page at `site/drill/index.html` (`--offline` rebuilds the page from the committed data) |
-| `drill/engine.js` | the game model: lines and fatigue, setups, reads, the shift simulation, the typical bench, Monte Carlo grading, shootout math |
+| `drill/engine.js` | the game model: the calls, reads, players and lines, the possession simulation, the typical bench, Monte Carlo grading, shootout math |
 | `drill/ui.js`, `drill/page.html`, `drill/style.css` | the page |
 | `drill/check.mjs` | calibration against the real endings |
 | `drill/skill.mjs` | how much good decisions are worth (a bench that always takes the best graded decision) |

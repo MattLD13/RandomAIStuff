@@ -22,7 +22,7 @@
   // kind 'grade': your decision against the alternatives; kind 'wp': win chance from here with a typical bench
   let worker = null, jobId = 0, syncN = 400;
   const jobs = new Map();
-  const typicalOf = (s) => Object.assign({}, D.coachBase(s), { setup: 'umb', d: 'safe' });
+  const typicalOf = (s) => D.coach(s, () => 0.5);
   const runJob = (j) => {
     const t = performance.now();
     const out = j.kind === 'grade' ? D.grade(j.s, j.mine, syncN, j.seed) : D.evaluate(j.s, [typicalOf(j.s)], syncN, j.seed)[0].wp;
@@ -33,7 +33,7 @@
   const dropWorker = () => { worker = null; for (const [id, j] of jobs) { jobs.delete(id); j.res(runJob(j)); } };
   try {
     const src = $('engine-src').textContent;
-    const glue = `\nonmessage = (e) => { const j = e.data; const out = j.kind === 'grade' ? Drill.grade(j.s, j.mine, j.n, j.seed) : Drill.evaluate(j.s, [Object.assign({}, Drill.coachBase(j.s), { setup: 'umb', d: 'safe' })], j.n, j.seed)[0].wp; postMessage({ id: j.id, out }); };`;
+    const glue = `\nonmessage = (e) => { const j = e.data; const out = j.kind === 'grade' ? Drill.grade(j.s, j.mine, j.n, j.seed) : Drill.evaluate(j.s, [Drill.coach(j.s, () => 0.5)], j.n, j.seed)[0].wp; postMessage({ id: j.id, out }); };`;
     worker = new Worker(URL.createObjectURL(new Blob([src, glue], { type: 'text/javascript' })));
     worker.onmessage = (e) => { const j = jobs.get(e.data.id); if (j) { jobs.delete(e.data.id); j.res(e.data.out); } };
     worker.onerror = (e) => { if (e && e.preventDefault) e.preventDefault(); dropWorker(); };
@@ -122,7 +122,7 @@
   function namesFor(sc) { return { G: last(sc.roster.youG?.n) || 'your goalie', oG: last(sc.roster.oppG?.n) || 'their goalie' }; }
   // the real lines and pairs from that game (or, for an older entry, the late-game lineup three times)
   function rosterOf(sc) {
-    const nm = (p) => (p ? { n: p.n, num: p.num } : { n: '', num: '' });
+    const nm = (p) => (p ? { ...p } : { n: '', num: '' });
     if (sc.lines) {
       const side = (x) => ({ lines: x.lines.map((l) => l.map(nm)), pairs: x.pairs.map((p) => p.map(nm)), fo: x.fo });
       return { you: side(sc.lines.you), opp: side(sc.lines.opp) };
@@ -139,7 +139,13 @@
   }
   const fill = (text, d = {}) => {
     const m = namesAt(d.line ?? G.s.on, d.oline ?? G.s.oon, d.xa ?? G.s.xa);
-    return text.replace(/\{(\w+)\}/g, (_, k) => (k === 'G' ? G.names.G : k === 'oG' ? G.names.oG : (m[k] && m[k].n) || k));
+    return text.replace(/\{([\w-]+)\}/g, (_, k) => {
+      if (k === 'G') return G.names.G;
+      if (k === 'oG') return G.names.oG;
+      const lp = /^L(\d)-(\d)$/.exec(k);
+      if (lp) return (G.roster.you.lines[+lp[1]][+lp[2]] || {}).n || k;
+      return (m[k] && m[k].n) || k;
+    });
   };
 
   function setTeams(sc) {
@@ -315,7 +321,12 @@
     F.G = ctx.pulled ? [88, 100] : [42.5, 187];
     return { F, puck, cy };
   }
-  const ctxOf = (s) => ({ fo: s.dec === 'FO', fz: s.fz, z: s.z, poss: s.poss, setup: s.setup, look: s.look, pulled: s.pulled, xa: s.xa });
+  const ctxOf = (s) => {
+    if (s.ctx === 'FO_O') return { fo: true, fz: 'O', look: s.look, pulled: s.pulled };
+    if (s.ctx === 'YOU_O') return { z: 'O', poss: 'you', setup: A.setup || 'umb', look: s.look, pulled: s.pulled };
+    if (s.ctx === 'YOU_N') return { z: 'N', poss: 'you', look: s.look, pulled: s.pulled };
+    return { z: 'N', poss: 'them', look: s.look, pulled: s.pulled };
+  };
   function onIceFor(ctx, s) {
     const sk = D.skaters(s), is3 = D.three(s);
     const you = sk.you - (ctx.pulled ? 1 : 0), opp = sk.opp - (s.oppPulled ? 1 : 0);
@@ -339,10 +350,12 @@
   }
   function tagFor(s) {
     const sk = D.skaters(s);
-    const where = s.dec === 'FO' ? { O: 'Faceoff, their end', N: 'Faceoff, center ice', D: 'Faceoff, your end' }[s.fz] : s.z === 'O' ? (s.poss === 'you' ? 'Your puck in their end' : 'Their puck in their end') : s.z === 'N' ? 'Neutral zone' : (s.poss === 'you' ? 'Your puck in your end' : 'Their puck in your end');
+    const where = { FO_O: 'Faceoff, their end', YOU_N: 'Your puck, coming up ice', YOU_O: 'Your puck in their end', THEM: 'Their puck' }[s.ctx] || '';
     const str = s.pulled ? `${sk.you} on ${sk.opp} · empty net` : s.pp > 0 ? `Power play ${fmt(s.pp)}` : s.pp < 0 ? `Penalty kill ${fmt(-s.pp)}` : `${sk.you} on ${sk.opp}`;
     return `${where} · ${str}`;
   }
+
+
   function drawTargets(list, origin, z = 1) {
     const g = $('targets');
     const sc = 1 / z;
@@ -413,13 +426,13 @@
   }
 
   // ==================================================================================================
-  // A game: you run the bench
+  // A game: one call per possession
   // ==================================================================================================
   function start(day, practiceSc) {
     clearTimers();
     const sc = practiceSc || gameForDay(day);
     setTeams(sc);
-    G = { day, practice: !!practiceSc, sc, s: D.newGame(sc), step: 0, sumD: 0, sumV: 0, calls: [], names: null, roster: rosterOf(sc), pick: null, wpNow: null };
+    G = { day, practice: !!practiceSc, sc, s: D.newGame(sc), step: 0, sumD: 0, sumV: 0, calls: [], names: null, roster: rosterOf(sc), focus: null, wpNow: null };
     G.names = namesFor(sc);
     $('game').appendChild($('pbp'));
     hideAll();
@@ -427,7 +440,7 @@
     $('result').hidden = true; $('so').hidden = true; $('call').hidden = false;
     $('feed').innerHTML = '';
     buildRink();
-    relabel(G.s.on, G.s.oon, G.s.xa);
+    relabel(G.s.on, G.s.oon);
     stage(ctxOf(G.s), true);
     $('rink-tag').textContent = tagFor(G.s);
     board();
@@ -443,33 +456,15 @@
     $('feed').prepend(li);
   }
 
-  const setupList = (s) => (D.three(s) ? D.SETUPS3 : D.SETUPS);
-  const setupName = (s, id) => (setupList(s).find((x) => x[0] === id) || [id, id])[1];
-  const dName = (id) => (D.DMODES.find((x) => x[0] === id) || [id, id])[1];
-  const lineNames = (i) => G.roster.you.lines[i].map((p) => p.n).filter(Boolean).join(', ');
-  function goalieName(id) {
-    const m = namesAt(G.s.on, G.s.oon, id === 'pullD' ? 'D' : 'F');
-    return { in: 'Stay in', pullF: `Pull: extra F (${m.X.n || 'forward'})`, pullD: `Pull: extra D (${m.X.n || 'defenseman'})`, stay: 'Stay pulled', back: 'Back in the net' }[id] || id;
-  }
-  function describe(s, c) {
-    const bits = [`Line ${c.line + 1}`, setupName(s, c.setup), dName(c.d)];
-    if (c.goalie === 'pullF' || c.goalie === 'pullD') bits.push(c.goalie === 'pullF' ? 'pulled the goalie (extra F)' : 'pulled the goalie (extra D)');
-    if (c.goalie === 'back') bits.push('goalie back in');
-    if (c.timeout) bits.push('timeout');
-    return bits.join(' · ');
-  }
-  // small half-rink diagrams for the setups
-  const MINI = {
-    umb: [[30, 30], [10, 19], [50, 19], [30, 18], [30, 8]], over: [[11, 30], [6, 18], [10, 7], [24, 9], [44, 31]], crash: [[14, 30], [46, 30], [8, 18], [25, 7], [35, 7]],
-  };
-  const MINI3 = { umb: [[30, 30], [12, 16], [48, 16]], over: [[30, 30], [22, 12], [40, 18]], crash: [[30, 30], [26, 7], [35, 7]] };
-  function mini(s, id) {
-    const pts = (D.three(s) ? MINI3 : MINI)[id];
-    const lanes = id === 'umb' ? 'M30 30L10 19M30 30L50 19M30 30L30 18' : id === 'over' ? 'M11 30L6 18L10 7L24 9' : 'M14 30L25 7M46 30L35 7';
-    return `<svg class="mini" viewBox="0 0 60 38" aria-hidden="true"><line x1="0" y1="35" x2="60" y2="35" class="bl"/><line x1="0" y1="4" x2="60" y2="4" class="gl"/><rect x="27" y="1" width="6" height="3" class="net"/><path class="ln" d="${lanes}"/>${pts.map(([x, y]) => `<circle class="me" cx="${x}" cy="${y}" r="2.6"/>`).join('')}</svg>`;
-  }
+  const callName = (id) => (D.CALLS[id] || [id])[0];
+  const SPECIAL = new Set(['pull', 'allin', 'to']);
+  // a player from a key like L0-2 (line 1, third man) or P1-0 (second pair, first D)
+  const playerOf = (k) => { const R2 = G.roster.you; return k[0] === 'L' ? R2.lines[+k[1]][+k[3]] : R2.pairs[+k[1]][+k[3]]; };
+  const pctTxt = (p) => (p.ss ? `${p.sg} G · ${((100 * p.sg) / p.ss).toFixed(0)}%` : '');
+  function describe(c) { return `${callName(c.call)}${c.focus ? ` → ${playerOf(c.focus).n}` : ''}`; }
+  const ctxWords = { FO_O: 'Faceoff in their end', YOU_N: 'Your puck, coming up ice', YOU_O: 'Your puck in their end', THEM: 'Their puck' };
 
-  // the bench card
+  // the call menu
   function spot() {
     const s = G.s;
     board();
@@ -477,61 +472,40 @@
     if (s.per === 'SO') return shootout();
     if (G.wpNow != null && s.per === 'REG' && G.wpNow < 0.008) return outOfReach(false);
     if (G.wpNow != null && G.wpNow > 0.995) return outOfReach(true);
-    const o = D.options(s);
-    const base = D.coachBase(s);
-    const prev = G.pick || { setup: 'umb', d: 'safe' };
-    G.pick = { line: base.line, setup: o.setups.includes(prev.setup) ? prev.setup : 'umb', d: prev.d, goalie: o.goalie[0], timeout: false };
     const sk = D.skaters(s);
-    $('c-title').textContent = s.dec === 'FO' ? 'Your bench: the whistle' : 'Your bench: change on the fly?';
-    $('c-situ').textContent = `${perLabel(s)} ${fmt(s.t)} · ${s.pulled ? `${sk.you} on ${sk.opp}, net empty` : s.pp > 0 ? 'power play' : s.pp < 0 ? 'penalty kill' : `${sk.you} on ${sk.opp}`}`;
+    const d = D.diff(s);
+    const score = d < 0 ? `down ${-d}` : d > 0 ? `up ${d}` : 'tied';
+    const str = s.pulled ? `${sk.you} on ${sk.opp}, net empty` : s.pp > 0 ? `power play ${fmt(s.pp)}` : s.pp < 0 ? `penalty kill ${fmt(-s.pp)}` : `${sk.you} on ${sk.opp}`;
+    $('c-situ').innerHTML = `<b>${esc(ctxWords[s.ctx] || '')}</b> · ${esc(score)}, ${fmt(s.t)} left${s.per === 'REG' ? '' : ` in ${perLabel(s)}`} · ${esc(str)}`;
     const [, title, detail] = D.lookInfo(s);
     $('c-look').textContent = fill(title);
-    $('c-detail').textContent = fill(detail);
-    const ol = G.roster.opp.lines[s.oon].map((p) => p.n).filter(Boolean).join(', ');
-    const oe = s.olines[s.oon].e;
-    $('c-oline').textContent = `${s.oon === s.late ? 'Their go-to line' : `Their line ${s.oon + 1}`}: ${ol}`;
-    $('c-odet').textContent = s.oppStuck ? `Stuck out there after the icing: ${Math.round(s.oonSec)} seconds, legs at ${Math.round(oe * 100)}%.` : `${Math.round(s.oonSec)} seconds into their shift, legs at ${Math.round(oe * 100)}%.`;
-    // lines
-    $('c-lines').innerHTML = o.lines.map((i) => {
-      const e = s.lines[i].e, f = G.roster.you.fo[i] || [0, 0];
-      const col = e > 0.7 ? 'var(--good)' : e > 0.45 ? 'var(--ok)' : 'var(--bad)';
-      return `<button type="button" class="opt" data-dim="line" data-v="${i}">${i === s.on ? `<span class="tagon">${s.dec === 'FO' ? 'on ice' : `out ${Math.round(s.onSec)}s`}</span>` : ''}
-        <b>Line ${i + 1}</b><span class="names">${esc(lineNames(i))}</span>
-        <span class="legs"><i style="width:${Math.round(e * 100)}%;background:${col}"></i></span>
-        <span class="meta"><span>Legs ${Math.round(e * 100)}%</span><span>${f[1] ? `FO ${f[0]}/${f[1]}` : ''}</span></span></button>`;
+    const e = s.olines[s.oon].e;
+    $('c-detail').textContent = `${fill(detail)}${s.oppStuck ? ' Their line is stuck out there after the icing.' : e < 0.45 ? ` Their line is gassed (${Math.round(s.oonSec)}s).` : ''}`;
+    const opts = D.options(s);
+    $('c-calls').innerHTML = opts.map((id) => {
+      const [label, hint] = D.CALLS[id];
+      return `<button type="button" class="callbtn${SPECIAL.has(id) ? ' special' : ''}" data-c="${id}"><b>${esc(label)}</b><small>${esc(hint)}</small></button>`;
     }).join('');
-    $('c-setups').innerHTML = setupList(s).map(([id, label, hint]) => `<button type="button" class="opt" data-dim="setup" data-v="${id}">${mini(s, id)}<b>${esc(label)}</b><small>${esc(hint)}</small></button>`).join('');
-    $('c-d').innerHTML = D.DMODES.map(([id, label, hint]) => `<button type="button" class="opt" data-dim="d" data-v="${id}"><b>${esc(label)}</b><small>${esc(hint)}</small></button>`).join('');
-    $('g-goalie').hidden = o.goalie.length < 2;
-    $('c-goalie').innerHTML = o.goalie.map((id) => `<button type="button" class="opt" data-dim="goalie" data-v="${id}"><b>${esc(goalieName(id))}</b>${id === 'pullF' ? '<small>More offense. Weaker if they get it out.</small>' : id === 'pullD' ? '<small>A shot from the point, more cover behind.</small>' : ''}</button>`).join('');
-    $('g-to').hidden = o.timeout.length < 2;
-    $('c-to').innerHTML = o.timeout.map((v) => `<button type="button" class="opt" data-dim="timeout" data-v="${v ? 1 : 0}"><b>${v ? 'Use it now' : 'Save it'}</b>${v ? '<small>Your whole bench gets its legs back.</small>' : ''}</button>`).join('');
-    document.querySelectorAll('#call .opt').forEach((b) => b.onclick = () => pickOpt(b.dataset.dim, b.dataset.v));
-    markPicks();
-    $('c-go').textContent = s.dec === 'FO' ? 'Drop the puck' : 'Go';
-    $('c-go').disabled = false;
-    $('c-go').onclick = commit;
+    $('c-calls').querySelectorAll('.callbtn').forEach((b) => { b.onclick = () => commit(b.dataset.c); });
+    // who gets it
+    const feedList = D.feedable(s);
+    $('c-who-wrap').hidden = !feedList.length;
+    if (G.focus && !feedList.find((f) => f.key === G.focus)) G.focus = null;
+    $('c-who').innerHTML = [`<button type="button" class="chipbtn" data-f=""><b>Anyone</b><small>the open man</small></button>`].concat(feedList.map((f) => {
+      const p = playerOf(f.key) || {};
+      const game = p.gsog != null ? `${p.gg || 0} G, ${p.gsog} SOG tonight` : '';
+      return `<button type="button" class="chipbtn${f.on ? '' : ' bench'}" data-f="${f.key}"><b>${esc(p.n || '')}</b><small>${esc(f.on ? game : 'on the bench')}</small><small>${esc(pctTxt(p))}</small></button>`;
+    })).join('');
+    $('c-who').querySelectorAll('.chipbtn').forEach((b) => {
+      b.setAttribute('aria-pressed', String((b.dataset.f || null) === G.focus));
+      b.onclick = () => { G.focus = b.dataset.f || null; $('c-who').querySelectorAll('.chipbtn').forEach((x) => x.setAttribute('aria-pressed', String((x.dataset.f || null) === G.focus))); Sound.play('pass'); if (G.focus && G.focus[0] === 'L') relabel(+G.focus[1], s.oon); else relabel(s.on, s.oon); };
+    });
     const firstGame = !load().tipped;
     $('c-tip').hidden = !(firstGame && G.step < 2);
-    $('c-tip').textContent = G.step === 0 ? 'Pick your line, setup, D and goalie, then drop the puck. Read what they are showing and who they have out.' : 'Watch the shift play out. Tap the ice to skip ahead.';
+    $('c-tip').textContent = G.step === 0 ? 'Tap a call and watch the possession play out. Read what they are showing; feed a player if you want the puck on his stick.' : 'Tap the ice to skip ahead. Green means you read it right.';
     if (firstGame && G.step >= 1) { const st0 = load(); st0.tipped = true; save(st0); }
     $('call').hidden = false;
     G.accepting = true;
-  }
-  function pickOpt(dim, v) {
-    if (!G.accepting) return;
-    G.pick[dim] = dim === 'line' ? +v : dim === 'timeout' ? v === '1' : v;
-    markPicks();
-    Sound.play('pass');
-    // preview: show the line you picked on the ice
-    if (dim === 'line') relabel(G.pick.line, G.s.oon, G.s.xa);
-  }
-  function markPicks() {
-    document.querySelectorAll('#call .opt').forEach((b) => {
-      const v = G.pick[b.dataset.dim];
-      const on = b.dataset.dim === 'line' ? +b.dataset.v === v : b.dataset.dim === 'timeout' ? (b.dataset.v === '1') === v : b.dataset.v === v;
-      b.setAttribute('aria-pressed', String(on));
-    });
   }
 
   // a game that is gone (under 1%), or won (over 99.5%), plays itself out to the horn
@@ -550,32 +524,35 @@
     later(finish, 1600);
   }
 
-  async function commit() {
+  // the setup the players skate into for a call (for the picture)
+  const SETUP_OF = { point: 'umb', pull: 'umb', to: 'umb', oneT: 'umb', shoot: 'umb', go: 'umb', setup: 'over', low: 'over', crash: 'crash', allin: 'crash' };
+
+  async function commit(call) {
     if (!G || !G.accepting) return;
     G.accepting = false;
-    $('c-go').disabled = true;
+    $('c-calls').querySelectorAll('.callbtn').forEach((b) => { b.disabled = true; });
     const s = G.s;
-    const c = { ...G.pick };
-    const before = { t: s.t, per: perLabel(s), look: fill(D.lookInfo(s)[1]), call: describe(s, c), state: D.clone(s), choice: c };
+    const c = { call, focus: s.ctx === 'THEM' ? null : G.focus };
+    const before = { t: s.t, per: perLabel(s), look: fill(D.lookInfo(s)[1]), ctx: s.ctx, call: describe(c), state: D.clone(s), choice: c };
     const grading = job('grade', s, c, G.step + 1 + G.day * 1000);
     const events = [];
     const rng = D.mulberry(D.hash(`${G.sc.id}:${G.practice ? 'p' : G.day}:${G.step}`));
     const say = (k, text, data) => events.push({ k, text: fill(text, data), data: data || {} });
+    A.setup = SETUP_OF[call] || 'umb';
     D.resolve(s, c, rng, say);
-    // playoff overtime: each decision covers a longer stretch
-    if (s.per === 'OT' && s.playoff && !s.over && before.state.per === 'OT') {
-      const t0 = s.t, ot0 = s.otNum, auto = [];
-      while (!s.over && s.per === 'OT' && s.otNum === ot0 && t0 - s.t < 150) D.resolve(s, D.coach(s, rng), rng, (k, text, data) => auto.push({ k, text: fill(text, data), data: data || {} }));
-      const big = auto.filter((e) => ['against', 'eng', 'pp', 'pk', 'ot', 'stop'].includes(e.k) || (e.k === 'shot' && e.data.res !== 'wide'));
-      events.push({ k: 'play', text: `The next ${t0 - s.t} seconds: ${big.length ? '' : 'back and forth, no one breaks through.'}`, data: {} });
-      events.push(...big.slice(-4));
+    // overtime: each call also covers the next stretch (until a goal or the horn)
+    if (s.per === 'OT' && !s.over && before.state.per === 'OT') {
+      const budget = s.playoff ? 75 : 20, t0 = s.t, ot0 = s.otNum, auto = [];
+      while (!s.over && s.per === 'OT' && s.otNum === ot0 && t0 - s.t < budget) D.resolve(s, D.coach(s, rng), rng, (k, text, data) => auto.push({ k, text: fill(text, data), data: data || {} }));
+      const big = auto.filter((e) => ['against', 'eng', 'pp', 'pk', 'ot', 'so', 'stop'].includes(e.k) || (e.k === 'shot' && e.data.res !== 'wide'));
+      if (t0 - s.t > 0) events.push({ k: 'play', text: `The next ${t0 - s.t} seconds: ${big.length ? '' : 'back and forth, no one breaks through.'}`.trim(), data: {} });
+      events.push(...big.slice(-3));
     }
     G.step++;
     const after = s.over || s.per === 'SO' ? Promise.resolve(s.over ? (s.won ? 1 : 0) : s.soWin) : job('wp', s, null, G.step + 7);
     $('call').hidden = true;
     $('result').hidden = true;
     $('rink-hint').hidden = !(G.step < 3);
-    Sound.play('whistle');
     await run(before, s, events);
     $('rink-hint').hidden = true;
     const g = await grading;
@@ -585,7 +562,7 @@
   }
 
   // ==================================================================================================
-  // The shift, frame by frame
+  // The possession, frame by frame
   // ==================================================================================================
   async function run(before, s, events) {
     A.busy = true; A.skipping = false;
@@ -597,16 +574,12 @@
     };
     A.cam.follow = false;
     A.cycles = 0;
-    $('rink-tag').hidden = true;   // the ticker says what is happening; the corner label is for between shifts
-    try {
-      // your line (and theirs) take their spots
-      relabel(before.choice.line, before.state.oon, before.choice.goalie === 'pullD' ? 'D' : before.choice.goalie === 'pullF' ? 'F' : before.state.xa);
-      for (const e of events) await animate(e);
-    } catch (err) { /* an animation glitch must never stop the game */ }
+    $('rink-tag').hidden = true;
+    try { for (const e of events) await animate(e); } catch (err) { /* an animation glitch must never stop the game */ }
     A.trailOn = false;
     hl(null); tick('');
     A.skipping = false;
-    if (!s.over && s.per !== 'SO') { relabel(s.on, s.oon, s.xa); await stage(ctxOf(s), false); }
+    if (!s.over && s.per !== 'SO') { relabel(s.on, s.oon); await stage(ctxOf(s), false); }
     $('rink-tag').textContent = tagFor(s);
     $('rink-tag').hidden = false;
     A.busy = false;
@@ -614,69 +587,76 @@
     board();
   }
 
-  const role = (text) => { const m = text.match(/\{(\w+)\}/); return m ? m[1] : null; };
+  const tokId = (tok) => { const m = /^\{(\w+)\}$/.exec(tok || ''); return m && A.e[m[1]] ? m[1] : null; };
+  const nearestOf = (ids, p) => ids.filter((id) => !$(`p-${id}`).classList.contains('off')).sort((a, b) => dist(P(a), p) - dist(P(b), p))[0];
   const roleOf = (e, mine) => {
-    // events keep their tokens in data.raw; text is already filled, so look the name up on the ice
     const ids = mine ? YOU : OPP;
     for (const id of ids) { const el = $(`p-${id}`); const n = el && el.querySelector('.l').textContent; if (n && e.text.includes(n) && !el.classList.contains('off')) return id; }
     return mine ? 'C' : 'oC';
   };
-  const nearestOf = (ids, p) => ids.filter((id) => !$(`p-${id}`).classList.contains('off')).sort((a, b) => dist(P(a), p) - dist(P(b), p))[0];
   const PASSES = { umb: [['D1', 'LW'], ['LW', 'D1'], ['D1', 'C'], ['C', 'D1'], ['D1', 'D2'], ['D2', 'D1']], over: [['LW', 'C'], ['C', 'LW'], ['LW', 'D1'], ['D1', 'LW'], ['C', 'RW']], crash: [['LW', 'D1'], ['D1', 'D2'], ['D2', 'RW'], ['LW', 'C']] };
-
+  // where the event happens: the decision context at that moment
+  const zoneOf = (d) => (d.ctx === 'YOU_O' || d.ctx === 'FO_O' ? { z: 'O', poss: 'you' } : d.ctx === 'YOU_N' ? { z: 'N', poss: 'you' } : d.ctx === 'THEM' ? { z: 'N', poss: 'them' } : null);
   async function restage(d, ms = 450) {
-    if (!d || !d.z) return;
-    const ctx = { fo: false, z: d.z, poss: d.poss, setup: d.setup, look: d.look, pulled: d.pulled, xa: d.xa };
+    const zp = d && (d.z ? { z: d.z, poss: d.poss } : zoneOf(d));
+    if (!zp) return;
+    const ctx = { fo: false, z: zp.z, poss: zp.poss, setup: A.setup || 'umb', look: d.look, pulled: d.pulled };
     const cur = A.ctx || {};
     if (cur.fo || cur.z !== ctx.z || cur.poss !== ctx.poss || cur.setup !== ctx.setup || cur.pulled !== ctx.pulled) {
-      if (d.line != null) relabel(d.line, d.oline, d.xa);
+      if (d.line != null) relabel(d.line, d.oline);
       await stage(ctx, false, ms);
     }
   }
 
   async function animate(e) {
-    const k = e.k, d = e.data;
+    const k = e.k, d = e.data || {};
     if (e.text && k !== 'cycle') tick(e.text);
     if (k === 'timeout') { Sound.play('whistle'); flash('Timeout', 'info', 1000); await sleep(1000); return; }
-    if (k === 'pull') { flash('Net empty', 'info', 1100); show('X', true); setPos('X', [88, 108]); await Promise.all([tween('G', [88, 100], 900), tween('X', [45, Math.min(P('puck')[1] + 10, 150)], 900)]); show('G', false); return; }
-    if (k === 'return') { show('G', true); await tween('G', [42.5, 187], 700); return; }
+    if (k === 'pull') { flash(d.five ? 'All in' : 'Net empty', 'info', 1100); show('X', true); setPos('X', [88, 108]); await Promise.all([tween('G', [88, 100], 900), tween('X', [45, Math.min(P('puck')[1] + 10, 150)], 900)]); show('G', false); return; }
     if (k === 'change' || k === 'ochange') {
       const ids = k === 'change' ? YOU : OPP;
-      await Promise.all(ids.map((id) => tween(id, [86, P(id)[1]], 420)));
-      relabel(d.line, d.oline, d.xa);
-      await sleep(120);
-      await stage({ ...(A.ctx || ctxOf(G.s)) }, false, 520);
+      await Promise.all(ids.map((id) => tween(id, [86, P(id)[1]], 380)));
+      relabel(d.line, d.oline);
+      await sleep(100);
+      await stage({ ...(A.ctx || ctxOf(G.s)) }, false, 480);
       return;
     }
-    if (k === 'stuck') { flash('Their line is stuck', 'info', 1300); await sleep(1300); return; }
+    if (k === 'stuck') { flash('Their line is stuck', 'info', 1200); await sleep(1200); return; }
     if (k === 'fo') {
-      const fz = d.zone || 'N';
-      await stage({ fo: true, fz, pulled: d.pulled, xa: d.xa }, false, 500);
+      await stage({ fo: true, fz: d.zone || 'N', pulled: d.pulled }, false, 450);
       const dot = P('puck');
-      Sound.play('whistle'); await sleep(220);
+      Sound.play('whistle'); await sleep(200);
       Sound.play('stick');
       await Promise.all([tween('C', [dot[0], dot[1] + 2.4], 110), tween('oC', [dot[0], dot[1] - 2.4], 110)]);
       const w = d.won ? P('C') : P('oC');
       await puckTo([w[0] + (d.won ? -3 : 3), w[1] + (d.won ? 7 : -7)], 240, { trail: true });
-      await restage(d, 520);
+      return;
+    }
+    if (k === 'entry') {
+      if (d.ok) {
+        await restage({ ...d, z: 'N', poss: 'you' }, 300);
+        A.cam.follow = true;
+        const fast = d.kind === 'carry';
+        await Promise.all([carry('C', [36, 64], fast ? 600 : 800, { ease: linear }), tween('LW', [16, 60], 700), tween('RW', [66, 62], 700), tween('D1', [30, 86], 750), tween('D2', [56, 90], 750)]);
+        A.cam.follow = false;
+        if (!fast) await restage({ ...d, z: 'O', poss: 'you' }, 450);
+      } else { await restage({ ...d, z: 'N', poss: 'you' }, 300); const t = P('puck'); await tween('oD1', [t[0] + 1.5, t[1] - 1.5], 380); Sound.play('stick'); await sleep(200); }
       return;
     }
     if (k === 'cycle') {
-      A.cycles = (A.cycles || 0) + 1;
-      if (A.cycles > 2) return;
-      await restage(d);
-      const lanes = PASSES[d.setup] || PASSES.umb;
-      const [a, b] = lanes[Math.floor(Math.random() * lanes.length)];
-      if ($(`p-${b}`).classList.contains('off')) return;
-      Sound.play('pass');
-      await puckTo([P(b)[0] + 1.4, P(b)[1] - 1.4], 300, { trail: true });
-      await Promise.all(YOU.filter((id) => id !== b).map((id) => tween(id, [P(id)[0] + (Math.random() - 0.5) * 4, P(id)[1] + (Math.random() - 0.5) * 3], 300)));
-      void a;
+      await restage({ ...d, z: 'O', poss: 'you' });
+      const lanes = PASSES[A.setup] || PASSES.umb;
+      for (let i = 0; i < 2; i++) {
+        const [, b] = lanes[Math.floor(Math.random() * lanes.length)];
+        if ($(`p-${b}`).classList.contains('off')) continue;
+        Sound.play('pass');
+        await puckTo([P(b)[0] + 1.4, P(b)[1] - 1.4], 300, { trail: true });
+      }
       return;
     }
     if (k === 'shot') {
-      await restage({ ...d, z: 'O', poss: 'you' });
-      const id = roleOf(e, true); const sp = P(id);
+      await restage({ ...d, z: 'O', poss: 'you' }, 350);
+      const id = tokId(d.who) || roleOf(e, true); const sp = P(id);
       A.cam.follow = true;
       if (dist(P('puck'), sp) > 3) { Sound.play('pass'); await puckTo([sp[0] + 1.4, sp[1] - 1.4], 260, { trail: true }); }
       hl(id);
@@ -696,9 +676,9 @@
       hl(null); A.cam.follow = false;
       return;
     }
-    if (k === 'freeze') { Sound.play('whistle'); await sleep(500); return; }
+    if (k === 'freeze') { Sound.play('whistle'); await sleep(450); return; }
     if (k === 'against' || k === 'stop') {
-      await restage({ ...d, z: 'D', poss: 'them' });
+      await restage({ ...d, z: 'D', poss: 'them' }, 350);
       const id = roleOf(e, false); const sp = P(id);
       A.cam.follow = true;
       if (dist(P('puck'), sp) > 3) await puckTo([sp[0] - 1.4, sp[1] + 1.4], 260, { trail: true });
@@ -707,7 +687,7 @@
       const tgt = k === 'against' ? [42.5 + (Math.random() - 0.5) * 4, 191.3] : [42.5 + (Math.random() - 0.5) * 3, 187.6];
       await Promise.all([puckTo(tgt, 210, { trail: true, ease: linear }), k === 'stop' && !$('p-G').classList.contains('off') ? tween('G', [tgt[0], 187], 160) : null]);
       if (k === 'against') { lamp('you'); Sound.play('thud'); flash('Goal against', 'bad', 1600); await sleep(1600); }
-      else { Sound.play('save'); await sleep(500); await tween('G', [42.5, 187], 200); }
+      else { Sound.play('save'); await sleep(450); await tween('G', [42.5, 187], 200); }
       hl(null); A.cam.follow = false;
       return;
     }
@@ -726,61 +706,43 @@
       A.cam.follow = false;
       return;
     }
-    if (k === 'keep') { const who = d.z === 'O' ? 'D2' : 'D1'; await restage(d); await Promise.all([tween(who, [P(who)[0], 70], 300), puckTo([P(who)[0] + 1.4, 68.6], 300, { trail: true })]); Sound.play('stick'); hl(who); await sleep(220); hl(null); return; }
-    if (k === 'turn' || k === 'chip' || k === 'badchange') {
+    if (k === 'keep') { await restage({ ...d, z: 'O', poss: 'you' }); await Promise.all([tween('D1', [P('D1')[0], 70], 300), puckTo([P('D1')[0] + 1.4, 68.6], 300, { trail: true })]); Sound.play('stick'); hl('D1'); await sleep(220); hl(null); return; }
+    if (k === 'turn' || k === 'beat') {
       const them = nearestOf(OPP, P('puck'));
       if (them) { await tween(them, [P('puck')[0] - 1.4, P('puck')[1] - 1.4], 300); Sound.play('stick'); await puckTo([P(them)[0] - 1.4, P(them)[1] + 1.4], 160); }
-      await sleep(250);
-      await restage(d);
+      await sleep(220);
+      if (k === 'beat') { A.cam.follow = true; await carry(them || 'oC', [40, 150], 700, { ease: linear }); A.cam.follow = false; }
       return;
     }
-    if (k === 'clear') { Sound.play('stick'); A.cam.follow = true; await puckTo([44 + (Math.random() - 0.5) * 20, 118], 700, { trail: true, ease: linear }); Sound.play('board'); A.cam.follow = false; await restage(d); return; }
-    if (k === 'rush') {
-      await restage({ ...d, z: 'N', poss: 'them' }, 300);
-      A.cam.follow = true;
-      const car = 'oC';
-      await Promise.all([carry(car, [40, 160], 800, { ease: linear }), tween('oLW', [24, 158], 800), tween('D1', [38, 172], 800), tween('D2', [50, 176], 800)]);
-      A.cam.follow = false;
-      return;
-    }
-    if (k === 'entry') {
-      if (d.ok) {
-        await restage({ ...d, z: 'N', poss: 'you' }, 300);
-        A.cam.follow = true;
-        await Promise.all([carry('C', [36, 64], 700, { ease: linear }), tween('LW', [16, 60], 700), tween('RW', [66, 62], 700), tween('D1', [30, 86], 750), tween('D2', [56, 90], 750)]);
-        A.cam.follow = false;
-        await restage(d, 500);
-      } else { const t = P('puck'); await tween('oD1', [t[0] + 1.5, t[1] - 1.5], 380); Sound.play('stick'); await sleep(200); await restage(d); }
-      return;
-    }
-    if (k === 'take') { const me = nearestOf(YOU, P('puck')); await tween(me, [P('puck')[0] + 1.4, P('puck')[1] + 1.4], 320); Sound.play('board'); hl(me); await sleep(220); hl(null); await restage(d); return; }
-    if (k === 'dumpin') { Sound.play('stick'); A.cam.follow = true; await puckTo([12, 194], 800, { ctrl: [10, 150] }); Sound.play('board'); A.cam.follow = false; await restage(d); return; }
-    if (k === 'zone') { await restage({ ...d, z: 'N', poss: 'them' }, 300); A.cam.follow = true; await carry('oD1', [20, 150], 700); A.cam.follow = false; await restage(d); return; }
-    if (k === 'breakout') { await restage({ ...d, z: 'D', poss: 'you' }, 300); Sound.play('pass'); await puckTo([P('LW')[0] + 1.4, P('LW')[1] - 1.4], 300, { trail: true }); A.cam.follow = true; await carry('LW', [20, 112], 600); A.cam.follow = false; await restage(d); return; }
+    if (k === 'clear') { Sound.play('stick'); A.cam.follow = true; await puckTo([44 + (Math.random() - 0.5) * 20, 118], 700, { trail: true, ease: linear }); Sound.play('board'); A.cam.follow = false; return; }
+    if (k === 'take') { const me = nearestOf(YOU, P('puck')); if (me) { await tween(me, [P('puck')[0] + 1.4, P('puck')[1] + 1.4], 320); Sound.play('board'); hl(me); await sleep(220); hl(null); } return; }
+    if (k === 'dumpin') { Sound.play('stick'); A.cam.follow = true; await Promise.all([puckTo([70, 8], 800, { ctrl: [70, 50] }), tween('LW', [64, 14], 900)]); Sound.play('board'); A.cam.follow = false; return; }
+    if (k === 'play') { await restage(d); await sleep(e.text ? 800 : 0); return; }
     if (k === 'pp' || k === 'pk') { Sound.play('whistle'); flash(k === 'pp' ? 'Power play' : 'Penalty kill', 'info', 1300); await sleep(1300); return; }
     if (k === 'ot' || k === 'so' || k === 'end') { Sound.play('whistle'); flash(k === 'ot' ? 'Overtime' : k === 'so' ? 'Shootout' : 'Final', 'info', 1400); await sleep(1400); return; }
-    await sleep(e.text ? 650 : 0);
+    await sleep(e.text ? 600 : 0);
   }
 
-  // what the shift looked like, in a few words
+  // what the possession came to, in a few words
   function headline(events) {
     const has = (k, f = () => true) => events.find((e) => e.k === k && f(e));
     if (has('shot', (e) => e.data.res === 'goal')) return 'Goal!';
     if (has('eng')) return 'Empty-net goal against';
     if (has('against')) return 'Goal against';
-    if (has('icing') && has('stuck') == null) return 'Iced: their line is stuck';
+    if (has('icing')) return 'Icing';
     if (has('pp')) return 'Power play';
     if (has('pk')) return 'Penalty kill';
-    const shots = events.filter((e) => e.k === 'shot').length;
-    const saves = events.filter((e) => e.k === 'shot' && e.data.res === 'save').length;
-    const zone = events.filter((e) => (e.k === 'cycle' || e.k === 'keep' || e.k === 'shot')).length;
-    if (shots >= 2) return `${shots} shots, ${saves ? `${saves} save${saves > 1 ? 's' : ''}` : 'none through'}`;
-    if (shots === 1) return saves ? 'One shot, saved' : 'One shot, no damage';
+    const shots = events.filter((e) => e.k === 'shot');
+    if (shots.length >= 2) return `${shots.length} shots, nothing through`;
+    if (shots.length === 1) return { save: 'Save', block: 'Blocked', wide: 'Wide' }[shots[0].data.res] || 'Shot';
     if (has('stop')) return `Big save, ${G.names.G}`;
-    if (zone >= 3) return 'Pinned them in';
-    if (has('icing')) return 'Icing';
-    if (has('clear') || has('turn')) return 'They got it out';
-    return 'Back and forth';
+    if (has('take')) return 'Puck won';
+    if (has('entry', (e) => !e.data.ok)) return 'Stood up at the line';
+    if (has('beat')) return 'Beaten';
+    if (has('turn')) return 'Turnover';
+    if (has('clear')) return 'Cleared';
+    if (has('dumpin')) return 'Dumped in';
+    return 'Clock running';
   }
 
   function afterPlay(before, g, events, wpAfter) {
@@ -789,25 +751,26 @@
     const v = D.verdict(loss, g.bestWp);
     const d = g.mine - g.typ;
     if (v.k !== 'none') { G.sumD += d; G.sumV += g.typV; }
-    G.calls.push({ t: before.t, per: before.per, look: before.look, call: before.call, best: describe(before.state, g.best), loss, v: v.k, d, choice: before.choice });
+    G.calls.push({ t: before.t, per: before.per, look: before.look, call: before.call, best: describe(g.best), loss, v: v.k, d, choice: before.choice });
     $('r-big').textContent = headline(events);
-    $('r-line').textContent = events.filter((e) => e.text && !['timeout', 'return', 'cycle', 'change', 'ochange'].includes(e.k)).slice(-2).map((e) => e.text).join(' ');
+    $('r-line').textContent = events.filter((e) => e.text && !['timeout', 'cycle', 'change', 'ochange', 'fo'].includes(e.k)).slice(-2).map((e) => e.text).join(' ');
     $('r-wp').textContent = `Win chance ${(g.typ * 100).toFixed(1)}% → ${(wpAfter * 100).toFixed(1)}%`;
     const ptsEl = $('r-pts');
     ptsEl.className = `pts num ${v.k === 'best' || v.k === 'good' ? 'good' : v.k}`;
     ptsEl.textContent = v.k === 'none' ? '–' : pts(d);
     ptsEl.title = 'Win chance compared with a typical NHL bench in the same spot';
-    // a verdict per decision
-    const st = before.state, c = before.choice;
-    const label = { line: (x) => `Line ${x + 1} (${lineNames(x).split(', ')[0]})`, setup: (x) => setupName(st, x), d: (x) => dName(x), goalie: (x) => goalieName(x), timeout: (x) => (x ? 'Use the timeout' : 'Save the timeout') };
-    const title = { line: 'Line', setup: 'Setup', d: 'Your D', goalie: 'Goalie', timeout: 'Timeout' };
-    const rows = Object.entries(g.perDim).map(([dim, r]) => {
-      const gain = r.gain * Math.min(3, Math.max(1, 0.15 / Math.max(g.bestWp, 0.01)));
-      const cls = gain <= 0.006 ? 'good' : gain <= 0.02 ? 'ok' : 'bad';
-      const txt = r.best === c[dim] || gain <= 0.006 ? `${title[dim]}: <b>${esc(label[dim](c[dim]))}</b>, the right call.` : `${title[dim]}: ${esc(label[dim](r.best))} was better (+${(r.gain * 100).toFixed(1)}).`;
-      return `<li class="${cls}"><span>${txt}</span></li>`;
-    });
-    $('r-verdict').innerHTML = v.k === 'none' ? '<p class="verdict none"><span>The game was out of reach. Not graded.</span></p>' : `<ul class="verdicts">${rows.join('')}</ul>`;
+    const gain = (g.bestWp - g.mine) * 100;
+    const c = before.choice;
+    let txt = v.k === 'best' ? 'Your call: <b>the best one.</b>'
+      : v.k === 'good' ? `Your call: <b>as good as any</b> (${esc(describe(g.best))} was +${gain.toFixed(1)}, inside the margin).`
+      : v.k === 'ok' ? `Your call: <b>decent.</b> ${esc(describe(g.best))} was a bit better (+${gain.toFixed(1)}).`
+      : v.k === 'bad' ? `Your call: <b>costly.</b> ${esc(describe(g.best))} was the call (+${gain.toFixed(1)} win chance).`
+      : 'The game was out of reach. Not graded.';
+    if (c.focus && v.k !== 'none') {
+      const f = (g.mine - g.anyone) * 100;
+      txt += Math.abs(f) < 0.3 ? ` Feeding ${esc(playerOf(c.focus).n)}: no different from anyone.` : f > 0 ? ` Feeding ${esc(playerOf(c.focus).n)} was worth +${f.toFixed(1)}.` : ` Feeding ${esc(playerOf(c.focus).n)} cost ${(-f).toFixed(1)}: let the play find the open man.`;
+    }
+    $('r-verdict').innerHTML = `<p class="verdict callv ${v.k}"><span>${txt}</span></p>`;
     $('result').hidden = false;
     feed(`${before.per === '3RD' ? '' : before.per + ' '}${fmt(before.t)}`, `<b>${esc(before.call)}</b>${esc(before.look)}. ${esc(events.map((e) => e.text).filter(Boolean).join(' '))}`,
       `<span class="d ${v.k === 'best' || v.k === 'good' ? 'good' : v.k}">${v.k === 'none' ? '–' : pts(d)}</span>`);
@@ -817,7 +780,6 @@
     const r = $('result').getBoundingClientRect();
     if (r.top < 0 || r.top > window.innerHeight * 0.6) $('result').scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
-
 
   // ==================================================================================================
   // Shootout: pick a shooter, then pick your spot on the net
@@ -990,16 +952,19 @@
     return `The real ${sc.you.name} bench ${bits.join(', ')}, and lost ${r.final.you}-${r.final.opp}${how}.`;
   }
   function style(score) {
-    const calls = G.calls.map((c) => c.call.toLowerCase());
-    const bold = calls.filter((c) => /seam|stretch|one-timer|carry|forecheck|pressure|net-front|attack|go/.test(c)).length;
-    const safe = calls.filter((c) => /dump|collapse|trap|glass|regroup|back to the point|shoot|peel|circle back|stay above/.test(c)).length;
+    const calls = G.calls.map((c) => c.call);
+    const bold = calls.filter((c) => /Go now|Crash|Five forwards|Sell out|Forecheck|One-timer/.test(c)).length;
+    const safe = calls.filter((c) => /point|Set it up|straight|Dump|Work it low/.test(c)).length;
+    const fed = calls.filter((c) => c.includes('→')).length;
     const pull = G.s.pulls[0];
     if (score >= 85) return 'Bench genius';
     if (pull != null && pull >= 180) return 'The spreadsheet';
+    if (fed >= Math.max(3, calls.length / 2)) return 'Star feeder';
     if (bold > safe * 1.6) return 'Riverboat gambler';
     if (safe > bold * 1.6) return 'Old-time hockey';
     return 'Steady hand';
   }
+
   function finish() {
     const { s } = G;
     clearTimers();
@@ -1098,8 +1063,8 @@
     }
     if (!G.accepting) return;
     const n = Number(e.key);
-    if (n >= 1 && n <= 3) { e.preventDefault(); pickOpt('line', String(n - 1)); }
-    else if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    const calls = [...$('c-calls').querySelectorAll('.callbtn')];
+    if (n >= 1 && n <= calls.length) { e.preventDefault(); commit(calls[n - 1].dataset.c); }
   });
 
   window.EmptyNet = { state: () => G, refresh: () => { relabel(G.s.on, G.s.oon, G.s.xa); stage(ctxOf(G.s), true); spot(); } };   // for testing from the console
