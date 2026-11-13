@@ -19,7 +19,7 @@ const run = (sc, smart, k) => {
   const s = D.newGame({ ...sc, roster: sc.roster ?? { you: [], opp: [] } });
   let tied = false, calls = 0;
   while (!s.over && s.per !== 'SO' && s.otNum < 3 && calls < 120) {
-    const c = smart ? D.grade(s, N, calls + 1)[0] : D.coach(s, r);
+    const c = smart ? D.grade(s, D.coach(s, r), N, calls + 1).best : D.coach(s, r);
     D.resolve(s, c, r); calls++;
     if (s.you >= s.opp) tied = true;
   }

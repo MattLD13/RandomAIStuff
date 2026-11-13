@@ -40,7 +40,7 @@ const sec = (mmss) => { const [m, s] = mmss.split(':').map(Number); return m * 6
 async function get(url, tries = 4) {
   for (let i = 0; ; i++) {
     try {
-      const r = await fetch(url, { headers: { 'user-agent': 'rinkside-drill' } });
+      const r = await fetch(url, { headers: { 'user-agent': 'rinkside-drill' }, signal: AbortSignal.timeout(20000) });
       if (!r.ok) throw new Error(`${r.status} ${url}`);
       return await r.json();
     } catch (err) {
@@ -291,6 +291,77 @@ async function schedule(pool) {
   return sched;
 }
 
+// ---------- real lines, from the NHL shift charts ----------
+// Forward lines: the three centers who took the most draws, each with the two forwards who shared the most ice
+// with him. D pairs: the four D with the most ice, paired by shared ice. Also: who was on the ice (and for how
+// long) at the scenario's starting faceoff, each center's faceoff record that night, and the other team's
+// go-to line late in the third.
+const LINES = join(ROOT, '.cache', 'drill-lines');
+async function linesFor(sc) {
+  const file = join(LINES, `${sc.id}.json`);
+  try { return JSON.parse(await readFile(file, 'utf8')); } catch {}
+  const [pbp, sh] = await Promise.all([get(`https://api-web.nhle.com/v1/gamecenter/${sc.id}/play-by-play`), get(`https://api.nhle.com/stats/rest/en/shiftcharts?cayenneExp=gameId=${sc.id}`)]);
+  const at = (per, mmss) => (per - 1) * 1200 + sec(mmss);
+  const shifts = (sh.data || []).filter((x) => x.typeCode === 517 && x.startTime && x.endTime).map((x) => ({ pid: x.playerId, team: x.teamId, s: at(x.period, x.startTime), e: at(x.period, x.endTime) })).filter((x) => x.e > x.s);
+  const byP = new Map();
+  for (const x of shifts) { if (!byP.has(x.pid)) byP.set(x.pid, []); byP.get(x.pid).push(x); }
+  const toi = (pid, from = 0, to = 1e9) => (byP.get(pid) || []).reduce((a, x) => a + Math.max(0, Math.min(x.e, to) - Math.max(x.s, from)), 0);
+  const overlap = (a, b) => { let o = 0; for (const x of byP.get(a) || []) for (const y of byP.get(b) || []) o += Math.max(0, Math.min(x.e, y.e) - Math.max(x.s, y.s)); return o; };
+  const fo = new Map();
+  for (const p of pbp.plays) if (p.typeDescKey === 'faceoff') {
+    const d = p.details || {};
+    for (const [id, w] of [[d.winningPlayerId, 1], [d.losingPlayerId, 0]]) { if (!id) continue; const r = fo.get(id) || [0, 0]; r[0] += w; r[1] += 1; fo.set(id, r); }
+  }
+  const T0 = 2 * 1200 + (1200 - sc.start.t);
+  const side = (teamId) => {
+    const roster = pbp.rosterSpots.filter((r) => r.teamId === teamId && byP.has(r.playerId));
+    const tag = (r) => ({ n: r.lastName.default, num: r.sweaterNumber, pos: r.positionCode });
+    const fwd = roster.filter((r) => ['C', 'L', 'R'].includes(r.positionCode));
+    const dmen = roster.filter((r) => r.positionCode === 'D').sort((a, b) => toi(b.playerId) - toi(a.playerId)).slice(0, 4);
+    // cluster forwards into trios by shared ice: the two who played most together, then whoever played most with both
+    const pool = fwd.filter((r) => toi(r.playerId) > 120).sort((a, b) => toi(b.playerId) - toi(a.playerId)).slice(0, 12);
+    const ov = new Map();
+    const o2 = (a, b) => { const k = a < b ? `${a}-${b}` : `${b}-${a}`; if (!ov.has(k)) ov.set(k, overlap(a, b)); return ov.get(k); };
+    let lines = [];
+    const left = new Set(pool.map((r) => r.playerId));
+    const byId = new Map(pool.map((r) => [r.playerId, r]));
+    for (let k = 0; k < 3 && left.size >= 3; k++) {
+      let best = null, bo = -1;
+      const ids = [...left];
+      for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) { const o = o2(ids[i], ids[j]); if (o > bo) { bo = o; best = [ids[i], ids[j]]; } }
+      const third = ids.filter((id) => !best.includes(id)).sort((a, b) => (o2(b, best[0]) + o2(b, best[1])) - (o2(a, best[0]) + o2(a, best[1])))[0];
+      const trio = [...best, third].map((id) => byId.get(id));
+      trio.forEach((r) => left.delete(r.playerId));
+      // the center: whoever took the most draws
+      trio.sort((a, b) => (fo.get(b.playerId) || [0, 0])[1] - (fo.get(a.playerId) || [0, 0])[1]);
+      lines.push(trio);
+    }
+    lines = lines.sort((a, b) => b.reduce((x, r) => x + toi(r.playerId), 0) - a.reduce((x, r) => x + toi(r.playerId), 0));
+    const d1 = dmen[0], d1p = dmen.slice(1).sort((a, b) => overlap(d1.playerId, b.playerId) - overlap(d1.playerId, a.playerId))[0];
+    const pairs = [[d1, d1p], dmen.filter((d) => d !== d1 && d !== d1p)].map((p) => p.filter(Boolean));
+    // on the ice at the starting faceoff
+    const on = new Set(shifts.filter((x) => x.team === teamId && x.s <= T0 && x.e > T0).map((x) => x.pid));
+    const score = lines.map((l) => l.filter((r) => on.has(r.playerId)).length);
+    const cur = score.indexOf(Math.max(...score));
+    const curStarts = lines[cur].filter((r) => on.has(r.playerId)).map((r) => (byP.get(r.playerId) || []).find((x) => x.s <= T0 && x.e > T0).s);
+    const shiftSec = curStarts.length ? Math.round(T0 - Math.min(...curStarts)) : 0;
+    const late = lines.map((l) => l.reduce((x, r) => x + toi(r.playerId, 2 * 1200 + 600, 3 * 1200), 0));
+    return {
+      lines: lines.map((l) => l.map(tag)),
+      fo: lines.map((l) => fo.get(l[0].playerId) || [0, 0]),
+      pairs: pairs.map((p) => p.map(tag)),
+      onIce: Math.max(0, cur), shiftSec: Math.min(shiftSec, 90),
+      late: late.indexOf(Math.max(...late)),
+    };
+  };
+  const youId = sc.you.home ? pbp.homeTeam.id : pbp.awayTeam.id, oppId = sc.you.home ? pbp.awayTeam.id : pbp.homeTeam.id;
+  const out = { you: side(youId), opp: side(oppId) };
+  if (out.you.lines.length < 3 || out.opp.lines.length < 3 || out.you.pairs[0].length < 2 || out.opp.pairs[0].length < 2) return null;
+  await mkdir(LINES, { recursive: true });
+  await writeFile(file, JSON.stringify(out));
+  return out;
+}
+
 async function main() {
   const config = JSON.parse(await readFile(join(ROOT, 'config.json'), 'utf8'));
   let endings;
@@ -308,6 +379,7 @@ async function main() {
       sc.tier = tier(sc);
       if (!sc.tier) continue;
       sc.label = label(sc);
+      try { sc.lines = await linesFor(sc); } catch (err) { console.warn(`lines ${sc.id}: ${err.message}`); sc.lines = null; }
       pool.push(trim(sc, so));
     }
     const sched = await schedule(pool);
