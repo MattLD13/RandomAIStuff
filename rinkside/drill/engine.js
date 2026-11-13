@@ -42,7 +42,7 @@
     ENTRY: [['carry', 'Carry in', 'Attack the middle with speed. You get the rush.'], ['wide', 'Drive wide', 'Take it down the wall, protect it low.'], ['dump', 'Dump & chase', 'Get it deep, go win it back.'], ['stretch', 'Stretch pass', 'Spring a forward. Breakaway if it connects.'], ['change', 'Regroup', 'Swing back, fresh legs. Costs time.']],
     RUSH: [['shoot', 'Shoot in stride', 'Rip it before they set up.'], ['drop', 'Drop to the trailer', 'Leave it for the late man.'], ['drive', 'Drive the net', 'Take it to the crease.'], ['delay', 'Pull up', 'Wait for support. Zone time.']],
     BREAK: [['high', 'Shoot high', 'Over the shoulder.'], ['five', 'Five-hole', 'Between the pads.'], ['deke', 'Deke', 'Make him move first.']],
-    ZONE: [['shoot', 'Point shot', 'From the point, through traffic.'], ['quick', 'Shoot it yourself', 'Quick shot from the wall.'], ['cycle', 'Cycle low', 'Work it below the dots.'], ['seam', 'Seam pass', 'Cross-ice for the one-timer.'], ['net', 'Net-front', 'Bump it to the slot.']],
+    ZONE: [['shoot', 'Point shot', 'From the point, through traffic.'], ['point', 'D-to-D', 'Up to the point, swing it across. Moves their box.'], ['quick', 'Shoot it yourself', 'Quick shot from the wall.'], ['cycle', 'Cycle low', 'Work it below the dots.'], ['seam', 'Seam pass', 'Cross-ice for the one-timer.'], ['net', 'Net-front', 'Bump it to the slot.']],
     THEIRS_N: [['press', 'Forecheck', 'Two in deep, force a turnover.'], ['sit', 'Trap', 'Clog the middle and wait.']],
     THEIRS_D: [['press', 'Pressure', 'Go take it from them.'], ['sit', 'Collapse', 'Protect the slot.']],
   };
@@ -115,7 +115,7 @@
     s.look = pickLook(s, mulberry(hash(`look${sc.id}`)));
     return s;
   }
-  const clone = (s) => ({ ...s, pulls: s.pulls.slice() });
+  const clone = (s) => ({ ...s, pulls: s.pulls.slice() });   // atPoint (D-to-D) rides along
   const diff = (s) => s.you - s.opp;
 
   function pickLook(s, r) {
@@ -123,6 +123,8 @@
     const w = list.map(([id]) => {
       if (id === 'box' && s.pulled) return 2.2;            // a team defending 6-on-5 collapses
       if ((id === 'odd' || id === 'trailer') && s.look === 'change') return 2;
+      if (s.atPoint && (id === 'door' || id === 'tired')) return s.dragged ? 3.2 : 1.9;   // swinging it D-to-D drags the box across
+      if (s.atPoint && id === 'box') return s.dragged ? 0.25 : 0.6;
       if (id === 'tired' && s.legs > 0.8) return 0.5;
       if ((id === 'cycle' || id === 'slow' || id === 'dump') && diff(s) < 0 && s.per === 'REG') return 1.5; // protecting a lead
       return 1;
@@ -184,6 +186,8 @@
     const is3 = three(s);
     const sk = skaters(s);
     const L = s.look, ph = s.phase, p = c.play;
+    const fromPoint = !!s.atPoint;
+    s.atPoint = false; s.dragged = false;
     const youMul = s.per === 'REG' && diff(s) < 0 ? R.youQ : R.tiedQ;
     const themMul = s.per === 'REG' && diff(s) < 0 ? R.themQ : is3 ? R.them3 : R.themTied;
     const off = adv(sk.you - sk.opp) * (is3 ? R.otOpen : 1) * (0.82 + 0.3 * s.legs) * youMul * (L === 'tired' && ph === 'ZONE' ? 1.15 : 1);
@@ -349,8 +353,19 @@
             if (s.pulled) { if (!engAttempt(0.4, '{oW}')) s.phase = 'ENTRY'; }
             else if (!against(0.15, 'breakaway')) s.phase = 'ENTRY';
           } else {
-            const res = shot(0.04 * (L === 'rebound' ? 1.4 : 1), 'point', '{D1}', look({ box: 0.65, points: 0.6, rebound: 0.15 }) || 0.3);
+            const res = shot(0.04 * (L === 'rebound' ? 1.4 : 1) * (fromPoint ? 1.15 : 1), 'point', '{D1}', Math.max(0.05, (look({ box: 0.65, points: 0.6, rebound: 0.15 }) || 0.3) - (fromPoint ? 0.15 : 0)));
             if (res !== 'goal' && !(res === 'save' && r() < (L === 'rebound' ? 0.8 : 0.22) && shot(0.1 * (L === 'rebound' ? 1.6 : 1), 'rebound', '{C}') === 'goal')) clear(1, 0.42);
+          }
+        } else if (p === 'point') {
+          spend(6, 10);
+          const lost = r() < (L === 'points' ? 0.26 : L === 'box' ? 0.02 : 0.05);
+          if (lost) {
+            say('pass', '{oW} jumps the pass to the point and is gone.', { ok: false, type: 'point' });
+            if (s.pulled) { if (!engAttempt(0.4, '{oW}')) s.phase = 'ENTRY'; }
+            else if (!against(L === 'points' ? 0.15 : 0.08, 'breakaway')) s.phase = 'ENTRY';
+          } else {
+            say('pass', '{C} moves it up to {D2}. {D2} swings it across to {D1}.', { ok: true, type: 'point' });
+            s.phase = 'ZONE'; s.atPoint = true; s.dragged = L === 'box'; s.bonus += L === 'box' ? 0.1 : 0.04;
           }
         } else if (p === 'quick') {
           spend(6, 10);
@@ -358,9 +373,9 @@
           if (res !== 'goal' && !(res === 'save' && r() < (L === 'rebound' ? 0.55 : 0.18) && shot(0.1, 'rebound', '{W2}') === 'goal')) clear(1, 0.38);
         } else if (p === 'cycle') {
           spend(18, 28);
-          if (r() < 0.62 + (s.legs - 0.5) * 0.12 + look({ box: 0.15, tired: 0.2, points: 0.05, door: -0.05 })) {
+          if (r() < 0.62 + (s.legs - 0.5) * 0.12 + look({ box: 0.06, tired: 0.2, points: 0.05, door: -0.05 })) {
             say('play', '{C} and {W2} work it low.');
-            if (shot(0.09 * (look({ tired: 1.6, box: 1.3 }) || 1), 'slot', '{W2}') !== 'goal') clear(1, 0.38);
+            if (shot(0.09 * (look({ tired: 1.6, box: 1.1 }) || 1), 'slot', '{W2}') !== 'goal') clear(1, 0.38);
           } else { say('turn', 'Cycle broken up along the wall.'); clear(1.25, 0.25); }
         } else if (p === 'seam') {
           spend(10, 15);
@@ -496,7 +511,7 @@
   // ---------- the typical NHL bench, who finishes every simulated game ----------
   const MIX = {
     REG: { FO_O: { back: 0.45, set: 0.25, tie: 0.3 }, FO_N: { fwd: 0.5, back: 0.5 }, FO_D: { out: 0.6, glass: 0.4 },
-      ENTRY: { carry: 0.35, wide: 0.15, dump: 0.35, stretch: 0.08, change: 0.07 }, ZONE: { shoot: 0.3, quick: 0.15, cycle: 0.25, seam: 0.15, net: 0.15 },
+      ENTRY: { carry: 0.35, wide: 0.15, dump: 0.35, stretch: 0.08, change: 0.07 }, ZONE: { shoot: 0.27, point: 0.12, quick: 0.13, cycle: 0.22, seam: 0.13, net: 0.13 },
       RUSH: { shoot: 0.4, drop: 0.2, drive: 0.2, delay: 0.2 }, BREAK: { high: 0.4, five: 0.3, deke: 0.3 },
       THEIRS_N: { press: 0.55, sit: 0.45 }, THEIRS_D: { press: 0.5, sit: 0.5 } },
     OT: { FO_O: { back: 0.6, go: 0.4 }, FO_N: { back: 0.6, go: 0.4 }, FO_D: { back: 0.6, go: 0.4 },

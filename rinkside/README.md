@@ -559,6 +559,10 @@ real players who were on the ice late in that game.
   `node drill/skill.mjs` plays the same endings with a bench that grades every call and always takes
   the best one: it ties the game about 42% of the time and wins about 32% (typical bench: 18% / 9%).
   Hard, but a good reader comes back far more often than a real bench did.
+- **Working the point:** D-to-D moves it up to one point and swings it across. It keeps the puck and
+  drags a sagging box across (the back door and tired legs show up more often next), and the next
+  call starts from the point with a cleaner shooting lane. Against a team pressuring your points,
+  the pass up can be jumped and go the other way.
 - **The rush and the breakaway:** carrying it in gives you a rush decision (shoot in stride, drop to
   the trailer, drive the net, pull up) against its own read (3-on-2, open trailer, backchecker
   closing, soft gap); a stretch pass that connects gives you a breakaway against the goalie's look

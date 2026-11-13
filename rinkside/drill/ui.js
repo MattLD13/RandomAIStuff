@@ -309,7 +309,8 @@
         rebound: { oD: [35, 23], oD2: [51, 23], oW: [30, 42], oW2: [56, 44], oC: [42, 33] },
       }[L] || { oD: [36, 24], oD2: [52, 24], oW: [30, 42], oW2: [56, 44], oC: [42, 33] });
       if (L === 'door') F.W1 = [67, 27];
-      puck = [F.C[0] + 1.6, F.C[1] - 1.6];
+      if (s.atPoint) { F.D1 = [18, 68]; F.C = [24, 40]; }
+      puck = s.atPoint ? [F.D1[0] + 1.6, F.D1[1] - 1.6] : [F.C[0] + 1.6, F.C[1] - 1.6];
     } else if (s.phase === 'THEIRS' && !s.deep) {
       cy = 100;
       Object.assign(F, { C: [42, 112], W1: [28, 96], W2: [58, 96], D1: [30, 134], D2: [56, 134], X: [42, 120] });
@@ -339,7 +340,7 @@
     if (s.phase === 'ENTRY') return 'D1';
     if (s.phase === 'RUSH') return 'C';
     if (s.phase === 'BREAK') return 'W1';
-    if (s.phase === 'ZONE') return 'C';
+    if (s.phase === 'ZONE') return s.atPoint ? 'D1' : 'C';
     if (s.phase === 'THEIRS') return s.deep ? (s.look === 'shot' ? 'oD' : s.look === 'cycle' ? 'oC' : 'oW') : (s.look === 'dump' ? 'oC' : 'oD');
     return null;
   };
@@ -366,7 +367,7 @@
   }
   function tagFor(s) {
     const sk = D.skaters(s);
-    const where = { FO_O: 'Faceoff, their end', FO_N: 'Faceoff, center ice', FO_D: 'Faceoff, your end', ENTRY: 'Your puck, coming up ice', RUSH: 'On the rush', BREAK: 'Breakaway!', ZONE: 'Your puck in their end', THEIRS: s.deep ? 'Their puck in your end' : 'Their puck, neutral zone' }[s.phase];
+    const where = { FO_O: 'Faceoff, their end', FO_N: 'Faceoff, center ice', FO_D: 'Faceoff, your end', ENTRY: 'Your puck, coming up ice', RUSH: 'On the rush', BREAK: 'Breakaway!', ZONE: s.atPoint ? 'Your puck at the point' : 'Your puck in their end', THEIRS: s.deep ? 'Their puck in your end' : 'Their puck, neutral zone' }[s.phase];
     const str = s.pulled ? `${sk.you} on ${sk.opp} · empty net` : s.pp > 0 ? `Power play ${fmt(s.pp)}` : s.pp < 0 ? `Penalty kill ${fmt(-s.pp)}` : `${sk.you} on ${sk.opp}`;
     return `${where} · ${str}`;
   }
@@ -392,7 +393,7 @@
       Object.assign(T, { high: [[52, 8], 'Shoot high'], five: [[42.5, 23], 'Five-hole'], deke: [[31, 18], 'Deke'] });
     } else if (k === 'ZONE') {
       T.shoot = [[42.5, 7.5], three ? 'Shoot' : `Point shot (${n.D1})`];
-      if (!three) T.quick = [[at('C')[0] - 6, at('C')[1] + 7], `${n.C} shoots`];
+      if (!three) { T.quick = [[at('C')[0] - 6, at('C')[1] + 7], `${n.C} shoots`]; T.point = [at('D2'), s.atPoint ? `Swing it back (${n.D2})` : `D-to-D (${n.D2})`]; }
       T.seam = [at('W1'), three ? `Back door: ${n.W1}` : `Seam to ${n.W1}`];
       if (three) T.peel = [[42, 68], 'Peel back'];
       else { T.cycle = [[9, 21], 'Cycle low']; T.net = [at('W2'), `Bump to ${n.C}`]; }
@@ -408,10 +409,14 @@
   function drawTargets(list, origin, z = 1) {
     const g = $('targets');
     const sc = 1 / z;
+    const F = G && G.s && G.s.per !== 'SO' && origin ? formation(G.s).F : null;   // where the skaters are heading
     g.innerHTML = list.map((t) => {
       const [x, y] = t.at, lx = clamp(x, 10 * sc, 85 - 10 * sc), above = y < 18 || y > (origin ? origin[1] : 0) ? 1 : -1;
-      let ly = y + above * 6.2 * sc, lxx = lx, anchor = 'middle';
-      if (y < 18 && Math.abs(x - 42.5) < 6) { ly = y + 1; lxx = x - 4.5 * sc; anchor = 'end'; }   // at the net: label beside it, not on the goalie
+      // a target on a teammate: label above him, clear of his name (names sit below your skaters)
+      const onMate = !!F && ['C', 'W1', 'W2', 'D1', 'D2', 'X'].some((id) => F[id] && !$(`p-${id}`).classList.contains('off') && dist(F[id], t.at) < 2.5);
+      let ly = y + (onMate ? -5.6 : above * 6.2) * sc, lxx = lx, anchor = 'middle';
+      if (y < 18 && Math.abs(x - 42.5) < 6) { ly = y + 1; lxx = x - 4.5 * sc; anchor = 'end'; }        // at the net: label beside it, not on the goalie
+      else if (y < 30 && Math.abs(x - 42.5) < 8) { ly = y + 1; lxx = x + 4.2 * sc; anchor = 'start'; } // in the slot: label to the side
       return `<g class="tgt" data-p="${t.play}">${origin ? `<path class="lane" d="M${origin[0]} ${origin[1]} L${x} ${y}" style="stroke-width:${0.45 * sc}"/>` : ''}
         <circle class="halo" cx="${x}" cy="${y}" r="${3.6 * sc}"/><circle class="ring" cx="${x}" cy="${y}" r="${2.9 * sc}" style="stroke-width:${0.4 * sc}"/>
         <text class="num" x="${x}" y="${y}" style="font-size:${3 * sc}px">${t.n}</text>
@@ -716,6 +721,13 @@
       const recv = d.ok ? tk.filter((t) => !t.startsWith('o')).pop() || 'W1' : tk.find((t) => t.startsWith('o')) || nearestOf(OPP, P('puck'));
       let rp = P(recv);
       Sound.play('pass');
+      if (d.ok && d.type === 'point') {
+        const p2 = P('D2'), p1 = P('D1');
+        await puckTo([p2[0] - 1.4, p2[1] - 1.4], 320, { trail: true }); hl('D2'); Sound.play('pass');
+        await Promise.all([tween('oW2', [p2[0] - 6, p2[1] - 6], 420), tween('oW', [p1[0] + 6, p1[1] - 6], 520), tween('oD', [32, 26], 520), tween('oD2', [46, 27], 520)]);
+        await puckTo([p1[0] + 1.6, p1[1] - 1.6], 420, { trail: true }); hl('D1'); await sleep(200);
+        return;
+      }
       if (d.ok && d.type === 'stretch') { rp = [42.5, 42]; await Promise.all([tween(recv, rp, 700, { ease: easeOut }), puckTo([rp[0] + 1, rp[1] - 1], 620, { trail: true, ctrl: [rp[0] + 14, (rp[1] + P('puck')[1]) / 2] })]); }
       else if (d.ok) { await puckTo([rp[0] + 1.2, rp[1] - 1.2], 300, { trail: true }); hl(recv); }
       else { const mid = lerp(P('puck'), d.type === 'stretch' ? [16, 74] : P(tk.filter((t) => !t.startsWith('o')).pop() || 'W1'), 0.55); await Promise.all([tween(recv, mid, 320), puckTo(mid, 320, { trail: true })]); Sound.play('stick'); hl(recv); }
