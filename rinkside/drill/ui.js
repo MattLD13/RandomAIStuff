@@ -325,7 +325,7 @@
     if (s.ctx === 'FO_O') return { fo: true, fz: 'O', look: s.look, pulled: s.pulled };
     if (s.ctx === 'YOU_O') return { z: 'O', poss: 'you', setup: A.setup || 'umb', look: s.look, pulled: s.pulled };
     if (s.ctx === 'YOU_N') return { z: 'N', poss: 'you', look: s.look, pulled: s.pulled };
-    return { z: 'N', poss: 'them', look: s.look, pulled: s.pulled };
+    return { z: s.tz === 'D' ? 'D' : 'N', poss: 'them', look: s.look, pulled: s.pulled };
   };
   function onIceFor(ctx, s) {
     const sk = D.skaters(s), is3 = D.three(s);
@@ -350,7 +350,7 @@
   }
   function tagFor(s) {
     const sk = D.skaters(s);
-    const where = { FO_O: 'Faceoff, their end', YOU_N: 'Your puck, coming up ice', YOU_O: 'Your puck in their end', THEM: 'Their puck' }[s.ctx] || '';
+    const where = whereWords(s);
     const str = s.pulled ? `${sk.you} on ${sk.opp} · empty net` : s.pp > 0 ? `Power play ${fmt(s.pp)}` : s.pp < 0 ? `Penalty kill ${fmt(-s.pp)}` : `${sk.you} on ${sk.opp}`;
     return `${where} · ${str}`;
   }
@@ -463,6 +463,7 @@
   const pctTxt = (p) => (p.ss ? `${p.sg} G · ${((100 * p.sg) / p.ss).toFixed(0)}%` : '');
   function describe(c) { if (!c.focus) return callName(c.call); return c.call[0] === 'f' && c.call.length > 1 && c.call !== 'fpoint' || c.call === 'fpoint' ? `${callName(c.call)} (${playerOf(c.focus).n} on the draw)` : `${callName(c.call)} → ${playerOf(c.focus).n}`; }
   const ctxWords = { FO_O: 'Faceoff in their end', YOU_N: 'Your puck, coming up ice', YOU_O: 'Your puck in their end', THEM: 'Their puck' };
+  const whereWords = (s) => (s.ctx === 'THEM' ? (s.pulled ? 'Their puck, your net is empty' : s.tz === 'D' ? 'Their puck in your end' : 'Their puck, coming up ice') : ctxWords[s.ctx] || '');
 
   // the call menu
   function spot() {
@@ -476,7 +477,7 @@
     const d = D.diff(s);
     const score = d < 0 ? `down ${-d}` : d > 0 ? `up ${d}` : 'tied';
     const str = s.pulled ? `${sk.you} on ${sk.opp}, net empty` : s.pp > 0 ? `power play ${fmt(s.pp)}` : s.pp < 0 ? `penalty kill ${fmt(-s.pp)}` : `${sk.you} on ${sk.opp}`;
-    $('c-situ').innerHTML = `<b>${esc(ctxWords[s.ctx] || '')}</b> · ${esc(score)}, ${fmt(s.t)} left${s.per === 'REG' ? '' : ` in ${perLabel(s)}`} · ${esc(str)}${s.drawn ? ' · <b>Timeout: pick your drawn-up play</b>' : ''}${s.pulled && s.ctx === 'THEM' ? ' · <b>your net is empty</b>' : ''}`;
+    $('c-situ').innerHTML = `<b>${esc(whereWords(s))}</b> · ${esc(score)}, ${fmt(s.t)} left${s.per === 'REG' ? '' : ` in ${perLabel(s)}`} · ${esc(str)}${s.drawn ? ' · <b>Timeout: pick your drawn-up play</b>' : ''}`;
     const [, title, detail] = D.lookInfo(s);
     $('c-look').textContent = fill(title);
     const e = s.olines[s.oon].e;
@@ -602,7 +603,7 @@
   };
   const PASSES = { umb: [['D1', 'LW'], ['LW', 'D1'], ['D1', 'C'], ['C', 'D1'], ['D1', 'D2'], ['D2', 'D1']], over: [['LW', 'C'], ['C', 'LW'], ['LW', 'D1'], ['D1', 'LW'], ['C', 'RW']], crash: [['LW', 'D1'], ['D1', 'D2'], ['D2', 'RW'], ['LW', 'C']] };
   // where the event happens: the decision context at that moment
-  const zoneOf = (d) => (d.ctx === 'YOU_O' || d.ctx === 'FO_O' ? { z: 'O', poss: 'you' } : d.ctx === 'YOU_N' ? { z: 'N', poss: 'you' } : d.ctx === 'THEM' ? { z: 'N', poss: 'them' } : null);
+  const zoneOf = (d) => (d.ctx === 'YOU_O' || d.ctx === 'FO_O' ? { z: 'O', poss: 'you' } : d.ctx === 'YOU_N' ? { z: 'N', poss: 'you' } : d.ctx === 'THEM' ? { z: d.tz === 'D' ? 'D' : 'N', poss: 'them' } : null);
   async function restage(d, ms = 450) {
     const zp = d && (d.z ? { z: d.z, poss: d.poss } : zoneOf(d));
     if (!zp) return;
@@ -619,6 +620,7 @@
     if (e.text && k !== 'cycle') tick(e.text);
     if (k === 'timeout') { Sound.play('whistle'); flash('Timeout', 'info', 1000); await sleep(1000); return; }
     if (k === 'pull') { flash(d.five ? 'All in' : 'Net empty', 'info', 1100); show('X', true); setPos('X', [88, 108]); await Promise.all([tween('G', [88, 100], 900), tween('X', [45, Math.min(P('puck')[1] + 10, 150)], 900)]); show('G', false); return; }
+    if (k === 'return') { show('G', true); setPos('G', [88, 100]); await tween('G', [42.5, 187], 800); $('rink').classList.remove('empty'); return; }
     if (k === 'change' || k === 'ochange') {
       const ids = k === 'change' ? YOU : OPP;
       await Promise.all(ids.map((id) => tween(id, [86, P(id)[1]], 380)));

@@ -538,9 +538,12 @@ game's real lines. One call per possession, and the possession plays out on the 
   from the circle, Center shoots off the draw, Tie up and crash, Win it to the wall and work it low;
   you pick who takes the draw (your centers, with their real faceoff record that night), and the read
   is about the draw (their center owns the dot, struggling, wingers cheating in, goalie fighting it).
-  Their puck: Play it straight, Forecheck hard, Clog the middle, Sell out (late, trailing). With your
-  net empty: Hunt the puck, Get in the lanes (a blocked or missed try is often icing), Everyone on
-  the puck. Each defensive call with the net empty gives up a goal 21-30% of the time.
+  Their puck coming up ice: Stand them up at the line, Forecheck hard, Clog the middle. In your end:
+  Play it straight, Pressure the puck, Collapse and block shots, Take the body (penalty risk). Late
+  and trailing, Sell out joins both. With your net empty: Hunt the puck, Get in the lanes (a blocked
+  or missed try is often icing), Everyone on the puck, Goalie back in. Each zone has its own reads
+  (looking long, carrying it slowly, dumping to change; cycling to kill clock, looking to shoot, a man
+  at your net; looking to clear it, holding it patiently, scrambling for it), each with a best call.
 - **Who gets it.** Leave it on Anyone, or feed one of your players, shown with his goals and shots
   that night and his season goals and shooting %. His season shooting (shrunk toward league average)
   scales the shot; the defense keys on him a little. Feeding a star on the bench sends his line out.

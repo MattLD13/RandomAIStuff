@@ -11,7 +11,7 @@
   // ---------- rates (tuned by drill/check.mjs against ~950 real late one-goal endings) ----------
   const R = {
     adv: { '-2': 0.18, '-1': 0.42, '0': 1, '1': 1.75, '2': 2.4, '3': 2.8 },
-    youQ: 0.33, tiedQ: 1, themQ: 1, themTied: 2.8, them3: 3.2, otOpen: 0.5, engMul: 1.95,
+    youQ: 0.345, tiedQ: 1, themQ: 1, themTied: 2.4, them3: 3.0, otOpen: 0.5, engMul: 1.95,
     engClear: 0.1, icing: 0.35, penOpp: 0.05, penYou: 0.03,
     pullAt: { '-1': 100, '-2': 200 }, lgSh: 0.095, pace: 1.6,
   };
@@ -44,7 +44,12 @@
     pull: ['Pull the goalie, then attack', 'Six on five.'],
     allin: ['Five forwards, all in', 'Goalie out, no D back. Everything for the tying goal.'],
     to: ['Timeout, draw up a play', 'Stop the clock, rest your bench, then pick the set play.'],
+    gap: ['Stand them up at the line', 'Tight gap at your blue line. Make them dump it or turn it over.'],
     straight: ['Play it straight', 'Protect the slot, take it back when they lose it.'],
+    pressure: ['Pressure the puck', 'Win it on the wall. Leaves a man open if you miss.'],
+    block: ['Collapse and block shots', 'Everyone inside the dots. Take away the point.'],
+    body: ['Take the body', 'Finish every check, separate man from puck. Penalty risk.'],
+    back: ['Goalie back in', 'Get him back in the net and defend. The pull is over for now.'],
     press: ['Forecheck hard', 'Go for the turnover. Odd-man rush if it fails.'],
     trap: ['Clog the middle', 'Make them dump it. You get it back, a few seconds later.'],
     sellout: ['Sell out, everyone up', 'All five hunt the puck. Burned if they get by.'],
@@ -56,7 +61,9 @@
   const LOOKS = {
     YOU_N: [['trap', '1-3-1 trap', 'Three across the neutral zone. Nothing up the middle.'], ['change', 'They are changing', 'Two forwards heading for the bench.'], ['gap', 'Tight gap at the line', 'Their D are standing up at the blue line.'], ['soft', 'Soft through the middle', 'Their forwards are slow getting back.']],
     YOU_O: [['box', 'Collapsing in front', 'Five inside the dots. They will give you the point.'], ['pressure', 'Jumping your points', 'Their wingers are pressuring your D at the line.'], ['sag', 'Sagging off', 'Soft on the puck, and {oG} is leaking rebounds.']],
-    THEM: [['clock', 'Killing clock', 'Cycling along the wall, not looking to shoot.'], ['stretch', 'Looking long', 'A forward is hanging at your blue line.'], ['shoot', 'Looking to shoot', 'Their D are walking the line for a lane.']],
+    THEM_N: [['stretch', 'Looking long', 'A forward is hanging at your blue line.'], ['slow', 'Their D carrying it slowly', 'No hurry. Killing clock behind their own line.'], ['dump', 'Dumping it to change', 'Getting it deep and heading for the bench.']],
+    THEM_D: [['clock', 'Cycling to kill clock', 'Along the wall, not looking to shoot.'], ['shoot', 'Looking to shoot', 'Their D are walking the line for a lane.'], ['screen', 'A man parked at your net', 'Screening {G}, waiting for a tip.']],
+    EMPTY: [['clear', 'Looking to clear it', 'They just want it out, toward your empty net.'], ['patient', 'Holding it, patient', 'Waiting for a clean look at the empty net.'], ['scramble', 'Scrambling for it', 'Loose puck along the wall.']],
   };
   LOOKS.FO_O = [['strong', 'Their center owns the dot', '{oC} has been winning almost every draw.'], ['weak', 'Their center is struggling', '{oC} keeps getting beat clean.'], ['cheat', 'Their wingers are cheating in', 'Two of them leaning on the dot. Your point is open.'], ['leaky', '{oG} is fighting the puck', 'Rebounds everywhere. Get pucks and bodies to the net.']];
 
@@ -84,7 +91,7 @@
       on, oon, onSec: shiftSec, oonSec: oShift,
       fo: ro.you.fo.map(([w, t]) => (w + 5) / (t + 10)), ofo: L ? L.opp.fo.map(([w, t]) => (w + 5) / (t + 10)) : [0.5, 0.5, 0.5],
       tal: { lines: ro.you.lines.map((l) => l.map(talent)), pairs: ro.you.pairs.map((p) => p.map(talent)) },
-      ctx: sc.start.zone === 'O' ? 'FO_O' : 'FO', fz: sc.start.zone, look: 'box', oppStuck: false, bonus: 0,
+      ctx: sc.start.zone === 'O' ? 'FO_O' : 'FO', tz: 'N', fz: sc.start.zone, look: 'box', oppStuck: false, bonus: 0,
       over: false, won: null, how: null, soWin: so.win, pulls: [], last: null,
     };
     if (s.ctx === 'FO') drawFaceoff(s, mulberry(hash(`fo${sc.id}`)), () => {});
@@ -97,13 +104,14 @@
   const pairOf = (line) => (line === 2 ? 1 : 0);
 
   function pickLook(s, r) {
-    const list = LOOKS[s.ctx] || LOOKS.YOU_O;
+    const list = LOOKS[lkey(s)] || LOOKS.YOU_O;
     const w = list.map(([id]) => (id === 'box' && s.pulled ? 2.2 : id === 'clock' && diff(s) < 0 ? 1.6 : id === 'change' && s.olines[s.oon].e < 0.5 ? 2 : 1));
     let x = r() * w.reduce((a, b) => a + b, 0);
     for (let i = 0; i < list.length; i++) { if (x < w[i]) return list[i][0]; x -= w[i]; }
     return list[0][0];
   }
-  const lookInfo = (s) => (LOOKS[s.ctx] || LOOKS.YOU_O).find((l) => l[0] === s.look) || (LOOKS[s.ctx] || LOOKS.YOU_O)[0];
+  const lkey = (s) => (s.ctx === 'THEM' ? (s.pulled ? 'EMPTY' : s.tz === 'D' ? 'THEM_D' : 'THEM_N') : s.ctx);
+  const lookInfo = (s) => (LOOKS[lkey(s)] || LOOKS.YOU_O).find((l) => l[0] === s.look) || (LOOKS[lkey(s)] || LOOKS.YOU_O)[0];
 
   function skaters(s) {
     const base = three(s) ? 3 : 5;
@@ -123,8 +131,11 @@
     if (s.ctx === 'FO_O') base = ['fpoint', 'fcircle', 'fquick', 'ftie', 'fwall'];
     else if (s.ctx === 'YOU_N') base = ['go', 'setup', 'point', 'crash'].concat(s.lines[s.on].e < 0.5 && !s.pulled ? ['dump'] : []);
     else if (s.ctx === 'YOU_O') base = ['shoot', 'low', 'point', 'crash'];
-    else if (s.pulled) return ['hunt', 'lanes', 'swarm'];
-    else return ['straight', 'press', 'trap'].concat(s.per === 'REG' && diff(s) < 0 && s.t < 240 ? ['sellout'] : []);
+    else if (s.pulled) return ['hunt', 'lanes', 'swarm', 'back'];
+    else {
+      const late = s.per === 'REG' && diff(s) < 0 && s.t < 240 ? ['sellout'] : [];
+      return (s.tz === 'D' ? ['straight', 'pressure', 'block', 'body'] : ['gap', 'press', 'trap']).concat(late);
+    }
     if (pullOK) base = base.concat(['pull', 'allin']);
     if (s.ctx === 'FO_O' && s.to && s.per === 'REG') base = base.concat(['to']);
     return base;
@@ -146,7 +157,8 @@
   function drawFaceoff(s, r, say) {
     const won = r() < clamp(0.5 + (s.fo[s.on] - s.ofo[s.oon]) * 0.6, 0.3, 0.7);
     say('fo', won ? '{C} wins the draw.' : '{oC} wins the draw.', { won, zone: s.fz });
-    s.ctx = s.fz === 'D' ? (won ? 'YOU_N' : 'THEM') : won ? 'YOU_N' : 'THEM';
+    s.ctx = won ? 'YOU_N' : 'THEM';
+    s.tz = s.fz === 'D' ? 'D' : 'N';
     s.t = Math.max(0, s.t - 2);
   }
 
@@ -157,7 +169,7 @@
 
   function resolve(s, c, rng, say = () => {}) {
     const r = rng;
-    const tag = (extra = {}) => ({ line: s.on, oline: s.oon, ctx: s.ctx, look: s.look, pulled: s.pulled, five: s.five, ...extra });
+    const tag = (extra = {}) => ({ line: s.on, oline: s.oon, ctx: s.ctx, tz: s.tz, look: s.look, pulled: s.pulled, five: s.five, ...extra });
     const sayT = (k, text, extra) => say(k, text, tag(extra));
     let call = c.call, focus = c.focus || null;
     const ctx0 = s.ctx;
@@ -254,17 +266,17 @@
       if (s.pulled) {
         if (engTry(R.engClear * risk)) return;
         if (r() < R.icing) { s.ctx = 'FO_O'; s.oppStuck = true; sayT('icing', '{oD1} fires at the empty net and misses. Icing: their line has to stay out.'); return; }
-        s.ctx = r() < 0.55 ? 'YOU_N' : 'THEM'; sayT('clear', s.ctx === 'YOU_N' ? 'Cleared. {D1} goes back for it.' : 'Cleared. They have it at center.');
+        s.ctx = r() < 0.55 ? 'YOU_N' : 'THEM'; s.tz = 'N'; sayT('clear', s.ctx === 'YOU_N' ? 'Cleared. {D1} goes back for it.' : 'Cleared. They have it at center.');
         return;
       }
       if (r() < 0.12) { s.ctx = 'FO_O'; s.oppStuck = true; sayT('icing', 'They ice it. Their line has to stay out.'); return; }
-      s.ctx = r() < 0.45 ? 'YOU_N' : 'THEM'; sayT('clear', '{oD1} clears it.');
+      s.ctx = r() < 0.45 ? 'YOU_N' : 'THEM'; s.tz = 'N'; sayT('clear', '{oD1} clears it.');
     };
     // a turnover at their blue line: the rush comes back at you
     const turnover = (q) => {
       if (s.pulled) { if (engTry(0.28, '{oC}')) return; s.ctx = 'YOU_N'; sayT('take', 'It misses. {D1} retrieves.'); return; }
-      if (r() < 0.45) { if (against(q, 'rush', '{oC}')) return; s.ctx = r() < 0.5 ? 'YOU_N' : 'THEM'; return; }
-      s.ctx = 'THEM';
+      if (r() < 0.45) { if (against(q, 'rush', '{oC}')) return; s.ctx = r() < 0.5 ? 'YOU_N' : 'THEM'; s.tz = 'D'; return; }
+      s.ctx = 'THEM'; s.tz = 'N';
     };
 
     // ---------- the possession ----------
@@ -328,45 +340,89 @@
       } else { spend(5, 9); after(shot(0.055 * look({ sag: 2.1, box: 0.65, pressure: 0.9 }), 'crease', 'fwd'), 0.42, 0.45 * look({ sag: 1.3 }), 0.12); }
     } else {
       // their puck
-      if (s.pulled) {
+      const tz0 = s.tz;
+      const toYou = (why) => { s.ctx = 'YOU_N'; if (why) sayT('take', why); };
+      const theirsIn = (z) => { s.ctx = 'THEM'; s.tz = z; };
+      if (s.pulled && call === 'back') {
+        spend(2, 4);
+        s.pulled = false; s.five = false;
+        sayT('return', '{G} back in the net. You defend five on five.');
+        theirsIn(tz0 || 'N');
+      } else if (s.pulled) {
         // your net is empty
         if (call === 'lanes') {
           spend(5, 9);
           sayT('play', 'Everyone into the lanes between the puck and your net.');
-          if (engTry(0.11 * look({ shoot: 1.25, clock: 0.7, stretch: 1.1 }), '{oD1}')) {}
-          else if (r() < 0.45) { s.ctx = 'FO_O'; s.oppStuck = true; sayT('icing', 'Their try at the empty net is blocked and goes the length. Icing.'); }
-          else { s.ctx = 'YOU_N'; sayT('take', 'Blocked. {D1} picks it up.'); }
+          if (engTry(0.11 * look({ patient: 1.6, clear: 0.3, scramble: 1.1 }), '{oD1}')) {}
+          else if (r() < 0.45 * look({ clear: 1.6, patient: 0.8 })) { s.ctx = 'FO_O'; s.oppStuck = true; sayT('icing', 'Their try at the empty net is blocked and goes the length. Icing.'); }
+          else toYou('Blocked. {D1} picks it up.');
         } else {
           const all = call === 'swarm';
           spend(3, 6);
-          const steal = (all ? 0.56 : 0.46) + lk({ clock: 0.12, stretch: -0.1, shoot: -0.05 });
+          const steal = (all ? 0.56 : 0.46) + (all ? lk({ scramble: 0.2, patient: -0.08, clear: -0.05 }) : lk({ scramble: 0.08, patient: 0.12, clear: -0.05 }));
           if (r() < steal) { sayT('take', all ? 'Six on the puck. {LW} strips it.' : '{LW} hunts it down and wins it.'); s.ctx = 'YOU_O'; if (r() < (all ? 0.55 : 0.35)) after(shot(all ? 0.11 : 0.08, 'slot', 'fwd'), 0.45, 0.2); }
           else {
             sayT('beat', 'They get it past you.');
-            if (!engTry((all ? 0.3 : 0.2) * look({ stretch: 1.3 }), '{oC}')) { if (r() < 0.4) { s.ctx = 'FO_O'; s.oppStuck = true; sayT('icing', 'It misses the empty net and goes the length. Icing.'); } else { s.ctx = 'YOU_N'; sayT('take', 'It misses. {D1} retrieves.'); } }
+            if (!engTry((all ? 0.3 : 0.2) * look({ patient: 1.3, clear: 0.9 }), '{oC}')) { if (r() < 0.4) { s.ctx = 'FO_O'; s.oppStuck = true; sayT('icing', 'It misses the empty net and goes the length. Icing.'); } else toYou('It misses. {D1} retrieves.'); }
           }
         }
-      } else if (call === 'straight') {
-        spend(7, 12);
-        sayT('play', s.look === 'clock' ? 'They cycle it along the wall.' : 'You protect the slot.');
-        if (r() < 0.4 * look({ shoot: 1.5, clock: 0.5 })) { if (!against(0.055 * look({ shoot: 1.25 }), r() < 0.5 ? 'point' : 'slot', r() < 0.5 ? '{oD1}' : '{oRW}')) s.ctx = r() < 0.35 ? 'FO_D' : 'YOU_N'; }
-        else { s.ctx = 'YOU_N'; sayT('take', 'They lose it. {D1} takes it back.'); }
-      } else if (call === 'trap') {
-        spend(9, 14);
-        sayT('play', 'Three across the neutral zone. They have to dump it.');
-        if (r() < 0.06 * look({ stretch: 0.3, shoot: 1.2 })) { if (!against(0.06, 'point', '{oD1}')) s.ctx = 'YOU_N'; }
-        else { s.ctx = 'YOU_N'; sayT('take', '{oC} dumps it in. {D1} goes back for it.'); }
-      } else {
-        const sell = call === 'sellout';
-        spend(sell ? 3 : 5, sell ? 6 : 9);
-        const steal = (sell ? 0.52 : 0.42) + lk({ clock: 0.15, stretch: -0.15 }) + (eY - 0.6) * 0.1;
-        if (r() < steal) {
-          sayT('take', sell ? 'Everyone up. {LW} strips them in their end.' : '{LW} forces the turnover.');
-          s.ctx = 'YOU_O';
-          if (r() < (sell ? 0.6 : 0.45)) after(shot(sell ? 0.1 : 0.08, 'slot', 'fwd'), 0.4, 0.2);
+      } else if (tz0 === 'D') {
+        // they have it in your end
+        if (call === 'straight') {
+          spend(7, 12);
+          sayT('play', 'You protect the slot.');
+          if (r() < 0.4 * look({ shoot: 1.5, clock: 0.5, screen: 1.2 })) { if (!against(0.055 * look({ shoot: 1.2, screen: 0.85 }), r() < 0.5 ? 'point' : 'slot', r() < 0.5 ? '{oD1}' : '{oRW}')) { if (r() < 0.35) s.ctx = 'FO_D'; else toYou(); } }
+          else if (r() < 0.25 * look({ clock: 1.8 })) { sayT('play', 'They keep cycling. The clock runs.'); theirsIn('D'); }
+          else toYou('They lose it. {D1} takes it back.');
+        } else if (call === 'pressure') {
+          spend(5, 9);
+          if (r() < 0.45 + lk({ clock: 0.27, screen: -0.05, shoot: -0.1 }) + (eY - 0.6) * 0.1) {
+            sayT('take', '{D2} wins it on the wall.');
+            s.ctx = 'YOU_N'; s.bonus += 0.1;
+          } else { sayT('beat', 'They move it past the pressure.'); if (!against(0.09 * look({ shoot: 1.4, screen: 1.3 }), 'slot', '{oRW}')) { if (r() < 0.55) toYou(); else theirsIn('D'); } }
+        } else if (call === 'block') {
+          spend(8, 13);
+          sayT('play', 'Everyone collapses inside the dots.');
+          if (r() < 0.45 * look({ shoot: 1.5, clock: 0.4 })) { if (!against(0.025 * look({ screen: 1.6, shoot: 0.8 }), 'point', '{oD1}')) toYou('Blocked. {D1} clears it up the wall.'); }
+          else if (L === 'clock' && r() < 0.5) { sayT('play', 'They cycle around you. The clock runs.'); theirsIn('D'); }
+          else toYou('They give it up. {D1} takes it.');
+        } else if (call === 'body') {
+          spend(6, 10);
+          if (r() < 0.07) { s.pp = -120; s.ctx = 'FO'; s.fz = 'D'; sayT('pk', 'Penalty on {D2}. Penalty kill.'); }
+          else if (r() < 0.46 + lk({ screen: 0.38, clock: 0.02, shoot: -0.08 })) toYou(L === 'screen' ? '{D2} clears the man out of the crease and takes the puck.' : '{D2} finishes the check and separates man from puck.');
+          else { sayT('beat', 'The hit misses. A man comes free.'); if (!against(0.08 * look({ screen: 0.9 }), 'slot', '{oRW}')) { if (r() < 0.5) toYou(); else theirsIn('D'); } }
         } else {
-          sayT('beat', sell ? 'They get by everyone.' : 'They beat the forecheck.');
-          if (!against((sell ? 0.22 : 0.11) * look({ stretch: 1.5 }), sell ? 'breakaway' : 'rush', '{oC}')) s.ctx = r() < 0.65 ? 'YOU_N' : 'THEM';
+          spend(3, 6);
+          if (r() < 0.4 + lk({ clock: 0.1 })) { sayT('take', 'Everyone on the puck. {LW} strips it.'); s.ctx = 'YOU_O'; if (r() < 0.5) after(shot(0.1, 'slot', 'fwd'), 0.4, 0.2); }
+          else { sayT('beat', 'They get out of the zone with numbers.'); if (!against(0.26, 'rush', '{oC}')) toYou(); }
+        }
+      } else {
+        // they are coming up ice
+        if (call === 'gap') {
+          spend(6, 10);
+          const x = r();
+          const steal = 0.18 + lk({ slow: 0.1, stretch: -0.06 }), dumped = 0.55 + lk({ dump: 0.15, stretch: -0.2, slow: -0.1 });
+          if (x < steal) { sayT('take', '{D1} stands up {oLW} at the line and takes it.'); s.ctx = 'YOU_N'; s.bonus += 0.08; }
+          else if (x < steal + dumped) { if (r() < 0.72) toYou('They have to dump it. {D1} retrieves.'); else { sayT('dumpin', 'They dump it in and win the race.'); theirsIn('D'); } }
+          else { sayT('beat', L === 'stretch' ? 'A long pass gets in behind your D.' : '{oLW} beats your D wide.'); if (!against(0.07 * look({ stretch: 1.9 }), L === 'stretch' ? 'breakaway' : 'rush', '{oLW}')) theirsIn('D'); }
+        } else if (call === 'trap') {
+          spend(9, 14);
+          sayT('play', 'Three across the neutral zone. They have to dump it.');
+          if (r() < 0.05 * look({ stretch: 0.3, slow: 0.6 })) { if (!against(0.06, 'point', '{oD1}')) toYou(); }
+          else if (L === 'stretch' && r() < 0.5) { toYou('The long pass is picked off in the middle. Go!'); s.bonus += 0.15; dur -= 4; }
+          else toYou('{oC} dumps it in. {D1} goes back for it.');
+        } else {
+          const sell = call === 'sellout';
+          spend(sell ? 3 : 5, sell ? 6 : 9);
+          const steal = (sell ? 0.44 : 0.42) + lk({ slow: 0.15, stretch: -0.15, dump: -0.05 }) + (eY - 0.6) * 0.1;
+          if (r() < steal) {
+            sayT('take', sell ? 'Everyone up. {LW} strips them in their end.' : '{LW} forces the turnover.');
+            s.ctx = 'YOU_O';
+            if (r() < (sell ? 0.6 : 0.45)) after(shot(sell ? 0.1 : 0.08, 'slot', 'fwd'), 0.4, 0.2);
+          } else {
+            sayT('beat', sell ? 'They get by everyone.' : 'They beat the forecheck.');
+            if (!against((sell ? 0.27 : 0.11) * look({ stretch: 1.5 }), sell ? 'breakaway' : 'rush', '{oC}')) { if (r() < 0.6) toYou(); else theirsIn('D'); }
+          }
         }
       }
       if (s.ctx === 'FO_D') { s.ctx = 'FO'; s.fz = 'D'; }
@@ -416,13 +472,13 @@
   // ---------- the typical NHL bench ----------
   const MIX = {
     FO_O: { fpoint: 0.35, fcircle: 0.25, fquick: 0.1, ftie: 0.15, fwall: 0.15 }, YOU_N: { go: 0.38, setup: 0.32, point: 0.2, crash: 0.1 },
-    YOU_O: { shoot: 0.3, low: 0.3, point: 0.25, crash: 0.15 }, THEM: { straight: 0.45, press: 0.35, trap: 0.2 }, EMPTY: { hunt: 0.5, lanes: 0.35, swarm: 0.15 },
+    YOU_O: { shoot: 0.3, low: 0.3, point: 0.25, crash: 0.15 }, THEM_N: { gap: 0.4, press: 0.35, trap: 0.25 }, THEM_D: { straight: 0.5, pressure: 0.25, block: 0.15, body: 0.1 }, EMPTY: { hunt: 0.5, lanes: 0.35, swarm: 0.15 },
   };
   function coach(s, r) {
     const o = options(s);
     if (o.includes('pull') && s.t <= (R.pullAt[String(Math.max(diff(s), -2))] ?? 300) && (s.ctx === 'FO_O' || s.ctx === 'YOU_N')) return { call: s.ctx === 'FO_O' && o.includes('to') && s.t < 120 ? 'to' : 'pull', focus: null };
     if (o.includes('to') && s.pulled && s.t < 90 && diff(s) < 0) return { call: 'to', focus: null };
-    const mix = s.ctx === 'THEM' && s.pulled ? MIX.EMPTY : MIX[s.ctx];
+    const mix = MIX[lkey(s)];
     let x = r(), call = Object.keys(mix)[0];
     for (const [k, w] of Object.entries(mix)) { if (x < w) { call = k; break; } x -= w; }
     return { call, focus: null };
@@ -456,7 +512,7 @@
     for (const call of o) add({ call, focus: mine.focus || null });
     if (s.ctx !== 'THEM') { add({ call: mine.call, focus: null }); for (const f of feedable(s)) add({ call: mine.call, focus: f.key }); }
     // the typical bench's calls
-    const mix = (s.ctx === 'THEM' && s.pulled ? MIX.EMPTY : MIX[s.ctx]) || {};
+    const mix = MIX[lkey(s)] || {};
     for (const call of Object.keys(mix)) add({ call, focus: null });
     const cb = coach(s, () => 0.5);
     add(cb);
