@@ -1,1 +1,2 @@
-updated,games,shots,goals,sgp_logloss,moneypuck_logloss,standard_logloss,rinkside_logloss
+updated,games,shots,goals,sgp_logloss,moneypuck_logloss,standard_logloss,rinkside_logloss,date,sgp_no_change_logloss,sgp_monthly_logloss,sgp_5v5,sgp_no_change_5v5,standard_5v5,sgp_monthly_5v5,rinkside_5v5,moneypuck_5v5
+,38,3130,219,0.2108,0.21328,0.21263,0.22188,2026-11-16,0.21283,0.2115,0.19416,0.19691,0.19635,0.19476,0.20575,0.19666

@@ -1,5 +1,179 @@
 {
- "updated": "2026-11-10 21:36 UTC",
+ "updated": "2026-11-16 21:12 UTC",
  "cutoff": "2026-11-11",
- "frozen": "2026-11-10 21:10 UTC"
+ "frozen": "2026-11-10 21:10 UTC",
+ "shots": {
+  "games": 38,
+  "shots": 3130,
+  "goals": 219,
+  "moneypuck_coverage": 0.9924
+ },
+ "input_coverage": {
+  "shift_data": 1.0,
+  "handedness": 1.0,
+  "shot_speed": 0.9616
+ },
+ "by_strength": {
+  "5v5": {
+   "sgp": 0.19416,
+   "sgp_no_change": 0.19691,
+   "standard": 0.19635,
+   "sgp_monthly": 0.19476,
+   "rinkside": 0.20575,
+   "moneypuck": 0.19666,
+   "shots": 2472
+  },
+  "other strengths": {
+   "sgp": 0.27334,
+   "sgp_no_change": 0.27265,
+   "standard": 0.27379,
+   "sgp_monthly": 0.27441,
+   "rinkside": 0.28246,
+   "moneypuck": 0.27572,
+   "shots": 658
+  }
+ },
+ "models": {
+  "sgp": {
+   "logloss": 0.2108,
+   "auc": 0.802,
+   "brier": 0.05797,
+   "predicted": 220.0
+  },
+  "sgp_no_change": {
+   "logloss": 0.21283,
+   "auc": 0.7953,
+   "brier": 0.05842,
+   "predicted": 219.8
+  },
+  "standard": {
+   "logloss": 0.21263,
+   "auc": 0.7965,
+   "brier": 0.05834,
+   "predicted": 218.3
+  },
+  "sgp_monthly": {
+   "logloss": 0.2115,
+   "auc": 0.7991,
+   "brier": 0.05814,
+   "predicted": 218.0
+  },
+  "rinkside": {
+   "logloss": 0.22188,
+   "auc": 0.7729,
+   "brier": 0.06048,
+   "predicted": 219.0
+  },
+  "moneypuck": {
+   "logloss": 0.21328,
+   "auc": 0.7932,
+   "brier": 0.05826,
+   "predicted": 224.0
+  }
+ },
+ "sgp_vs": {
+  "sgp_no_change": {
+   "gain_x1e4": 20.27,
+   "lo": -1.94,
+   "hi": 43.37,
+   "share_better": 0.963
+  },
+  "standard": {
+   "gain_x1e4": 18.27,
+   "lo": -12.81,
+   "hi": 49.81,
+   "share_better": 0.879
+  },
+  "sgp_monthly": {
+   "gain_x1e4": 7.01,
+   "lo": -0.22,
+   "hi": 14.36,
+   "share_better": 0.9715
+  },
+  "rinkside": {
+   "gain_x1e4": 110.77,
+   "lo": 58.26,
+   "hi": 163.36,
+   "share_better": 1.0
+  },
+  "moneypuck": {
+   "gain_x1e4": 24.75,
+   "lo": -20.06,
+   "hi": 72.58,
+   "share_better": 0.8575
+  }
+ },
+ "sgp_vs_moneypuck_excl_toi0": {
+  "gain_x1e4": 44.56,
+  "lo": 7.54,
+  "hi": 84.54,
+  "share_better": 0.989,
+  "excluded_shots": 16
+ },
+ "chances": {
+  "y_xgf": {
+   "team_games": 76,
+   "rmse_model": 0.801,
+   "rmse_matchup": 0.8282,
+   "rmse_league_avg": 0.8973,
+   "mse_gain_vs_matchup": [
+    0.0444,
+    -0.0324,
+    0.1363
+   ],
+   "mse_gain_vs_league_avg": [
+    0.1636,
+    0.0043,
+    0.3937
+   ]
+  },
+  "y_ff": {
+   "team_games": 76,
+   "rmse_model": 7.5413,
+   "rmse_matchup": 7.7602,
+   "rmse_league_avg": 8.9069,
+   "mse_gain_vs_matchup": [
+    3.3491,
+    -1.44,
+    8.7208
+   ],
+   "mse_gain_vs_league_avg": [
+    22.4616,
+    4.1565,
+    47.5137
+   ]
+  },
+  "y_hd": {
+   "team_games": 76,
+   "rmse_model": 4.4777,
+   "rmse_matchup": 4.4981,
+   "rmse_league_avg": 4.7131,
+   "mse_gain_vs_matchup": [
+    0.1827,
+    -1.6302,
+    1.8909
+   ],
+   "mse_gain_vs_league_avg": [
+    2.1628,
+    -1.5257,
+    6.3525
+   ]
+  },
+  "y_gf": {
+   "team_games": 76,
+   "rmse_model": 1.7205,
+   "rmse_matchup": 1.7634,
+   "rmse_league_avg": 1.7545,
+   "mse_gain_vs_matchup": [
+    0.1497,
+    0.0035,
+    0.3036
+   ],
+   "mse_gain_vs_league_avg": [
+    0.1184,
+    -0.133,
+    0.374
+   ]
+  }
+ }
 }
