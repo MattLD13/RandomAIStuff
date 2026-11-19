@@ -83,23 +83,13 @@
     $('cand-name').value = store.name || '';
     const list = $('exam-list');
     list.textContent = '';
-    for (const ex of DATA.exams.filter((exam) => !exam.legacy)) {
-      const ids = [ex.id, ...(ex.lineage || [])];
-      const tries = store.history.filter((h) => ids.includes(h.examId) && h.mode === 'exam');
-      const best = tries.length ? Math.max(...tries.map((h) => h.score)) : null;
-      const counts = {};
-      ex.questions.forEach((q) => (counts[q.section] = (counts[q.section] || 0) + 1));
+    for (const ex of DATA.exams.filter((exam) => !exam.legacy && exam.group !== 'drawing')) {
       const isDrill = ex.id.startsWith('drill');
-      if (ex.id === 'drill') list.append(el('h3', { class: 'h-sec' }, 'Concept exams — estimated difficulty'));
+      if (ex.id.startsWith('drill') && ex.difficultyRank === 1) list.append(el('h3', { class: 'h-sec' }, 'Concept exams — estimated difficulty'));
       const tier = isDrill ? ' tier-drill' : ex.difficultyRank >= 8 ? ' tier-hard' : '';
-      list.append(el('button', { class: 'exam-card' + tier, type: 'button', onclick: () => openIntro(ex.id) },
-        el('div', null,
-          el('div', { class: 'difficulty' }, isDrill ? `Concept difficulty ${ex.difficultyRank} / 5` : `Difficulty ${ex.difficultyRank} / 10`),
-          el('h3', null, ex.title),
-          el('p', null, ex.difficultyLabel || ex.blurb),
-          el('div', { class: 'meta' }, `${ex.questions.length} questions · ${ex.total} points · ${ex.timeMinutes} min · pass ${ex.passScore}`)),
-        el('div', { class: 'best' }, best == null ? 'Not taken' : el('span', null, 'Best', el('b', null, `${best}/${ex.total}`)))));
+      list.append(examCard(ex, tier, isDrill ? `Concept difficulty ${ex.difficultyRank} / 5` : `Difficulty ${ex.difficultyRank} / 10`));
     }
+    renderDrawingCards();
     // resume
     const c = cur();
     if (c && examById(c.examId)) {
@@ -131,6 +121,103 @@
       el('thead', null, el('tr', null, el('th', null, 'Exam'), el('th', null, 'Result'), el('th', null, 'Score'), el('th', null, ''))), tb)));
   }
 
+  function bestScore(ex) {
+    const ids = [ex.id, ...(ex.lineage || [])];
+    const tries = store.history.filter((h) => ids.includes(h.examId) && h.mode === 'exam');
+    return tries.length ? Math.max(...tries.map((h) => h.score)) : null;
+  }
+  function examCard(ex, tier, kicker) {
+    const best = bestScore(ex);
+    return el('button', { class: 'exam-card' + tier, type: 'button', onclick: () => openIntro(ex.id) },
+      el('div', null,
+        el('div', { class: 'difficulty' }, kicker),
+        el('h3', null, ex.title),
+        el('p', null, ex.difficultyLabel || ex.blurb),
+        el('div', { class: 'meta' }, `${ex.questions.length} questions · ${ex.total} points · ${ex.timeMinutes} min · pass ${ex.passScore}`)),
+      el('div', { class: 'best' }, best == null ? 'Not taken' : el('span', null, 'Best', el('b', null, `${best}/${ex.total}`))));
+  }
+
+  // ---------- Drawing Views guide ----------
+  const LESSONS = DATA.lessons || [];
+  let lessonIdx = 0;
+  const learned = () => (store.learned ||= {});
+  function renderDrawingCards() {
+    const box = $('drawing-list');
+    if (!box) return;
+    box.textContent = '';
+    if (LESSONS.length) {
+      const done = LESSONS.filter((l) => learned()[l.id]).length;
+      box.append(el('button', { class: 'exam-card tier-learn', type: 'button', onclick: () => openLearn() },
+        el('div', null,
+          el('div', { class: 'difficulty' }, 'Guide'),
+          el('h3', null, 'Drawing Views Guide'),
+          el('p', null, 'What each view looks like, how to make it in SOLIDWORKS, and what it gets confused with. Each lesson ends with a quick check.'),
+          el('div', { class: 'meta' }, `${LESSONS.length} lessons · projection · line types · hole callouts`),
+          el('div', { class: 'progress', 'aria-hidden': 'true' }, el('i', { style: `width:${(100 * done) / LESSONS.length}%` }))),
+        el('div', { class: 'best' }, el('span', null, 'Done', el('b', null, `${done}/${LESSONS.length}`)))));
+    }
+    for (const ex of DATA.exams.filter((e) => !e.legacy && e.group === 'drawing')) box.append(examCard(ex, ' tier-drill', 'Drill'));
+  }
+  function openLearn(i) {
+    if (Number.isInteger(i)) lessonIdx = i;
+    else { const next = LESSONS.findIndex((l) => !learned()[l.id]); lessonIdx = next < 0 ? 0 : next; }
+    show('learn');
+    renderLesson();
+  }
+  function renderLessonList() {
+    const ol = $('llist');
+    ol.textContent = '';
+    LESSONS.forEach((x, i) => ol.append(el('li', null, el('button', {
+      type: 'button', 'aria-current': i === lessonIdx ? 'true' : 'false', onclick: () => { lessonIdx = i; renderLesson(); $('lpane').scrollTop = 0; },
+      title: x.title,
+    }, el('span', { class: 'qn' }, String(i + 1)), el('span', { class: 'qs' }, x.title), el('span', { class: 'qf done' }, learned()[x.id] ? '✓' : ''), el('i', { class: 'dot' + (learned()[x.id] ? ' ok' : '') })))));
+    const cur = ol.querySelector('[aria-current="true"]');
+    if (cur) cur.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+  function renderLesson() {
+    const l = LESSONS[lessonIdx];
+    $('l-pos').innerHTML = `Lesson <b>${lessonIdx + 1}</b> of <b>${LESSONS.length}</b>`;
+    renderLessonList();
+    $('l-title').textContent = l.title;
+    $('l-group').textContent = l.group;
+    $('l-summary').textContent = l.summary;
+    const imgs = [l.image, l.extra].filter(Boolean);
+    const th = $('l-thumbs');
+    th.textContent = '';
+    imgs.forEach((im, i) => th.append(el('button', { class: 'thumb wide', type: 'button', onclick: () => openViewer(imgs, i), 'aria-label': `Open ${l.title} drawing in the image viewer` },
+      el('img', { src: im.src, alt: im.title }), el('span', null, imgs.length > 1 ? `${i + 1}. ${i ? 'Half section' : 'Example'}` : 'Example'))));
+    const fill = (id, items) => { const x = $(id); x.textContent = ''; items.forEach((t) => x.append(el('li', null, t))); };
+    fill('l-rec', l.recognise);
+    fill('l-make', l.make);
+    $('l-confuse').textContent = l.confuse;
+    // quick check
+    const box = $('l-check'), fb = $('l-feedback');
+    box.textContent = '';
+    fb.hidden = true;
+    box.append(el('div', { class: 'lbl' }, 'Quick check'), el('p', { class: 'l-q' }, l.check.prompt));
+    const opts = el('div', { class: 'opts', role: 'radiogroup' });
+    let picked = null;
+    l.check.options.forEach((o, i) => {
+      const input = el('input', { type: 'radio', name: 'lc-' + l.id, id: `lc-${l.id}-${i}`, value: String(i) });
+      input.addEventListener('change', () => { picked = i; btn.disabled = false; });
+      opts.append(el('label', { class: 'opt', for: `lc-${l.id}-${i}` }, input, el('span', { class: 'letter' }, 'abcd'[i] + ')'), el('span', { class: 'otext' }, o)));
+    });
+    const btn = el('button', { class: 'btn primary', type: 'button', disabled: true, onclick: () => {
+      const ok = picked === l.check.answer;
+      [...opts.children].forEach((lab, i) => {
+        lab.classList.toggle('is-correct', i === l.check.answer);
+        lab.classList.toggle('is-wrong', i === picked && !ok);
+      });
+      fb.className = 'feedback ' + (ok ? 'ok' : 'bad');
+      fb.innerHTML = '';
+      fb.append(el('div', { class: 'fb-head' }, ok ? 'Correct' : 'Not quite'), el('p', null, l.check.explain));
+      fb.hidden = false;
+      if (ok && !learned()[l.id]) { learned()[l.id] = true; save(); renderLessonList(); }
+    } }, 'Check answer');
+    box.append(opts, el('div', { class: 'row', style: 'margin-top:10px' }, btn));
+    $('l-prev').disabled = lessonIdx === 0;
+    $('l-next').disabled = lessonIdx === LESSONS.length - 1;
+  }
   function selectedMode() { return $('mode-practice').checked ? 'practice' : 'exam'; }
 
   function openIntro(examId) {
@@ -578,6 +665,10 @@
   };
   $('confirm-no').onclick = () => { $('confirm').hidden = true; };
   $('btn-home').onclick = () => { renderHome(); show('home'); };
+  $('l-prev').onclick = () => { if (lessonIdx > 0) { lessonIdx--; renderLesson(); $('lpane').scrollTop = 0; } };
+  $('l-next').onclick = () => { if (lessonIdx < LESSONS.length - 1) { lessonIdx++; renderLesson(); $('lpane').scrollTop = 0; } };
+  $('l-home').onclick = () => { renderHome(); show('home'); };
+  $('l-drill').onclick = () => { const d = DATA.exams.find((e) => !e.legacy && e.group === 'drawing'); renderHome(); if (d) openIntro(d.id); };
 
   document.addEventListener('keydown', (e) => {
     if (!$('viewer').hidden) {
@@ -589,6 +680,11 @@
       return;
     }
     if (!$('confirm').hidden && e.key === 'Escape') { $('confirm').hidden = true; return; }
+    if (!$('learn').hidden && (e.key === 'PageDown' || e.key === 'PageUp')) {
+      e.preventDefault();
+      $(e.key === 'PageDown' ? 'l-next' : 'l-prev').click();
+      return;
+    }
     if (!$('exam').hidden && (e.key === 'PageDown' || e.key === 'PageUp')) {
       e.preventDefault();
       setIdx(curIdx() + (e.key === 'PageDown' ? 1 : -1));

@@ -67,6 +67,13 @@ for (const ex of exams) {
 if (centroidHits > 0.4 * comQs) add('com-centroid', `correct option is the one nearest the average of the options in ${centroidHits} of ${comQs} questions`);
 const conceptQs = exams.filter((e) => e.id.startsWith('drill')).reduce((n, e) => n + e.questions.length, 0);
 if (longestHits.length > 0.4 * conceptQs) add('text-longest-rate', `correct concept answer is the longest option in ${longestHits.length} of ${conceptQs} questions`);
+const sentenceQs = [
+  ...exams.filter((e) => e.group === 'drawing').flatMap((e) => e.questions),
+  ...(ctx.window.CSWA_DATA.lessons || []).map((l) => ({ ...l.check, id: l.id })),
+].filter((q) => q.options.every((o) => o.length > 14));
+const sentenceLongest = sentenceQs.filter((q) => { const L = q.options.map((o) => o.length); return L[q.answer] === Math.max(...L) && L.filter((x) => x === L[q.answer]).length === 1; }).length;
+console.log(`Drawing drill and guide sentence answers that are the longest option: ${sentenceLongest} of ${sentenceQs.length}`);
+if (sentenceQs.length && sentenceLongest > 0.4 * sentenceQs.length) add('drawing-longest-rate', `right answer is the longest option in ${sentenceLongest} of ${sentenceQs.length} sentence-style drawing questions`);
 const hist = [0, 1, 2, 3].map((r) => ranks.filter((x) => x === r).length);
 if (massQs && Math.max(...hist) > 0.5 * massQs) add('mass-rank', `correct mass sits at the same sorted position in ${Math.max(...hist)} of ${massQs} questions ${JSON.stringify(hist)}`);
 

@@ -18,6 +18,8 @@ only gives you the drawings and checks your answers.
 |---|---|
 | **Practice Exams 1–10** | 14 questions, 240 points, 180 minutes, pass mark 168 (70%): 3 drafting (5 pts), 2 basic part (15), 2 intermediate part (15), 3 advanced part (15), 4 assembly (30). Exams 4–10 recombine the original model families and vary part dimensions and assembly positions; they are not seven entirely new designs. |
 | **Concepts Exams 1–5** | Five text-only multiple-choice exams covering sketch relations, features, mates, drawings, units and mass properties. |
+| **Drawing Views Guide** | 14 lessons for the Drafting Competencies section: every SOLIDWORKS drawing view (Standard 3, Model, Projected, Auxiliary, Section and half section, Aligned Section, Detail, Broken-out Section, Break, Crop, Alternate Position), first/third-angle projection, line types and hole callouts. Each lesson has a drawing, how to recognise it, how to make it, what it is confused with, and a quick check. Progress saves in the browser. |
+| **Drawing Views Drill** | 26 scored questions on the same topics (30 minutes, 70 % to pass). |
 | **Exam mode** | Timed. Answers are scored only when you click End Test (or time runs out). |
 | **Practice mode** | Untimed. **Check answer** shows right/wrong, the correct value and the working (volume × density, or a mass table for assemblies). |
 
@@ -65,7 +67,8 @@ python solidworks_parts.py  # add verified native 2025 parts to the STEP archive
 
 - `tools/content/models.mjs`: part and assembly models, with their dimensioned views
 - `tools/content/exams.mjs`: question text, parameters, materials and multiple-choice distractors
-- `tools/content/drafting.mjs`: the drawing-sheet SVGs for the drafting questions; `tools/content/concept-drills.mjs`: the new text-only questions
+- `tools/content/drafting.mjs`: the drawing-sheet SVGs for the drafting questions, the guide and the drill
+- `tools/content/drawing-course.mjs`: Drawing Views Guide lessons and the Drawing Views Drill; `tools/content/concept-drills.mjs`: the new text-only questions
 - `tools/content/legacy-exams.json`: previous exam versions retained for saved attempts
 - `tools/lib/geom.mjs`: modelling helpers and mass properties; `tools/lib/render.mjs` and `tools/render/`: the image renderer
 - `site/`: the deployed app (`index.html`, `app.css`, `app.js`, `data/`, `img/`, `parts/`)

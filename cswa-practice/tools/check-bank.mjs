@@ -9,10 +9,12 @@ const site = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 's
 const context = { window: {} };
 vm.runInNewContext(fs.readFileSync(path.join(site, 'data/exams.js'), 'utf8'), context);
 const allExams = context.window.CSWA_DATA.exams;
-const exams = allExams.filter(e => !e.legacy);
+const exams = allExams.filter(e => !e.legacy && e.group !== 'drawing');
+const drawing = allExams.filter(e => !e.legacy && e.group === 'drawing');
+const lessons = context.window.CSWA_DATA.lessons || [];
 const errors = [];
 const imageModels = new Map();
-if (exams.length !== 15 || EXAMS.length !== 15) errors.push('Expected 10 mocks and 5 concept exams');
+if (exams.length !== 15 || EXAMS.filter(e => e.group !== 'drawing').length !== 15) errors.push('Expected 10 mocks and 5 concept exams');
 if (allExams.filter(e => e.legacy).length !== 22) errors.push('Expected 22 saved-attempt versions');
 if (new Set(allExams.map(e => e.id)).size !== allExams.length) errors.push('Exam ids must be unique across live and saved versions');
 for (const e of exams) for (const old of e.lineage || []) if (!allExams.some(x => x.legacy && x.id === old)) errors.push(`${e.id}: lineage ${old} has no saved version`);
@@ -65,5 +67,21 @@ for (const [index, exam] of exams.entries()) {
     imageModels.set(src, key);
   }
 }
+// Drawing Views drill and guide
+if (drawing.length !== 1) errors.push('Expected one Drawing Views drill');
+for (const ex of drawing) {
+  if (ex.questions.length < 20) errors.push(`${ex.id}: drill should have at least 20 questions`);
+  for (const q of ex.questions) {
+    if (q.type !== 'mc' || q.options.length !== 4 || new Set(q.options).size !== 4 || q.answer < 0 || q.answer > 3) errors.push(`${q.id}: invalid drill question`);
+    for (const image of q.images) if (!fs.existsSync(path.join(site, image.src))) errors.push(`${q.id}: missing ${image.src}`);
+  }
+}
+if (lessons.length < 12) errors.push('Expected at least 12 Drawing Views lessons');
+for (const l of lessons) {
+  for (const im of [l.image, l.extra].filter(Boolean)) if (!fs.existsSync(path.join(site, im.src))) errors.push(`lesson ${l.id}: missing ${im.src}`);
+  if (!l.recognise?.length || !l.make?.length || !l.confuse || !l.summary) errors.push(`lesson ${l.id}: incomplete`);
+  const c = l.check;
+  if (!c || c.options.length !== 4 || new Set(c.options).size !== 4 || c.answer < 0 || c.answer > 3) errors.push(`lesson ${l.id}: invalid quick check`);
+}
 if (errors.length) throw new Error(errors.join('\n'));
-console.log(`Validated ${exams.length} exams, ${exams.reduce((n, e) => n + e.questions.length, 0)} questions and all image/download paths.`);
+console.log(`Validated ${exams.length} exams, the Drawing Views drill (${drawing[0]?.questions.length} questions) and ${lessons.length} lessons, ${exams.reduce((n, e) => n + e.questions.length, 0)} questions and all image/download paths.`);

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="1800" height="1040" font-family="DejaVu Sans, Arial, sans-serif">
+<defs>
+  <pattern id="hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <rect width="9" height="9" fill="#fff"/><line x1="0" y1="0" x2="0" y2="9" stroke="#111" stroke-width="1"/>
+  </pattern>
+  <marker id="ar" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+    <path d="M0,1.5 L10,5 L0,8.5 z" fill="#111"/>
+  </marker>
+  <marker id="arBig" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="16" markerHeight="16" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+    <path d="M0,1 L10,5 L0,9 z" fill="#111"/>
+  </marker>
+</defs>
+<rect x="0" y="0" width="900" height="520" fill="#fff"/>
+<rect x="10" y="10" width="880" height="500" fill="none" stroke="#111" stroke-width="2"/>
+<g transform="translate(650 460)" font-size="10" fill="#111">
+  <rect width="240" height="50" fill="none" stroke="#111" stroke-width="1.2"/>
+  <line x1="0" y1="25" x2="240" y2="25" stroke="#111"/><line x1="150" y1="25" x2="150" y2="50" stroke="#111"/>
+  <text x="8" y="17" font-size="12" font-weight="700">PRACTICE DRAWING</text>
+  <text x="8" y="42">UNITS: MM</text><text x="158" y="42">SHEET 1 OF 1</text>
+</g>
+<g fill="none" stroke="#111" stroke-width="1.8" stroke-linejoin="round">
+<path d="M300,180 L440,210 L440,270 L300,300 Z" stroke-width="3.2"/>
+    <circle cx="600" cy="240" r="60" stroke-width="3.2"/><circle cx="600" cy="240" r="30" stroke-width="3.2"/>
+    <line x1="276" y1="240" x2="684" y2="240" stroke-width="0.9" stroke-dasharray="18 4 3 4"/><line x1="600" y1="160" x2="600" y2="320" stroke-width="0.9" stroke-dasharray="18 4 3 4"/>
+</g>
+</svg>

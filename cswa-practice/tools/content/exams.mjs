@@ -4,6 +4,7 @@
 // and the working is only shown after answering (practice mode / review).
 // Answers for model questions are not typed in here; build.mjs measures them from the models.
 import { CONCEPT_DRILLS } from './concept-drills.mjs';
+import { DRAWING_DRILL } from './drawing-course.mjs';
 
 export const MATERIALS = {
   'AISI 1020': 7900,
@@ -462,4 +463,8 @@ for (const exam of [...orderedMocks, ...orderedConcepts]) {
   exam.lineage = base === exam.id ? [base] : [base, exam.id];
   exam.id = `${base}-${REVISION}`;
 }
-export const EXAMS = [...orderedMocks, ...orderedConcepts];
+// Drawing Views drill: its own section on the home screen, next to the guide.
+DRAWING_DRILL.lineage = [DRAWING_DRILL.id];
+DRAWING_DRILL.id = `${DRAWING_DRILL.id}-r1`;
+DRAWING_DRILL.difficultyLabel = 'Drawing views, projection, line types and hole callouts.';
+export const EXAMS = [...orderedMocks, ...orderedConcepts, DRAWING_DRILL];

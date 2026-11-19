@@ -228,6 +228,135 @@ export function cropView() {
   return sheet(body);
 }
 
+
+// ---- drawings for the Drawing Views guide and drill -------------------------------------
+const phantom = (d, w = 1.3) => `<path d="${d}" stroke-width="${w}" stroke-dasharray="22 4 4 4 4 4"/>`;
+
+export function standard3View() {
+  // Third-angle: top view above the front view, right view to the right of it.
+  const body = `
+  <path d="M100,430 H330 V400 H140 V290 H100 Z"/>
+  ${hidden(248, 400, 248, 430)}${hidden(272, 400, 272, 430)}${cl(260, 385, 260, 445)}
+  <rect x="100" y="90" width="230" height="140"/>
+  ${ln(140, 90, 140, 230, 1.4)}
+  <circle cx="260" cy="160" r="12"/>${centerMark(260, 160, 12)}
+  <rect x="420" y="290" width="140" height="140"/>
+  ${ln(420, 400, 560, 400, 1.4)}
+  ${hidden(478, 400, 478, 430)}${hidden(502, 400, 502, 430)}${cl(490, 385, 490, 445)}`;
+  return sheet(body);
+}
+
+export function halfSection() {
+  const cx = 220, cy = 230;
+  const vb = 650;
+  const body = `
+  <circle cx="${cx}" cy="${cy}" r="110"/><circle cx="${cx}" cy="${cy}" r="60"/><circle cx="${cx}" cy="${cy}" r="35"/>
+  <path d="M${cx},${cy - 140} L${cx},${cy} L${cx + 140},${cy}" stroke-width="1.4" stroke-dasharray="26 5 5 5"/>
+  <line x1="${cx}" y1="${cy - 140}" x2="${cx}" y2="${cy - 106}" stroke-width="1.6" marker-end="url(#arBig)"/>
+  <line x1="${cx + 140}" y1="${cy}" x2="${cx + 140}" y2="${cy + 34}" stroke-width="1.6" marker-end="url(#arBig)"/>
+  ${txt(cx - 18, cy - 128, 'A', { size: 18, bold: true })}${txt(cx + 158, cy + 30, 'A', { size: 18, bold: true })}
+  ${caption(cx, 400, 'View A')}
+  <rect x="${vb + 35}" y="330" width="75" height="30" fill="url(#hatch)" stroke="none"/>
+  <rect x="${vb + 35}" y="250" width="25" height="80" fill="url(#hatch)" stroke="none"/>
+  <path d="M${vb - 110},330 H${vb - 60} V250 H${vb + 60} V330 H${vb + 110} V360 H${vb - 110} Z"/>
+  ${ln(vb + 35, 250, vb + 35, 360, 1.6)}${ln(vb - 60, 330, vb, 330, 1.2)}
+  ${cl(vb, 235, vb, 375)}
+  ${txt(vb, 400, 'SECTION A-A', { bold: true })}
+  ${caption(vb, 430, 'View B')}`;
+  return sheet(body);
+}
+
+export function alternatePosition() {
+  // Assembly front view: a lever on a pivot shown in its working position and, in
+  // phantom lines, in a second position.
+  const bar = (deg, solid) => {
+    const a = (deg * Math.PI) / 180, c = Math.cos(a), sn = Math.sin(a);
+    const P = (u, v) => `${(240 + u * c - v * sn).toFixed(1)},${(300 - u * sn - v * c).toFixed(1)}`;
+    const d = `M${P(0, 14)} L${P(280, 14)} A14,14 0 0 1 ${P(280, -14)} L${P(0, -14)} A14,14 0 0 1 ${P(0, 14)} Z`;
+    return solid ? `<path d="${d}"/>` : phantom(d);
+  };
+  const body = `
+  <rect x="120" y="360" width="300" height="60"/>
+  <rect x="222" y="300" width="36" height="60"/>
+  ${bar(0, true)}${bar(32, false)}
+  <circle cx="240" cy="300" r="7"/>
+  <path d="M470,286 A230,230 0 0 0 440,180" stroke-width="1.1" marker-end="url(#ar)" marker-start="url(#ar)"/>`;
+  return sheet(body, 'ASSEMBLY DRAWING');
+}
+
+function projSymbol(x, y, kind, k = 1) {
+  // Truncated cone shown in two views. The circles are the view from the cone's small end.
+  // Third angle: the small end of the trapezoid faces the circles. First angle: the large end does.
+  const big = 30 * k, small = 15 * k, len = 70 * k, gap = 50 * k;
+  const ccx = x + len + gap + big;
+  const t = kind === 'third'
+    ? `M${x},${y - big} L${x + len},${y - small} L${x + len},${y + small} L${x},${y + big} Z`
+    : `M${x},${y - small} L${x + len},${y - big} L${x + len},${y + big} L${x},${y + small} Z`;
+  return `<path d="${t}" stroke-width="${1.6 * k}"/>
+    <circle cx="${ccx}" cy="${y}" r="${big}" stroke-width="${1.6 * k}"/><circle cx="${ccx}" cy="${y}" r="${small}" stroke-width="${1.6 * k}"/>
+    ${cl(x - 12 * k, y, ccx + big + 12 * k, y)}${cl(ccx, y - big - 10 * k, ccx, y + big + 10 * k)}`;
+}
+export function projectionSymbols() {
+  const body = `${projSymbol(110, 230, 'first', 1.6)}${txt(250, 340, 'FIRST-ANGLE', { bold: true })}
+  ${projSymbol(520, 230, 'third', 1.6)}${txt(660, 340, 'THIRD-ANGLE', { bold: true })}`;
+  return sheet(body);
+}
+export const projectionThird = () => sheet(`${projSymbol(300, 240, 'third', 2)}`);
+export const projectionFirst = () => sheet(`${projSymbol(300, 240, 'first', 2)}`);
+
+export function lineTypes() {
+  const tag = (n, x, y, tx, ty) => `<line x1="${x}" y1="${y}" x2="${tx}" y2="${ty}" stroke-width="0.9"/>
+    <circle cx="${tx}" cy="${ty}" r="14" fill="#fff" stroke-width="1.2"/>${txt(tx, ty + 5, n, { size: 15, bold: true })}`;
+  const body = `
+  <rect x="150" y="200" width="320" height="160" stroke-width="2.4"/>
+  ${hidden(280, 200, 280, 360)}${hidden(320, 200, 320, 360)}
+  ${cl(300, 180, 300, 380)}
+  ${phantom('M470,200 L640,120 L655,150 L470,236')}
+  <path d="M120,300 H500" stroke-width="2.2" stroke-dasharray="30 6 6 6"/>
+  <line x1="120" y1="300" x2="120" y2="330" stroke-width="2" marker-end="url(#arBig)"/>
+  <line x1="500" y1="300" x2="500" y2="330" stroke-width="2" marker-end="url(#arBig)"/>
+  ${tag('1', 150, 250, 90, 200)}${tag('2', 280, 340, 240, 430)}${tag('3', 300, 380, 360, 440)}
+  ${tag('4', 600, 139, 690, 100)}${tag('5', 500, 300, 560, 350)}`;
+  return sheet(body);
+}
+
+// Drafting symbols drawn as paths, so no special font is needed.
+const SYM = {
+  cbore: (x, y) => `<path d="M${x},${y - 11} V${y} H${x + 12} V${y - 11}" stroke-width="1.4"/>`,
+  csk: (x, y) => `<path d="M${x},${y - 11} L${x + 6},${y} L${x + 12},${y - 11}" stroke-width="1.4"/>`,
+  depth: (x, y) => `<path d="M${x + 6},${y - 12} V${y - 1} M${x + 2},${y - 5} L${x + 6},${y - 1} L${x + 10},${y - 5} M${x},${y + 1} H${x + 12}" stroke-width="1.4"/>`,
+};
+function callout(x, y, lines) {
+  return lines.map((parts, i) => {
+    let cx = x, out = '';
+    const yy = y + i * 22;
+    for (const p of parts) {
+      if (typeof p === 'string') { out += txt(cx, yy, p, { anchor: 'start' }); cx += p.length * 9.2 + 4; }
+      else { out += SYM[p.sym](cx, yy); cx += 18; }
+    }
+    return out;
+  }).join('');
+}
+export function holeCallouts() {
+  const cx = 300, cy = 250, R = 100;
+  const holes = [45, 135, 225, 315].map((d) => {
+    const a = (d * Math.PI) / 180, x = cx + R * Math.cos(a), y = cy - R * Math.sin(a);
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="10"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="18" stroke-width="1.3"/>`;
+  }).join('');
+  const hx = cx + R * Math.cos(Math.PI / 4), hy = cy - R * Math.sin(Math.PI / 4);
+  const body = `
+  <rect x="150" y="100" width="300" height="300"/>
+  <circle cx="${cx}" cy="${cy}" r="${R}" stroke-width="0.9" stroke-dasharray="18 4 3 4"/>
+  ${holes}
+  <circle cx="${cx}" cy="${cy}" r="10"/><circle cx="${cx}" cy="${cy}" r="20" stroke-width="1.3"/>
+  ${centerMark(cx, cy, 20)}
+  <path d="M${hx + 13},${hy - 13} L520,120 H540" stroke-width="1"/>
+  ${callout(548, 126, [['4X Ø10 THRU'], [{ sym: 'cbore' }, 'Ø18 ', { sym: 'depth' }, '6'], ['EQ. SP. ON Ø160 B.C.']])}
+  <path d="M${cx + 15},${cy + 13} L520,330 H540" stroke-width="1"/>
+  ${callout(548, 336, [['Ø10 THRU'], [{ sym: 'csk' }, 'Ø20 X 90°']])}`;
+  return sheet(body);
+}
+
 export const DRAFTING = {
   'section-view': sectionView,
   'detail-view': detailView,
@@ -237,4 +366,12 @@ export const DRAFTING = {
   'break-view': breakView,
   'aligned-section': alignedSection,
   'crop-view': cropView,
+  'standard-3-view': standard3View,
+  'half-section': halfSection,
+  'alternate-position': alternatePosition,
+  'projection-symbols': projectionSymbols,
+  'projection-third': projectionThird,
+  'projection-first': projectionFirst,
+  'line-types': lineTypes,
+  'hole-callouts': holeCallouts,
 };
