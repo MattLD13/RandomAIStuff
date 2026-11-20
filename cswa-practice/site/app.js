@@ -3,7 +3,8 @@
   'use strict';
   const DATA = window.CSWA_DATA;
   const SECTIONS = DATA.sections;
-  const SHORT = { draft: 'Drafting', basic: 'Basic Part', inter: 'Intermediate Part', adv: 'Advanced Part', asm: 'Assembly', concept: 'Concepts' };
+  const SHORT = { draft: 'Drawing views', basic: 'Basic Part', inter: 'Intermediate Part', adv: 'Advanced Part', asm: 'Assembly', concept: 'Concepts',
+    part1: 'Part 1', part2: 'Part 2', asm1: 'Assembly 1', asm2: 'Assembly 2', part3: 'Part 3 (reshape)' };
   const KEY = 'cswa-practice-v1';
   const $ = (id) => document.getElementById(id);
   const examById = (id) => DATA.exams.find((e) => e.id === id);
@@ -234,6 +235,7 @@
     $('intro-title').textContent = ex.title;
     $('intro-welcome').textContent = `Welcome${store.name ? ', ' + store.name : ''}, to ${ex.title}.`;
     $('rule-count').textContent = `Your exam has ${ex.questions.length} questions. You can answer them in any order.`;
+    $('rule-layout').hidden = !ex.questions.some((q) => q.section === 'part3');
     const f = $('intro-facts');
     f.textContent = '';
     const fact = (k, v) => f.append(el('div', null, el('dt', null, k), el('dd', null, v)));

@@ -16,7 +16,7 @@ only gives you the drawings and checks your answers.
 
 | | |
 |---|---|
-| **Practice Exams 1–10** | 14 questions, 240 points, 180 minutes, pass mark 168 (70%): 3 drafting (5 pts), 2 basic part (15), 2 intermediate part (15), 3 advanced part (15), 4 assembly (30). Exams 4–10 recombine the original model families and vary part dimensions and assembly positions; they are not seven entirely new designs. |
+| **Practice Exams 1–10** | Same order as the current CSWA: 3 drawing-view questions, Part 1 and Part 2 (each built, then changed by dimensions), two different assemblies (each built, then modified), and Part 3, which you build and then reshape by adding or removing features. 14 questions, 240 practice points (SOLIDWORKS doesn't publish per-question points), 180 minutes, 70 % to pass. Ranked easiest to hardest; the higher exams reuse the model families with changed dimensions and positions. |
 | **Concepts Exams 1–5** | Five text-only multiple-choice exams covering sketch relations, features, mates, drawings, units and mass properties. |
 | **Drawing Views Guide** | 14 lessons for the Drafting Competencies section: every SOLIDWORKS drawing view (Standard 3, Model, Projected, Auxiliary, Section and half section, Aligned Section, Detail, Broken-out Section, Break, Crop, Alternate Position), first/third-angle projection, line types and hole callouts. Each lesson has a drawing, how to recognise it, how to make it, what it is confused with, and a quick check. Progress saves in the browser. |
 | **Drawing Views Drill** | 26 scored questions on the same topics (30 minutes, 70 % to pass). |

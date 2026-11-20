@@ -15,10 +15,24 @@ const lessons = context.window.CSWA_DATA.lessons || [];
 const errors = [];
 const imageModels = new Map();
 if (exams.length !== 15 || EXAMS.filter(e => e.group !== 'drawing').length !== 15) errors.push('Expected 10 mocks and 5 concept exams');
-if (allExams.filter(e => e.legacy).length !== 22) errors.push('Expected 22 saved-attempt versions');
+if (allExams.filter(e => e.legacy).length !== 32) errors.push('Expected 32 saved-attempt versions');
 if (new Set(allExams.map(e => e.id)).size !== allExams.length) errors.push('Exam ids must be unique across live and saved versions');
 for (const e of exams) for (const old of e.lineage || []) if (!allExams.some(x => x.legacy && x.id === old)) errors.push(`${e.id}: lineage ${old} has no saved version`);
-if (exams.slice(0, 10).flatMap(e => e.questions).filter(q => q.section === 'asm' && q.parts).length !== 40) {
+// Current CSWA layout: 3 drafting, Part 1 (2), Part 2 (2), Assembly 1 (2), Assembly 2 (2), Part 3 (3).
+const LAYOUT = ['draft', 'draft', 'draft', 'part1', 'part1', 'part2', 'part2', 'asm1', 'asm1', 'asm2', 'asm2', 'part3', 'part3', 'part3'];
+const SOURCE = Object.fromEntries(EXAMS.map(e => [e.id, e]));
+for (const e of exams.slice(0, 10)) {
+  if (e.questions.map(q => q.section).join() !== LAYOUT.join()) errors.push(`${e.id}: questions are not in the current CSWA layout`);
+  const src = SOURCE[e.id].questions;
+  if (src[7].assembly.fn === src[9].assembly.fn) errors.push(`${e.id}: Assembly 1 and Assembly 2 must be different assemblies`);
+  // Part 3: one model throughout, and steps 2 and 3 must change the shape, not only dimensions
+  const p3 = src.slice(11);
+  if (new Set(p3.map(q => q.model.fn)).size !== 1) errors.push(`${e.id}: Part 3 must use one model`);
+  // shape = which parameters exist (a new one is a new feature) plus every non-dimension value
+  const shape = (q) => JSON.stringify([Object.keys(q.model.params).sort(), Object.entries(q.model.params).filter(([k]) => !/^[A-Z]$/.test(k)).sort()]);
+  if (shape(p3[0]) === shape(p3[1]) || shape(p3[1]) === shape(p3[2])) errors.push(`${e.id}: Part 3 steps must change the part's shape`);
+}
+if (exams.slice(0, 10).flatMap(e => e.questions).filter(q => /^asm[12]$/.test(q.section) && q.parts).length !== 40) {
   errors.push('Expected an assembly download in all 40 assembly questions');
 }
 if (exams.slice(7, 10).some(e => e.questions.some(q => q.prompt.includes('Hint: if none of the options')))) {
@@ -31,7 +45,7 @@ for (const old of allExams.filter(e => e.legacy)) {
   for (const q of old.questions) {
     for (const image of q.images) if (!fs.existsSync(path.join(site, image.src))) errors.push(`${q.id}: missing historical image ${image.src}`);
     if (q.parts && !fs.existsSync(path.join(site, q.parts))) errors.push(`${q.id}: missing historical archive ${q.parts}`);
-    if (q.section === 'asm' && !q.parts) errors.push(`${q.id}: missing historical assembly download`);
+    if (/^asm/.test(q.section) && !q.parts) errors.push(`${q.id}: missing historical assembly download`);
   }
 }
 for (const [index, exam] of exams.entries()) {
@@ -52,7 +66,7 @@ for (const [index, exam] of exams.entries()) {
     if (q.type === 'num' && (!Number.isFinite(q.answer.value) || q.answer.value <= 0)) errors.push(`${q.id}: invalid numeric answer`);
     for (const image of q.images) if (!fs.existsSync(path.join(site, image.src))) errors.push(`${q.id}: missing ${image.src}`);
     if (q.parts && !fs.existsSync(path.join(site, q.parts))) errors.push(`${q.id}: missing ${q.parts}`);
-    if (q.section === 'asm' && !q.parts) errors.push(`${q.id}: missing assembly archive`);
+    if (/^asm/.test(q.section) && !q.parts) errors.push(`${q.id}: missing assembly archive`);
   }
   // Every model prompt must include its driving dimensions when the variable is specified.
   for (const q of EXAMS[index].questions.filter(q => (q.model || q.assembly) && q.prompt.includes('A ='))) {

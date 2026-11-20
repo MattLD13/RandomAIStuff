@@ -128,12 +128,13 @@ export function archBracket({ A, B, C }) {
 
 // Advanced part: revolved flanged hub with fillet and chamfer, keyway, counterbore,
 // bolt circle, a side port boss and an optional flat.
-export function flangedHub({ A, B, D = null }) {
+export function flangedHub({ A, B, D = null, bolts = 6 }) {
   const H = 15 + B;
   const prof = filletPoly([[20, 0], [A / 2, 0], [A / 2, 15], [35, 15, 4], [35, H - 3], [32, H], [25, H], [25, H - 8], [20, H - 8]]);
   const holes = [];
-  for (let k = 0; k < 6; k++) {
-    const a = ((30 + 60 * k) * Math.PI) / 180;
+  const first = 180 / bolts; // first hole this many degrees from the keyway
+  for (let k = 0; k < bolts; k++) {
+    const a = ((first + (360 / bolts) * k) * Math.PI) / 180;
     holes.push(cyl('XZ', 47.5 * Math.cos(a), 47.5 * Math.sin(a), 5, -1, 16));
   }
   const cuts = [
@@ -158,9 +159,9 @@ export function flangedHub({ A, B, D = null }) {
     dim([0, H, -6], [0, H, 6], [32, 0, 0], '12'),
     dim([0, H, 0], [26, H, 0], [0, 0, -45], '26'),
     dim([0, 15, 0], [0, 15, 50], [-A / 2 - 20, 0, 0], '50'),
-    ang([0, 15, 0], [1, 0, 0], [Math.cos(Math.PI / 6), 0, Math.sin(Math.PI / 6)], 62, '30°'),
-    lead([47.5 * Math.cos(Math.PI / 6) + 3.5, 15, 47.5 * Math.sin(Math.PI / 6) + 3.5], 90, 60, '6X Ø10 THRU\nEQ. SP. ON Ø95 B.C.'),
-    { t: 'line', a: [0, 15, 0], b: [47.5 * Math.cos(Math.PI / 6), 15, 47.5 * Math.sin(Math.PI / 6)], dash: '14 4 3 4', w: 0.9 },
+    ang([0, 15, 0], [1, 0, 0], [Math.cos((first * Math.PI) / 180), 0, Math.sin((first * Math.PI) / 180)], 62, `${first}°`),
+    lead([47.5 * Math.cos((first * Math.PI) / 180) + 3.5, 15, 47.5 * Math.sin((first * Math.PI) / 180) + 3.5], 90, 60, `${bolts}X Ø10 THRU\nEQ. SP. ON Ø95 B.C.`),
+    { t: 'line', a: [0, 15, 0], b: [47.5 * Math.cos((first * Math.PI) / 180), 15, 47.5 * Math.sin((first * Math.PI) / 180)], dash: '14 4 3 4', w: 0.9 },
   ];
   if (D) top.push(dim([0, 15, -A / 2 + 5], [-D, 15, -A / 2 + 5], [0, 0, -25], 'D', { bold: true }));
   const front = [
@@ -357,32 +358,32 @@ export function shaftSupport({ A, B, C }) {
 
 // Advanced part: shelled housing with rounded corners, end tabs with gussets, boss,
 // optional window.
-export function housing({ A, B, window = false }) {
+export function housing({ A, B, window = false, tabs = true }) {
   const cuts = [
     prism('XZ', roundRect(6, 6, A - 6, 74, 4), -1, B - 6),
     cyl('XZ', 40, 40, 10, B - 7, B + 16),
-    cyl('XZ', -10, 15, 4, -1, 9), cyl('XZ', -10, 65, 4, -1, 9),
-    cyl('XZ', A + 10, 15, 4, -1, 9), cyl('XZ', A + 10, 65, 4, -1, 9),
+    ...(tabs ? [cyl('XZ', -10, 15, 4, -1, 9), cyl('XZ', -10, 65, 4, -1, 9),
+      cyl('XZ', A + 10, 15, 4, -1, 9), cyl('XZ', A + 10, 65, 4, -1, 9)] : []),
   ];
   if (window) cuts.push(box(A - 60, 15, 73, A - 20, 35, 81));
   const body = subtract(
     union(
       prism('XZ', roundRect(0, 0, A, 80, 10), 0, B),
-      box(-20, 0, 0, 8, 8, 80), box(A - 8, 0, 0, A + 20, 8, 80),
-      prism('XY', [[A, 8], [A + 15, 8], [A, 28]], 37, 43),
-      prism('XY', [[0, 8], [0, 28], [-15, 8]], 37, 43),
+      ...(tabs ? [box(-20, 0, 0, 8, 8, 80), box(A - 8, 0, 0, A + 20, 8, 80),
+        prism('XY', [[A, 8], [A + 15, 8], [A, 28]], 37, 43),
+        prism('XY', [[0, 8], [0, 28], [-15, 8]], 37, 43)] : []),
       cyl('XZ', 40, 40, 20, B, B + 15),
     ),
     cuts,
   );
   const iso = [
     dim([0, 0, 80], [A, 0, 80], [0, 0, 26], 'A', { bold: true }),
-    dim([A + 20, 0, 80], [A + 20, 0, 0], [22, 0, 0], '80'),
-    dim([0, 8, 70], [0, B, 70], [-34, 0, 0], 'B', { bold: true, textOff: 16 }),
-    dim([-20, 0, 80], [0, 0, 80], [0, 0, 26], '20'),
+    dim(tabs ? [A + 20, 0, 80] : [A, 0, 70], tabs ? [A + 20, 0, 0] : [A, 0, 10], [22, 0, 0], '80'),
+    dim([0, tabs ? 8 : 0, 70], [0, B, 70], [-34, 0, 0], 'B', { bold: true, textOff: 16 }),
+    ...(tabs ? [dim([-20, 0, 80], [0, 0, 80], [0, 0, 26], '20')] : []),
     lead([40 + 20 * S45, B + 15, 40 + 20 * S45], 80, -50, 'Ø40 ↑ 15'),
     lead([40 - 10 * S45, B + 15, 40 + 10 * S45], -90, -60, 'Ø20 THRU TO CAVITY'),
-    lead([A + 10 + 4 * S45, 8, 65 + 4 * S45], 60, -30, '4X Ø8 THRU'),
+    ...(tabs ? [lead([A + 10 + 4 * S45, 8, 65 + 4 * S45], 60, -30, '4X Ø8 THRU')] : []),
     lead([A - 10 + 10 * S45, B, 70 + 10 * S45], 50, -70, 'R10 (4X)'),
     triad([0, 0, 80], 26, 'Origin', { dx: -70, dy: 30 }),
   ];
@@ -396,20 +397,22 @@ export function housing({ A, B, window = false }) {
     v(ISO, 'Isometric', iso.filter((d) => d.text !== '')),
     v(ISO_BELOW, 'From below', [
       lead([A / 2, 0, 6], 60, -150, 'SHELL 6, BOTTOM FACE OPEN\nINSIDE CORNERS R4'),
-      dim([A + 20, 0, 80], [A + 20, 8, 80], [0, 0, 18], '8'),
+      ...(tabs ? [dim([A + 20, 0, 80], [A + 20, 8, 80], [0, 0, 18], '8')] : []),
     ]),
     v(TOP, 'Top', [
       dim([0, B + 15, 40], [40, B + 15, 40], [0, 0, 60], '40'),
       dim([0, B, 0], [0, B, 40], [-36, 0, 0], '40'),
-      dim([-20, 8, 0], [-20, 8, 15], [-16, 0, 0], '15'),
-      dim([-20, 8, 0], [-10, 8, 0], [0, 0, -16], '10'),
-      dim([-20, 8, 65], [-20, 8, 80], [-16, 0, 0], '15'),
-      dim([A, 8, 37], [A, 8, 43], [36, 0, 0], '6'),
+      ...(tabs ? [
+        dim([-20, 8, 0], [-20, 8, 15], [-16, 0, 0], '15'),
+        dim([-20, 8, 0], [-10, 8, 0], [0, 0, -16], '10'),
+        dim([-20, 8, 65], [-20, 8, 80], [-16, 0, 0], '15'),
+        dim([A, 8, 37], [A, 8, 43], [36, 0, 0], '6'),
+      ] : []),
     ]),
-    v(FRONT, 'Front (gussets)', [
-      dim([A, 8, 80], [A + 15, 8, 80], [0, -16, 0], '15'),
-      dim([A, 8, 80], [A, 28, 80], [-14, 0, 0], '20'),
+    v(FRONT, tabs ? 'Front (gussets)' : 'Front', [
+      ...(tabs ? [dim([A, 8, 80], [A + 15, 8, 80], [0, -16, 0], '15'), dim([A, 8, 80], [A, 28, 80], [-14, 0, 0], '20')] : []),
       ...(window ? [dim([A - 20, 35, 80], [A, 35, 80], [0, 20, 0], '20')] : []),
+      ...(!tabs && !window ? [dim([0, 0, 80], [0, B, 80], [-20, 0, 0], 'B', { bold: true })] : []),
     ]),
   ];
   return { body, views, origin: [0, 0, 80] };
@@ -597,18 +600,18 @@ export function steppedSpindle({ A, B }) {
 
 // Advanced part: tool block — sloped end with a blind hole normal to it, rounded pocket,
 // rounded corners, groove, through holes.
-export function toolBlock({ A, B, C }) {
+export function toolBlock({ A, B, C, groove = true, pocketThru = false, chamfer = false }) {
   const L = Math.hypot(C, 25);
   const n = [25 / L, C / L]; // outward normal of the sloped face (x, y)
   const mid = [A - C / 2, 27.5];
   let body = intersect(
-    prism('XY', [[0, 0], [A, 0], [A, 15], [A - C, 40], [0, 40]], 0, 60),
+    prism('XY', chamfer ? [[0, 0], [A, 0], [A, 15], [A - C, 40], [10, 40], [0, 30]] : [[0, 0], [A, 0], [A, 15], [A - C, 40], [0, 40]], 0, 60),
     prism('XZ', filletPoly([[0, 0, 10], [A, 0], [A, 60], [0, 60, 10]]), -1, 41),
   );
   body = subtract(body,
-    prism('XZ', roundRect(15, 15, 55, 45, 5), 40 - B, 41),
+    prism('XZ', roundRect(15, 15, 55, 45, 5), pocketThru ? -1 : 40 - B, 41),
     cyl('XZ', 75, 15, 6, -1, 41), cyl('XZ', 75, 45, 6, -1, 41),
-    box(-1, 10, 52, A + 1, 20, 61),
+    ...(groove ? [box(-1, 10, 52, A + 1, 20, 61)] : []),
     cyl('XY', 30, 10, 8, -1, 61),
     cylXYDir([mid[0], mid[1], 30], n, 5, -20, 1),
   );
@@ -616,10 +619,11 @@ export function toolBlock({ A, B, C }) {
     v(ISO, 'Isometric', [
       dim([A, 0, 60], [A, 0, 0], [26, 0, 0], '60'),
       dim([0, 0, 60], [0, 40, 60], [-22, 0, 0], '40'),
-      lead([15, 40 - B, 30], -80, -80, 'POCKET ↧ B, R5 CORNERS', { bold: true }),
+      lead([15, pocketThru ? 20 : 40 - B, 30], -80, -80, pocketThru ? 'POCKET THRU, R5 CORNERS' : 'POCKET ↧ B, R5 CORNERS', { bold: true }),
       lead(rimY(75, 40, 45, 6), 60, -80, '2X Ø12 THRU'),
       lead(rimZ(30, 10, 60, 8), -70, 60, 'Ø16 THRU'),
-      lead([A * 0.8, 15, 56], 70, 40, 'GROOVE 10 WIDE x 8 DEEP\nFULL LENGTH'),
+      ...(groove ? [lead([A * 0.8, 15, 56], 70, 40, 'GROOVE 10 WIDE x 8 DEEP\nFULL LENGTH')] : []),
+      ...(chamfer ? [lead([5, 35, 60], -60, -60, '10 X 10 CHAMFER\nFULL LENGTH')] : []),
       lead([mid[0] + 5 * S45, mid[1] + 3, 30 + 5 * S45], 60, -60, 'Ø10 ↧ 20, ⊥ TO SLOPED FACE\nAT ITS MIDPOINT, CENTRED'),
       triad([0, 0, 60], 24, 'Origin', { dx: -70, dy: 30 }),
     ]),
@@ -629,7 +633,8 @@ export function toolBlock({ A, B, C }) {
       dim([0, 0, 60], [30, 0, 60], [0, -20, 0], '30'),
       dim([0, 0, 60], [A, 0, 60], [0, -40, 0], 'A', { bold: true }),
       dim([0, 0, 60], [0, 10, 60], [-16, 0, 0], '10'),
-      dim([0, 10, 60], [0, 20, 60], [-16, 0, 0], '10'),
+      ...(groove ? [dim([0, 10, 60], [0, 20, 60], [-16, 0, 0], '10')] : []),
+      ...(chamfer ? [dim([0, 30, 60], [0, 40, 60], [-16, 0, 0], '10'), dim([0, 40, 60], [10, 40, 60], [0, 16, 0], '10')] : []),
       cline([18, 10, 60], [42, 10, 60]), cline([30, -4, 60], [30, 24, 60]),
       { t: 'line', a: [mid[0] - n[0] * 26, mid[1] - n[1] * 26, 60], b: [mid[0] + n[0] * 14, mid[1] + n[1] * 14, 60], dash: '14 4 3 4', w: 0.9 },
     ]),
@@ -641,8 +646,8 @@ export function toolBlock({ A, B, C }) {
       dim([0, 40, 60], [75, 40, 60], [0, 0, 20], '75'),
       dim([A, 40, 0], [A, 40, 15], [24, 0, 0], '15'),
       dim([A, 40, 15], [A, 40, 45], [24, 0, 0], '30'),
-      dim([A, 40, 52], [A, 40, 60], [24, 0, 0], '8'),
-      lead([10 - 10 * S45, 40, 10 - 10 * S45], -40, -40, 'R10 (2X)'),
+      ...(groove ? [dim([A, 40, 52], [A, 40, 60], [24, 0, 0], '8')] : []),
+      lead([10 - 10 * S45, chamfer ? 30 : 40, 10 - 10 * S45], -40, -40, 'R10 (2X)'),
       cline([65, 40, 15], [85, 40, 15]), cline([65, 40, 45], [85, 40, 45]),
     ]),
   ];

@@ -25,8 +25,13 @@ export const SECTIONS = {
   adv: 'Advanced Part Creation and Modification',
   asm: 'Assembly Creation and Modification',
   concept: 'Concepts',
+  part1: 'Part 1: build and modify',
+  part2: 'Part 2: build and modify',
+  asm1: 'Assembly 1',
+  asm2: 'Assembly 2',
+  part3: 'Part 3: build, then change its shape',
 };
-const PTS = { draft: 5, basic: 15, inter: 15, adv: 15, asm: 30 };
+const PTS = { draft: 5, basic: 15, inter: 15, adv: 15, asm: 30, part1: 15, part2: 15, asm1: 30, asm2: 30, part3: 15 };
 const g = (mat) => (MATERIALS[mat] / 1e6).toFixed(4);
 
 const partNotes = (mat, origin = 'arbitrary') => `
@@ -383,72 +388,97 @@ const drill = {
 };
 drill.questions.forEach((q) => { q.section = 'concept'; });
 
-// Additional mock exams recombine established model families and vary their driving A
-// dimension. The four-step assembly sequences are kept intact with their native parts.
-// They are additional practice sets, not seven entirely new model families.
-const families = [exam1, exam2, exam3];
-const combinations = [
-  [0, 0, 0, 0, 0], [1, 1, 0, 0, 0], [1, 1, 1, 1, 1],
-  [2, 2, 0, 1, 1], [0, 0, 2, 1, 2], [1, 2, 1, 2, 2], [2, 2, 2, 2, 2],
+// ======================================================================================
+// Mock exams in the current CSWA layout: 3 drafting questions, then Part 1 and Part 2 (each
+// built, then modified by dimensions), two different assemblies (each built, then modified),
+// and Part 3, which is built and then reshaped twice by adding or removing features.
+// The point weights are practice weights; SOLIDWORKS does not publish them for this layout.
+
+const reshape = (mat, change, ask, origin) => `<p>Modify the part from the previous step by changing its shape: ${change}</p>${partNotes(mat, origin)}<p>The images show the new shape. All other dimensions stay the same.</p><p>${ask}</p>`;
+const MASS = 'What is the overall mass of the part (grams)?';
+const COM = 'What is the centre of mass of the part (millimeters)?';
+
+// Part 3 for each model family: build, then two shape changes.
+const PART3 = [
+  [
+    exam1.questions[7],
+    { id: 'p3hub2', kind: 'num', model: { fn: 'flangedHub', params: { A: 120, B: 45, D: 50 } }, material: 'Alloy Steel',
+      prompt: reshape('Alloy Steel', 'cut a flat on the flange on the side opposite the keyway, at <b>D = 50</b> from the axis, through the flange thickness (see the Top view).', MASS, 'centre of the bottom face (see image)'),
+      explain: 'Sketch a line 50 mm from the axis on the bottom face of the flange and cut through the flange thickness on the side away from the keyway.' },
+    { id: 'p3hub3', kind: 'mc-com', model: { fn: 'flangedHub', params: { A: 120, B: 45, D: 50, bolts: 8 } }, material: 'Alloy Steel',
+      distract: [{ params: { A: 120, B: 45, D: 50 } }, { params: { A: 120, B: 45, D: null, bolts: 8 } }, { shift: [2.1, -1.4, 1.8] }],
+      prompt: reshape('Alloy Steel', 'change the bolt pattern to <b>8</b> equally spaced Ø10 holes on the Ø95 bolt circle, the first one 22.5° from the keyway. Keep the flat.', COM, 'centre of the bottom face (see image)'),
+      explain: 'Edit the circular pattern (8 instances) and the angle of the seed hole. The flat stays, so the centre of mass is still pulled toward +X.' },
+  ],
+  [
+    exam2.questions[7],
+    { id: 'p3hou2', kind: 'num', model: { fn: 'housing', params: { A: 120, B: 50, window: true } }, material: '1060 Alloy',
+      prompt: reshape('1060 Alloy', 'cut a 40 × 20 window through the front wall: right edge 20 mm from the right face, bottom edge 15 mm above the bottom (see the Front view).', MASS, 'as shown'),
+      explain: 'Sketch the rectangle on the front face and cut through the 6 mm wall only (Up To Next or a 6 mm blind cut).' },
+    { id: 'p3hou3', kind: 'mc-com', model: { fn: 'housing', params: { A: 120, B: 50, window: true, tabs: false } }, material: '1060 Alloy',
+      distract: [{ params: { A: 120, B: 50, window: true } }, { params: { A: 120, B: 50, window: false, tabs: false } }, { shift: [-3.2, 2.6, 1.9] }],
+      prompt: reshape('1060 Alloy', 'remove both mounting tabs, their gussets and their holes. Keep the window.', COM, 'as shown'),
+      explain: 'Delete (or suppress) the tab, gusset and tab-hole features. Without the low, heavy tabs the centre of mass moves up.' },
+  ],
+  [
+    exam3.questions[7],
+    { id: 'p3tool2', kind: 'num', model: { fn: 'toolBlock', params: { A: 120, B: 15, C: 25, groove: false, pocketThru: true } }, material: '6061 Alloy',
+      prompt: reshape('6061 Alloy', 'remove the groove on the front face, and make the pocket go all the way through the block.', MASS, 'as shown'),
+      explain: 'Delete the groove cut and change the pocket\'s end condition to Through All.' },
+    { id: 'p3tool3', kind: 'mc-com', model: { fn: 'toolBlock', params: { A: 120, B: 15, C: 25, groove: false, pocketThru: true, chamfer: true } }, material: '6061 Alloy',
+      distract: [{ params: { A: 120, B: 15, C: 25, groove: false, pocketThru: true } }, { params: { A: 120, B: 15, C: 25, chamfer: true } }, { shift: [1.7, -2.3, 2.2] }],
+      prompt: reshape('6061 Alloy', 'add a 10 × 10 chamfer along the full length of the top-left edge (see the Front view).', COM, 'as shown'),
+      explain: 'Chamfer the top-left edge 10 × 10. Removing material at the top left moves the centre of mass slightly right and down.' },
+  ],
 ];
-const variants = combinations.map(([draftFamily, basicFamily, interFamily, advFamily, asmFamily], index) => {
-  const number = index + 4;
-  const groups = [[draftFamily, 0, 3], [basicFamily, 3, 5], [interFamily, 5, 7],
-    [advFamily, 7, 10], [asmFamily, 10, 14]];
-  const questions = groups.flatMap(([family, start, end]) =>
-    structuredClone(families[family].questions.slice(start, end)));
-  const delta = 4 * (index + 1);
+const families = [exam1, exam2, exam3];
+// Assembly blocks: build, then one modification. Assembly 2 uses the coordinate-system step.
+const ASM1 = (f) => families[f].questions.slice(10, 12);
+const ASM2 = (f) => [families[f].questions[10], families[f].questions[12]];
+
+// [draft, part 1, part 2, assembly 1, assembly 2, part 3 family, variation], easiest first.
+const SPECS = [
+  [0, 0, 0, 0, 1, 0, 0], [1, 0, 0, 0, 1, 0, 1], [1, 1, 1, 1, 0, 1, 0], [0, 1, 0, 1, 0, 1, 2], [2, 1, 1, 1, 2, 1, 3],
+  [2, 2, 1, 0, 2, 0, 4], [2, 2, 2, 2, 0, 2, 0], [0, 2, 2, 2, 1, 2, 5], [1, 2, 1, 2, 1, 2, 6], [2, 2, 2, 2, 1, 2, 7],
+];
+const ASM_NAME = ['hinged arm', 'slide', 'link chain'];
+const P3_NAME = ['flanged hub', 'housing', 'tool block'];
+const LEVEL = ['Foundation', 'Foundation', 'Developing', 'Developing', 'Intermediate', 'Intermediate', 'Challenging', 'Hard', 'Harder', 'Most challenging'];
+
+const orderedMocks = SPECS.map(([fd, f1, f2, a1, a2, f3, k], index) => {
+  const rank = index + 1;
+  const blocks = [
+    ['draft', families[fd].questions.slice(0, 3)],
+    ['part1', families[f1].questions.slice(3, 5)],
+    ['part2', families[f2].questions.slice(5, 7)],
+    ['asm1', ASM1(a1)],
+    ['asm2', ASM2(a2)],
+    ['part3', PART3[f3]],
+  ];
+  const questions = blocks.flatMap(([section, qs]) => qs.map((q) => ({ ...structuredClone(q), section, points: PTS[section] })));
+  const delta = 4 * k, assemblyDelta = 2 * k;
   questions.forEach((q, i) => {
-    q.id = `e${number}r2q${i + 1}`;
-    if (number >= 8 && q.kind === 'mc-mass') q.kind = 'num';
-    if (q.assembly && typeof q.assembly.params.A === 'number') {
-      // Keep all four assembly modifications coherent, including the final material step.
-      const assemblyDelta = 2 * (index + 1);
-      q.assembly.params.A += assemblyDelta;
-      q.prompt = q.prompt.replace(/\bA\s*=\s*(\d+)/g, (_, n) => `A = ${Number(n) + assemblyDelta}`);
-      for (const alt of q.distract || []) {
-        if (alt.params && typeof alt.params.A === 'number') alt.params.A += assemblyDelta;
-      }
-      if (q.assembly.fn === 'chainAssembly' && i !== 12) {
-        q.explain = 'Set the specified mates and compare the bend direction with the drawing. B and C are angles between neighbouring links; rebuild and check Mass Properties.';
-      }
-      return;
-    }
-    if (!q.model || typeof q.model.params.A !== 'number') return;
-    q.model.params.A += delta;
-    q.prompt = q.prompt.replace(/\bA\s*=\s*(\d+)/g, (_, n) => `A = ${Number(n) + delta}`);
-    for (const alt of q.distract || []) {
-      if (alt.params && typeof alt.params.A === 'number') alt.params.A += delta;
-    }
+    q.id = `m${rank}q${i + 1}`;
+    if (rank >= 8 && q.kind === 'mc-mass') q.kind = 'num';
+    const target = q.model || q.assembly;
+    if (!target || typeof target.params.A !== 'number' || !k) return;
+    const d = q.assembly ? assemblyDelta : delta;
+    target.params.A += d;
+    q.prompt = q.prompt.replace(/\bA\s*=\s*(\d+)/g, (_, n) => `A = ${Number(n) + d}`);
+    for (const alt of q.distract || []) if (alt.params && typeof alt.params.A === 'number') alt.params.A += d;
+    if (q.assembly?.fn === 'chainAssembly') q.explain = 'Set the specified mates and compare the bend direction with the drawing. B and C are angles between neighbouring links; rebuild and check Mass Properties.';
   });
   return {
-    id: `exam${number}-r2`,
-    title: `CSWA Practice Exam ${number}`,
-    blurb: 'A mixed practice set with changed dimensions and assembly positions, combining familiar model families.',
+    id: `exam${rank}`,
+    title: `CSWA Practice Exam ${rank}`,
+    blurb: `Two parts, the ${ASM_NAME[a1]} and ${ASM_NAME[a2]} assemblies, then the ${P3_NAME[f3]} built and reshaped.`,
+    difficultyRank: rank,
+    difficultyLabel: `${LEVEL[index]}: two parts, the ${ASM_NAME[a1]} and ${ASM_NAME[a2]} assemblies, then the ${P3_NAME[f3]} reshaped.${rank >= 8 ? ' Fewer answer cues.' : ''}`,
+    showHints: rank < 8,
     questions,
   };
 });
 
-// Editorial study progression, not an official SOLIDWORKS difficulty rating.
-const orderedMocks = [exam1, variants[0], variants[1], exam2, variants[2], variants[3],
-  exam3, variants[4], variants[5], variants[6]];
-const descriptions = [
-  'Foundation: straightforward parts and a hinged arm.',
-  'Foundation: familiar features, new dimensions and a hinged arm.',
-  'Developing: a guide block and a hinged arm.',
-  'Developing: a sliding assembly, support and housing.',
-  'Intermediate: modified dimensions and a sliding assembly.',
-  'Intermediate: tapered geometry and a sliding assembly.',
-  'Challenging: a revolved spindle, angled hole and three-link chain.',
-  'Hard: revolve, housing and three-link chain; fewer answer cues.',
-  'Harder: tapered geometry, angled hole and chain; fewer answer cues.',
-  'Most challenging: tapered geometry, revolve, angled hole and chain; fewer answer cues.',
-];
-orderedMocks.forEach((exam, index) => {
-  exam.difficultyRank = index + 1;
-  exam.difficultyLabel = descriptions[index];
-  if (index >= 7) exam.showHints = false;
-});
 const orderedConcepts = [drill, CONCEPT_DRILLS[0], CONCEPT_DRILLS[1], CONCEPT_DRILLS[3], CONCEPT_DRILLS[2]];
 orderedConcepts.forEach((exam, index) => {
   exam.difficultyRank = index + 1;
@@ -457,11 +487,16 @@ orderedConcepts.forEach((exam, index) => {
 // Exams whose answer options change get a new revision id. The previous versions stay in
 // legacy-exams.json, so saved attempts (which store option positions) still review correctly;
 // `lineage` lets the home screen carry best scores across revisions.
-const REVISION = 'r3';
-for (const exam of [...orderedMocks, ...orderedConcepts]) {
+// Mock exams moved to the current layout in revision r4; concept exams are still r3.
+for (const exam of orderedConcepts) {
   const base = exam.id.replace(/-r\d+$/, '');
   exam.lineage = base === exam.id ? [base] : [base, exam.id];
-  exam.id = `${base}-${REVISION}`;
+  exam.id = `${base}-r3`;
+}
+for (const exam of orderedMocks) {
+  const n = Number(exam.id.replace('exam', ''));
+  exam.lineage = [`exam${n}`, ...(n >= 4 ? [`exam${n}-r2`] : []), `exam${n}-r3`];
+  exam.id = `exam${n}-r4`;
 }
 // Drawing Views drill: its own section on the home screen, next to the guide.
 DRAWING_DRILL.lineage = [DRAWING_DRILL.id];

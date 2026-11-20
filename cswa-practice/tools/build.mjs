@@ -1,6 +1,7 @@
 // Builds ../site/img/* and ../site/data/exams.js from the models and exam definitions.
 //   cd cswa-practice/tools && npm install && node build.mjs [--no-images]
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { massProps, meshData, apply } from './lib/geom.mjs';
@@ -67,16 +68,27 @@ function asmResult(fn, params, materials) {
 // ---- images ----------------------------------------------------------------------------
 let renderer = null;
 const rendered = new Map();
-async function renderPart(fn, params, prefix) {
+// Images are named after what they show (model, dimensions and annotations), so identical
+// drawings are shared between exams and an image is only rendered once.
+const FORCE = process.argv.includes('--force-images');
+const digest = (x) => crypto.createHash('sha1').update(x).digest('hex').slice(0, 10);
+async function renderOnce(file, spec) {
+  if (NO_IMAGES || (!FORCE && fs.existsSync(path.join(IMG, file)))) return;
+  if (!renderer) renderer = await startRenderer();
+  await renderer.render(spec, path.join(IMG, file));
+}
+
+async function renderPart(fn, params) {
   const key = 'p:' + fn + JSON.stringify(params);
   if (rendered.has(key)) return rendered.get(key);
   const m = evalModel(fn, params);
   const mesh = meshData(m.body);
+  const id = digest(fn + JSON.stringify(params) + JSON.stringify(m.views) + massProps(m.body).volume.toFixed(3));
   const out = [];
   for (let i = 0; i < m.views.length; i++) {
     const view = m.views[i];
-    const file = `${prefix}-${i + 1}.png`;
-    if (!NO_IMAGES && !ASSEMBLY_IMAGES_ONLY) await renderer.render({ bodies: [mesh], annotations: view.ann, view }, path.join(IMG, file));
+    const file = `m-${fn}-${id}-${i + 1}.png`;
+    if (!ASSEMBLY_IMAGES_ONLY) await renderOnce(file, { bodies: [mesh], annotations: view.ann, view });
     out.push({ src: 'img/' + file, title: view.title });
   }
   rendered.set(key, out);
@@ -92,17 +104,18 @@ function transformMesh(mesh, T) {
   return { positions: p, indices: mesh.indices };
 }
 
-async function renderAssembly(fn, params, prefix, examId) {
+async function renderAssembly(fn, params) {
   const a = evalModel(fn, params);
   const bodies = a.components.map((c) => {
     const m = evalModel(c.model, c.params || {});
     return { ...transformMesh(meshData(m.body), c.T), color: c.color };
   });
+  const id = digest(fn + JSON.stringify(params) + JSON.stringify(a.views) + JSON.stringify(a.components.map((c) => [c.model, c.T])));
   const out = [];
   for (let i = 0; i < a.views.length; i++) {
     const view = a.views[i];
-    const file = `${prefix}-asm-${i + 1}.png`;
-    if (!NO_IMAGES) await renderer.render({ bodies, annotations: view.ann, view }, path.join(IMG, file));
+    const file = `a-${fn}-${id}-${i + 1}.png`;
+    await renderOnce(file, { bodies, annotations: view.ann, view });
     out.push({ src: 'img/' + file, title: view.title });
   }
   const seen = new Set();
@@ -110,7 +123,7 @@ async function renderAssembly(fn, params, prefix, examId) {
     const k = c.model + JSON.stringify(c.params || {});
     if (seen.has(k)) continue;
     seen.add(k);
-    out.push(...(await renderPart(c.model, c.params || {}, `${examId}-${c.model}`)));
+    out.push(...(await renderPart(c.model, c.params || {})));
   }
   return out;
 }
@@ -200,7 +213,6 @@ function buildChoices(q, correct, makeAlt, distinct, fmt, gapFor) {
 
 // ---- main ----------------------------------------------------------------------------------
 async function main() {
-  if (!NO_IMAGES) renderer = await startRenderer();
   for (const [name, fn] of Object.entries(DRAFTING)) fs.writeFileSync(path.join(IMG, `draft-${name}.svg`), fn());
 
   const out = { generated: new Date().toISOString().slice(0, 10), sections: SECTIONS, exams: [] };
@@ -218,8 +230,9 @@ async function main() {
       if (exam.showHints !== false && (q.kind === 'mc-mass' || q.kind === 'mc-com')) o.prompt += '<p class="hint-line">Hint: if none of the options is within 1 % of your answer, re-check your model.</p>';
       let images = [];
       if (q.svg) images = [{ src: `img/draft-${q.svg}.svg`, title: 'Drawing' }];
-      if (q.model) images = await renderPart(q.model.fn, q.model.params, q.id);
-      else if (q.assembly) images = await renderAssembly(q.assembly.fn, q.assembly.params, q.id, exam.id.replace(/-r\d+$/, ""));
+      if (q.model) images = await renderPart(q.model.fn, q.model.params);
+      else if (q.assembly) images = await renderAssembly(q.assembly.fn, q.assembly.params);
+      if (q.assembly) o.asmCheck = { fn: q.assembly.fn, params: q.assembly.params, materials: q.materials };
       o.images = images;
       if (q.assembly && PARTS[q.assembly.fn]) o.parts = PARTS[q.assembly.fn];
 
@@ -304,6 +317,12 @@ async function main() {
   out.exams.push(...JSON.parse(fs.readFileSync(path.join(HERE, 'content', 'legacy-exams.json'), 'utf8')));
   fs.writeFileSync(path.join(OUT, 'data', 'exams.js'), '// Generated by tools/build.mjs. Do not edit by hand.\nwindow.CSWA_DATA = ' + JSON.stringify(out, null, 1) + ';\n');
   if (renderer) await renderer.close();
+  // Remove rendered images that no exam (current or saved) or lesson refers to any more.
+  const used = new Set(out.exams.flatMap((e) => e.questions.flatMap((q) => (q.images || []).map((im) => im.src))));
+  for (const l of out.lessons || []) for (const im of [l.image, l.extra].filter(Boolean)) used.add(im.src);
+  let pruned = 0;
+  if (!NO_IMAGES) for (const f of fs.readdirSync(IMG)) if (f.endsWith('.png') && !used.has('img/' + f)) { fs.unlinkSync(path.join(IMG, f)); pruned++; }
+  if (pruned) console.log(`removed ${pruned} unused images`);
   console.log('done');
 }
 
